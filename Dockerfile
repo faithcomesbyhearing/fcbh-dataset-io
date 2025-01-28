@@ -109,10 +109,10 @@ ENV PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 # Build the Go application
 WORKDIR /app/go/src
-RUN go build -o taskService /app/go/src/controller/ecs_entry/main.go
+RUN go install /app/go/src/controller/queue_server/s3_queue_server.go
 
 # Ensure the binary is executable
-RUN chmod +x ./taskService
+RUN chmod +x $GOPATH/bin/s3_queue_server
 
 # Use environment variable to determine the service to run
-ENTRYPOINT ["./taskService"]
+ENTRYPOINT $GOPATH/bin/s3_queue_server
