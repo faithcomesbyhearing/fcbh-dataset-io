@@ -16,28 +16,32 @@ type HTMLWriter struct {
 	ctx         context.Context
 	datasetName string
 	diffMatch   *diffmatchpatch.DiffMatchPatch
-	filename    string
 	out         *os.File
-	//lineNum     int
-	diffCount int
-	insertSum int
-	deleteSum int
+	diffCount   int
+	insertSum   int
+	deleteSum   int
 }
 
-func NewHTMLWriter(ctx context.Context, datasetName string) (HTMLWriter, *log.Status) {
+func NewHTMLWriter(ctx context.Context, datasetName string) HTMLWriter {
 	var h HTMLWriter
 	h.ctx = ctx
 	h.datasetName = datasetName
 	h.diffMatch = diffmatchpatch.New()
-	var status *log.Status
+	return h
+}
+
+func (h *HTMLWriter) WriteReport(baseDataset string, records []Pair, fileMap string) (string, *log.Status) {
 	var err error
-	h.filename = filepath.Join(os.Getenv(`FCBH_DATASET_TMP`), datasetName+"_compare.html")
-	h.out, err = os.Create(h.filename)
-	//h.out, err = os.CreateTemp(os.Getenv(`FCBH_DATASET_TMP`), datasetName+"_compare.html")
+	h.out, err = os.Create(filepath.Join(os.Getenv(`FCBH_DATASET_TMP`), h.datasetName+"_compare.html"))
 	if err != nil {
-		status = log.Error(ctx, 500, err, `Error creating output file for diff`)
+		return "", log.Error(h.ctx, 500, err, `Error creating output file for diff`)
 	}
-	return h, status
+	filename := h.WriteHeading(baseDataset)
+	for _, pair := range records {
+		h.WriteLine(pair)
+	}
+	h.WriteEnd(fileMap)
+	return filename, nil
 }
 
 func (h *HTMLWriter) WriteHeading(baseDataset string) string {
@@ -104,7 +108,6 @@ func (h *HTMLWriter) WriteLine(verse Pair) {
 		deletes := verse.Deletes()
 		h.deleteSum += deletes
 		errPct := verse.ErrorPct(inserts, deletes)
-		//h.lineNum++
 		_, _ = h.out.WriteString("<tr>\n")
 		h.writeCell(strconv.Itoa(verse.ScriptId()))
 		h.writeCell(strconv.FormatFloat(errPct, 'f', 0, 64))
@@ -157,7 +160,7 @@ func (h *HTMLWriter) writeCell(content string) {
 	_, _ = h.out.WriteString(`</td>`)
 }
 
-func (h *HTMLWriter) WriteEnd(filenameMap string) string {
+func (h *HTMLWriter) WriteEnd(filenameMap string) {
 	table := `</tbody>
 	</table>
 `
@@ -249,7 +252,6 @@ func (h *HTMLWriter) WriteEnd(filenameMap string) string {
 `
 	_, _ = h.out.WriteString(script)
 	_ = h.out.Close()
-	return h.filename
 }
 
 func (h *HTMLWriter) minSecFormat(duration float64) string {

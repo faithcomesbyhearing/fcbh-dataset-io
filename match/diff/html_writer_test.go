@@ -3,6 +3,8 @@ package diff
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -13,14 +15,15 @@ func TestHTMLWriter(t *testing.T) {
 		t.Fatal(status)
 	}
 	ctx := context.Background()
-	writer, status := NewHTMLWriter(ctx, test.project)
+	writer := NewHTMLWriter(ctx, test.project)
+	filename, status := writer.WriteReport(test.baseDB, records, fileMap)
 	if status != nil {
 		t.Fatal(status)
 	}
-	writer.WriteHeading(test.baseDB)
-	for _, rec := range records {
-		writer.WriteLine(rec)
+	newPath := filepath.Join("../", filepath.Base(filename))
+	err := os.Rename(filename, newPath)
+	if err != nil {
+		t.Fatal(err)
 	}
-	filename := writer.WriteEnd(fileMap)
-	fmt.Println("Filename:", filename)
+	fmt.Println("Filename:", newPath)
 }
