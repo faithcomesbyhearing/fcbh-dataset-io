@@ -619,7 +619,7 @@ func (d *DBAdapter) selectLine(lineId int64, query string) (string, *log.Status)
 // SelectScriptsByChapter is used by Compare
 func (d *DBAdapter) SelectScriptsByChapter(bookId string, chapterNum int) ([]Script, *log.Status) {
 	var results []Script
-	sqlStmt := `SELECT script_id, verse_str, script_text, uroman, script_begin_ts, script_end_ts FROM scripts 
+	sqlStmt := `SELECT script_id, chapter_end, verse_str, verse_end, script_text, uroman, script_begin_ts, script_end_ts FROM scripts 
 			WHERE book_id=? AND chapter_num=?
 			ORDER BY script_id`
 	rows, err := d.DB.Query(sqlStmt, bookId, chapterNum)
@@ -631,7 +631,7 @@ func (d *DBAdapter) SelectScriptsByChapter(bookId string, chapterNum int) ([]Scr
 		var vs Script
 		vs.BookId = bookId
 		vs.ChapterNum = chapterNum
-		err = rows.Scan(&vs.ScriptId, &vs.VerseStr, &vs.ScriptText, &vs.URoman, &vs.ScriptBeginTS, &vs.ScriptEndTS)
+		err = rows.Scan(&vs.ScriptId, &vs.ChapterEnd, &vs.VerseStr, &vs.VerseEnd, &vs.ScriptText, &vs.URoman, &vs.ScriptBeginTS, &vs.ScriptEndTS)
 		if err != nil {
 			return results, log.Error(d.Ctx, 500, err, `Error scanning in ReadScriptByChapter`)
 		}

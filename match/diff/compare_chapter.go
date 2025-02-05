@@ -3,37 +3,39 @@ package diff
 import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
-	"github.com/sergi/go-diff/diffmatchpatch"
 	"strings"
 )
 
-func (c *Compare) CompareChapters() (string, *log.Status) {
-	var filename string
+func (c *Compare) CompareChapters() ([]Pair, string, *log.Status) {
+	var fileMap string
 	var status *log.Status
-	filename = c.writer.WriteHeading(c.baseDataset)
 	var scripts []db.Script
 	scripts, status = c.database.SelectBookChapter()
 	if status != nil {
-		return filename, status
+		return c.results, fileMap, status
 	}
 	for _, scp := range scripts {
+		var pair Pair
+		pair.Ref.BookId = scp.BookId
+		pair.Ref.ChapterNum = scp.ChapterNum
 		var baseText, text string
 		baseText, status = c.concatText(c.baseDb, scp.BookId, scp.ChapterNum)
 		if status != nil {
-			return ``, status
+			return c.results, fileMap, status
 		}
-		baseText = c.cleanup(baseText)
+		pair.Base.Text = c.cleanup(baseText)
+		pair.Base.ScriptId = scp.ScriptId
 		text, status = c.concatText(c.database, scp.BookId, scp.ChapterNum)
 		if status != nil {
-			return ``, status
+			return c.results, fileMap, status
 		}
-		text = c.cleanup(text)
-		c.chapterDiff(scp.BookId, scp.ChapterNum, baseText, text)
+		pair.Comp.Text = c.cleanup(text)
+		pair.Comp.ScriptId = scp.ScriptId
+		c.chapterDiff(pair)
 	}
-	filenameMap, status := c.generateBookChapterFilenameMap()
+	fileMap, status = c.generateBookChapterFilenameMap()
 	c.baseDb.Close()
-	c.writer.WriteEnd(filenameMap, c.insertSum, c.deleteSum, c.diffCount)
-	return filename, status
+	return c.results, fileMap, status
 }
 
 func (c *Compare) concatText(conn db.DBAdapter, bookId string, chapter int) (string, *log.Status) {
@@ -53,16 +55,12 @@ func (c *Compare) concatText(conn db.DBAdapter, bookId string, chapter int) (str
 	return strings.Join(results, ""), status
 }
 
-func (c *Compare) chapterDiff(bookId string, chapter int, baseText string, text string) {
-	diffMatch := diffmatchpatch.New()
-	diffs := diffMatch.DiffMain(baseText, text, false)
+func (c *Compare) chapterDiff(chapter Pair) {
+	diffs := c.diffMatch.DiffMain(chapter.Comp.Uroman, chapter.Base.Uroman, false)
+	diffs = c.diffMatch.DiffCleanupMerge(diffs)
 	if !c.isMatch(diffs) {
-		inserts, deletes := c.measure(diffs)
-		c.insertSum += inserts
-		c.deleteSum += deletes
-		avgLen := float64(len(baseText)+len(text)) / 2.0
-		errPct := float64((inserts+deletes)*100) / avgLen
-		c.writer.WriteChapterDiff(bookId, chapter, inserts, deletes, errPct, diffMatch.DiffPrettyHtml(diffs))
-		c.diffCount++
+		chapter.Diffs = diffs
+		chapter.HTML = c.diffMatch.DiffPrettyHtml(diffs)
+		c.results = append(c.results, chapter)
 	}
 }

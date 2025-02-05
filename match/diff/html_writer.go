@@ -3,6 +3,7 @@ package diff
 import (
 	"context"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
+	"github.com/sergi/go-diff/diffmatchpatch"
 	"math"
 	"os"
 	"path/filepath"
@@ -14,17 +15,24 @@ import (
 type HTMLWriter struct {
 	ctx         context.Context
 	datasetName string
+	diffMatch   *diffmatchpatch.DiffMatchPatch
+	filename    string
 	out         *os.File
-	lineNum     int
+	//lineNum     int
+	diffCount int
+	insertSum int
+	deleteSum int
 }
 
 func NewHTMLWriter(ctx context.Context, datasetName string) (HTMLWriter, *log.Status) {
 	var h HTMLWriter
 	h.ctx = ctx
 	h.datasetName = datasetName
+	h.diffMatch = diffmatchpatch.New()
 	var status *log.Status
 	var err error
-	h.out, err = os.Create(filepath.Join(os.Getenv(`FCBH_DATASET_TMP`), datasetName+"_compare.html"))
+	h.filename = filepath.Join(os.Getenv(`FCBH_DATASET_TMP`), datasetName+"_compare.html")
+	h.out, err = os.Create(h.filename)
 	//h.out, err = os.CreateTemp(os.Getenv(`FCBH_DATASET_TMP`), datasetName+"_compare.html")
 	if err != nil {
 		status = log.Error(ctx, 500, err, `Error creating output file for diff`)
@@ -87,11 +95,18 @@ func (h *HTMLWriter) WriteHeading(baseDataset string) string {
 	return h.out.Name()
 }
 
-func (h *HTMLWriter) WriteVerseDiff(verse pair, inserts int, deletes int, largest int, errPct float64, diffHtml string) {
+func (h *HTMLWriter) WriteLine(verse Pair) {
+	largest := verse.largestLength()
 	if largest > 2 {
-		h.lineNum++
+		h.diffCount++
+		inserts := verse.Inserts()
+		h.insertSum += inserts
+		deletes := verse.Deletes()
+		h.deleteSum += deletes
+		errPct := verse.ErrorPct(inserts, deletes)
+		//h.lineNum++
 		_, _ = h.out.WriteString("<tr>\n")
-		h.writeCell(strconv.Itoa(h.lineNum))
+		h.writeCell(strconv.Itoa(verse.ScriptId()))
 		h.writeCell(strconv.FormatFloat(errPct, 'f', 0, 64))
 		h.writeCell(strconv.Itoa(inserts + deletes))
 		h.writeCell(strconv.Itoa(int(math.Abs(float64(inserts - deletes)))))
@@ -99,22 +114,22 @@ func (h *HTMLWriter) WriteVerseDiff(verse pair, inserts int, deletes int, larges
 		//h.writeCell(h.minSecFormat(verse.beginTS))
 		var params []string
 		params = append(params, "this")
-		params = append(params, "'"+verse.bookId+"'")
-		params = append(params, strconv.Itoa(verse.chapter))
-		params = append(params, strconv.FormatFloat(verse.beginTS, 'f', 4, 64))
-		params = append(params, strconv.FormatFloat(verse.endTS, 'f', 4, 64))
-		h.writeCell("<button title=\"" + h.minSecFormat(verse.beginTS) + "\" onclick=\"playVerse(" + strings.Join(params, ",") + ")\">Play</button>")
+		params = append(params, "'"+verse.Ref.BookId+"'")
+		params = append(params, strconv.Itoa(verse.Ref.ChapterNum))
+		params = append(params, strconv.FormatFloat(verse.BeginTS, 'f', 4, 64))
+		params = append(params, strconv.FormatFloat(verse.EndTS, 'f', 4, 64))
+		h.writeCell("<button title=\"" + h.minSecFormat(verse.BeginTS) + "\" onclick=\"playVerse(" + strings.Join(params, ",") + ")\">Play</button>")
 		h.writeCell(`+` + strconv.Itoa(inserts) + ` -` + strconv.Itoa(deletes))
-		h.writeCell(verse.bookId + ` ` + strconv.Itoa(verse.chapter) + `:` + verse.num)
-		h.writeCell(diffHtml)
+		h.writeCell(verse.Ref.ComposeKey())
+		h.writeCell(verse.HTML)
 		_, _ = h.out.WriteString("</tr>\n")
 	}
 }
 
 func (h *HTMLWriter) WriteChapterDiff(bookId string, chapter int, inserts int, deletes int, errPct float64, diffHtml string) {
-	h.lineNum++
+	var lineNum = 1 // replace with scriptId
 	_, _ = h.out.WriteString("<tr>\n")
-	h.writeCell(strconv.Itoa(h.lineNum))
+	h.writeCell(strconv.Itoa(lineNum))
 	h.writeCell(strconv.FormatFloat(errPct, 'f', 0, 64))
 	h.writeCell(strconv.Itoa(inserts + deletes))
 	h.writeCell(strconv.Itoa(int(math.Abs(float64(inserts - deletes)))))
@@ -142,19 +157,19 @@ func (h *HTMLWriter) writeCell(content string) {
 	_, _ = h.out.WriteString(`</td>`)
 }
 
-func (h *HTMLWriter) WriteEnd(filenameMap string, insertSum int, deleteSum int, diffCount int) {
+func (h *HTMLWriter) WriteEnd(filenameMap string) string {
 	table := `</tbody>
 	</table>
 `
 	_, _ = h.out.WriteString(table)
 	_, _ = h.out.WriteString(`<p>Total Inserted Chars `)
-	_, _ = h.out.WriteString(strconv.Itoa(insertSum))
+	_, _ = h.out.WriteString(strconv.Itoa(h.insertSum))
 	_, _ = h.out.WriteString(`, Total Deleted Chars `)
-	_, _ = h.out.WriteString(strconv.Itoa(deleteSum))
+	_, _ = h.out.WriteString(strconv.Itoa(h.deleteSum))
 	_, _ = h.out.WriteString("</p>\n")
 	_, _ = h.out.WriteString(`<p>`)
 	_, _ = h.out.WriteString("Total Difference Count: ")
-	_, _ = h.out.WriteString(strconv.Itoa(diffCount))
+	_, _ = h.out.WriteString(strconv.Itoa(h.diffCount))
 	_, _ = h.out.WriteString("</p>\n")
 	_, _ = h.out.WriteString(`<script type="text/javascript" src="https://code.jquery.com/jquery-3.5.1.js"></script>`)
 	_, _ = h.out.WriteString("\n")
@@ -234,9 +249,10 @@ func (h *HTMLWriter) WriteEnd(filenameMap string, insertSum int, deleteSum int, 
 `
 	_, _ = h.out.WriteString(script)
 	_ = h.out.Close()
+	return h.filename
 }
 
-func (a *HTMLWriter) minSecFormat(duration float64) string {
+func (h *HTMLWriter) minSecFormat(duration float64) string {
 	if duration > 0.5 {
 		duration -= 0.5
 	} else {

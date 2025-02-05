@@ -97,6 +97,7 @@ type Audio struct {
 	AudioVerseWav   string         `json:"-"`               // Transient
 }
 
+/*
 type AlignChar struct {
 	ScriptId     int64
 	BookId       string
@@ -119,3 +120,4 @@ type AlignChar struct {
 	DurationLong int
 	SilenceLong  int
 }
+*/
