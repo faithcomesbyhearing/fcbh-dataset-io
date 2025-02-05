@@ -4,8 +4,10 @@ import (
 	"context"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/generic"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/safe"
 	"github.com/xuri/excelize/v2"
 	"strconv"
 	"strings"
@@ -48,6 +50,7 @@ func (r ScriptReader) Read(filePath string) *log.Status {
 	if err != nil {
 		return log.Error(r.ctx, 500, err, `Error reading excel file.`)
 	}
+	var uniqueRefs = make(map[string]bool)
 	var col ColIndex
 	var records []db.Script
 	for i, row := range rows {
@@ -76,14 +79,11 @@ func (r ScriptReader) Read(filePath string) *log.Status {
 			}
 			if col.VerseCol == 0 || row[col.VerseCol] == `<<` {
 				rec.VerseStr = `0`
-				rec.VerseNum = 0
 			} else {
 				rec.VerseStr = row[col.VerseCol]
-				rec.VerseNum, err = strconv.Atoi(row[col.VerseCol])
-				if err != nil {
-					return log.Error(r.ctx, 500, err, `Error: verse num is not numeric`, row[3])
-				}
 			}
+			rec.VerseStr = r.uniqueVerse(uniqueRefs, rec)
+			rec.VerseNum = safe.SafeVerseNum(rec.VerseStr)
 			rec.Person = row[col.CharacterCol]
 			rec.ScriptNum = row[col.LineCol]
 			text := row[col.TextCol]
@@ -143,4 +143,21 @@ func (r ScriptReader) FindColIndexes(heading []string) (ColIndex, *log.Status) {
 		status = log.ErrorNoErr(r.ctx, 500, `Columns missing in script`, strings.Join(msgs, `; `))
 	}
 	return c, status
+}
+
+func (r ScriptReader) uniqueVerse(uniqueRefs map[string]bool, rec db.Script) string {
+	chars := []string{"", "a", "b", "c", "d", "e", "f", "g"}
+	for i := 0; i < len(chars); i++ {
+		verse := rec.VerseStr + chars[i]
+		key := generic.VerseRef{
+			BookId:     rec.BookId,
+			ChapterNum: rec.ChapterNum,
+			VerseStr:   verse}.UniqueKey()
+		_, found := uniqueRefs[key]
+		if !found {
+			uniqueRefs[key] = true
+			return verse
+		}
+	}
+	panic("unreachable in ScriptReader.uniqueVerse")
 }

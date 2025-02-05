@@ -25,7 +25,6 @@ func TestScriptReader(t *testing.T) {
 	if status != nil {
 		t.Fatal(status)
 	}
-	//}
 	conn.Close()
 }
 

@@ -23,7 +23,7 @@ text_data:
 
 func TestScriptTextDirect(t *testing.T) {
 	var tests []SqliteTest
-	tests = append(tests, SqliteTest{"SELECT count(*) FROM scripts", 8213})
+	tests = append(tests, SqliteTest{"SELECT count(*) FROM scripts", 9747})
 	testName := strings.Replace(scriptTextScript, "{bibleId}", "ENGWEB", -1)
 	DirectSqlTest(testName, tests, t)
 }
