@@ -27,21 +27,21 @@ type Compare struct {
 	settings    request.CompareSettings
 	replacer    *strings.Replacer
 	verseRm     *regexp.Regexp
-	writer      HTMLWriter
-	diffCount   int
-	insertSum   int
-	deleteSum   int
+	diffMatch   *diffmatchpatch.DiffMatchPatch
+	results     []Pair
 }
 
 type Verse struct {
-	bookId   string
-	chapter  int
-	verse    string
-	verseEnd string
-	text     string
-	uRoman   string
-	beginTS  float64
-	endTS    float64
+	scriptId   int
+	bookId     string
+	chapter    int
+	chapterEnd int
+	verse      string
+	verseEnd   string
+	text       string
+	uRoman     string
+	beginTS    float64
+	endTS      float64
 }
 
 func NewCompare(ctx context.Context, user string, baseDSet string, db db.DBAdapter,
@@ -57,41 +57,39 @@ func NewCompare(ctx context.Context, user string, baseDSet string, db db.DBAdapt
 	c.settings = settings
 	c.replacer = c.cleanUpSetup()
 	c.verseRm = regexp.MustCompile(`\{[0-9\-\,]+\}\s?`) // used by compareScriptLine
+	c.diffMatch = diffmatchpatch.New()
 	return c
 }
 
-func (c *Compare) Process() (string, *log.Status) {
-	var filename string
+func (c *Compare) Process() ([]Pair, string, *log.Status) {
+	var records []Pair
+	var fileMap string
 	var status *log.Status
 	c.baseDb, status = db.NewerDBAdapter(c.ctx, false, c.user, c.baseDataset)
 	if status != nil {
-		return filename, status
+		return records, fileMap, status
 	}
 	status = uroman.EnsureUroman(c.baseDb, c.lang)
 	if status != nil {
-		return filename, status
-	}
-	c.writer, status = NewHTMLWriter(c.ctx, c.dataset)
-	if status != nil {
-		return filename, status
+		return records, fileMap, status
 	}
 	var compHasVerse, compHasLine, baseHasVerse, baseHasLine bool
 	compHasVerse, compHasLine, c.compIdent, status = c.hasVerseLine(c.database)
 	if status != nil {
-		return filename, status
+		return records, fileMap, status
 	}
 	baseHasVerse, baseHasLine, c.baseIdent, status = c.hasVerseLine(c.baseDb)
 	if status != nil {
-		return filename, status
+		return records, fileMap, status
 	}
 	if compHasVerse && baseHasVerse {
-		filename, status = c.CompareVerses()
+		records, fileMap, status = c.CompareVerses()
 	} else if compHasLine && baseHasLine {
-		filename, status = c.CompareScriptLines()
+		records, fileMap, status = c.CompareScriptLines()
 	} else {
-		filename, status = c.CompareChapters()
+		records, fileMap, status = c.CompareChapters()
 	}
-	return filename, status
+	return records, fileMap, status
 }
 
 func (c *Compare) hasVerseLine(conn db.DBAdapter) (bool, bool, db.Ident, *log.Status) {
@@ -116,38 +114,35 @@ func (c *Compare) hasVerseLine(conn db.DBAdapter) (bool, bool, db.Ident, *log.St
 	return hasVerse, hasLine, ident, status
 }
 
-func (c *Compare) CompareVerses() (string, *log.Status) {
-	var filename string
+func (c *Compare) CompareVerses() ([]Pair, string, *log.Status) {
 	var status *log.Status
-	filename = c.writer.WriteHeading(c.baseDataset)
 	for _, bookId := range db.RequestedBooks(c.testament) {
-		var chapInBook, _ = db.BookChapterMap[bookId] // Need to check OK, because bookId could be in error?
+		var chapInBook, _ = db.BookChapterMap[bookId]
 		var chapter = 1
 		for chapter <= chapInBook {
-			var lines1, lines2 []Verse
-			lines1, status = c.process(c.baseDb, bookId, chapter)
+			var baseLines, compLinees []Verse
+			baseLines, status = c.process(c.baseDb, bookId, chapter)
 			if status != nil {
-				return filename, status
+				return c.results, "", status
 			}
-			lines2, status = c.process(c.database, bookId, chapter)
+			compLinees, status = c.process(c.database, bookId, chapter)
 			if status != nil {
-				return filename, status
+				return c.results, "", status
 			}
-			c.diff(lines1, lines2)
+			c.diff(baseLines, compLinees)
 			chapter++
 		}
 	}
 	filenameMap, status := c.generateBookChapterFilenameMap()
 	c.baseDb.Close()
-	c.writer.WriteEnd(filenameMap, c.insertSum, c.deleteSum, c.diffCount)
-	return filename, status
+	return c.results, filenameMap, status
 }
 
 func (c *Compare) process(conn db.DBAdapter, bookId string, chapterNum int) ([]Verse, *log.Status) {
 	var lines []Verse
 	var status *log.Status
 	var ident db.Ident
-	ident, status = conn.SelectIdent()
+	ident, status = conn.SelectIdent() // TextSource should be a parameter
 	if status != nil {
 		return lines, status
 	}
@@ -157,8 +152,10 @@ func (c *Compare) process(conn db.DBAdapter, bookId string, chapterNum int) ([]V
 	}
 	for _, script := range scripts {
 		var vs Verse
+		vs.scriptId = script.ScriptId
 		vs.bookId = script.BookId
 		vs.chapter = script.ChapterNum
+		vs.chapterEnd = script.ChapterEnd
 		vs.verse = script.VerseStr
 		vs.verseEnd = script.VerseEnd
 		vs.text = script.ScriptText
@@ -376,60 +373,44 @@ func (c *Compare) cleanup(text string) string {
 	return text
 }
 
-type pair struct {
-	bookId  string
-	chapter int
-	num     string
-	beginTS float64
-	endTS   float64
-	text1   string
-	text2   string
-}
-
 /* This diff method assumes one chapter at a time */
-func (c *Compare) diff(verses1 []Verse, verses2 []Verse) {
-
+func (c *Compare) diff(baseVS []Verse, compVS []Verse) {
+	var pairs = make([]Pair, 0, len(baseVS))
+	var didMatch = make(map[string]bool)
 	// Put the second data in a map
 	var verse2Map = make(map[string]Verse)
-	for _, vs2 := range verses2 {
+	for _, vs2 := range compVS {
 		verse2Map[vs2.verse] = vs2
 	}
 	// combine the verse2 to verse1 that match
-	var didMatch = make(map[string]bool)
-	var pairs = make([]pair, 0, len(verses1))
-	for _, vs1 := range verses1 {
+	var p Pair
+	for _, vs1 := range baseVS {
 		vs2, ok := verse2Map[vs1.verse]
 		if ok {
 			didMatch[vs1.verse] = true
+			p = NewPair(&vs1, &vs2)
+		} else {
+			p = NewPair(&vs1, nil)
 		}
-		p := pair{bookId: vs1.bookId, chapter: vs1.chapter, num: vs1.verse, beginTS: vs1.beginTS, endTS: vs1.endTS, text1: vs1.uRoman, text2: vs2.uRoman}
 		pairs = append(pairs, p)
 	}
 	// pick up any verse2 that did not match verse1
-	for _, vs2 := range verses2 {
+	for _, vs2 := range compVS {
 		_, ok := didMatch[vs2.verse]
 		if !ok {
-			p := pair{bookId: vs2.bookId, chapter: vs2.chapter, num: vs2.verse, beginTS: vs2.beginTS, endTS: vs2.endTS, text1: ``, text2: vs2.uRoman}
+			p = NewPair(nil, &vs2)
 			pairs = append(pairs, p)
 		}
 	}
-	// perform a match on pairs
-	diffMatch := diffmatchpatch.New()
 	for _, par := range pairs {
-		if len(par.text1) > 0 || len(par.text2) > 0 {
-			par.text1 = strings.TrimSpace(par.text1)
-			par.text2 = strings.TrimSpace(par.text2)
-			diffs := diffMatch.DiffMain(par.text1, par.text2, false)
-			diffMatch.DiffCleanupMerge(diffs) // required for measure to compute largest
-			if !c.isMatch(diffs) {
-				inserts, deletes := c.measure(diffs)
-				largest := c.largestLength(diffs)
-				c.insertSum += inserts
-				c.deleteSum += deletes
-				avgLen := float64(len(par.text1)+len(par.text2)) / 2.0
-				errPct := float64((inserts+deletes)*100) / avgLen
-				c.writer.WriteVerseDiff(par, inserts, deletes, largest, errPct, diffMatch.DiffPrettyHtml(diffs))
-				c.diffCount++
+		if len(par.Base.Uroman) > 0 || len(par.Comp.Uroman) > 0 {
+			par.Base.Uroman = strings.TrimSpace(par.Base.Uroman)
+			par.Comp.Uroman = strings.TrimSpace(par.Comp.Uroman)
+			diffs := c.diffMatch.DiffMain(par.Comp.Uroman, par.Base.Uroman, false)
+			par.Diffs = c.diffMatch.DiffCleanupMerge(diffs) // required for measure to compute largest
+			if !c.isMatch(par.Diffs) {
+				par.HTML = c.diffMatch.DiffPrettyHtml(diffs)
+				c.results = append(c.results, par)
 			}
 		}
 	}
@@ -455,39 +436,6 @@ func (c *Compare) ensureClean(diffs []diffmatchpatch.Diff) {
 		}
 		prior = diff.Type
 	}
-}
-
-func (c *Compare) measure(diffs []diffmatchpatch.Diff) (int, int) {
-	var inserts = 0
-	var deletes = 0
-	for _, diff := range diffs {
-		lenText := len(diff.Text)
-		if diff.Type == diffmatchpatch.DiffInsert {
-			inserts += lenText
-		} else if diff.Type == diffmatchpatch.DiffDelete {
-			deletes += lenText
-		}
-	}
-	return inserts, deletes
-}
-
-func (c *Compare) largestLength(diffs []diffmatchpatch.Diff) int {
-	var result int
-	var length int
-	for _, diff := range diffs {
-		if diff.Type != diffmatchpatch.DiffEqual {
-			length += len(diff.Text)
-		} else {
-			if length > result {
-				result = length
-			}
-			length = 0
-		}
-	}
-	if length > result {
-		result = length
-	}
-	return result
 }
 
 func (c *Compare) generateBookChapterFilenameMap() (string, *log.Status) {
