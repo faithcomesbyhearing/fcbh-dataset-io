@@ -2,6 +2,7 @@ package diff
 
 import (
 	"context"
+	"database/sql"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
@@ -27,6 +28,7 @@ type Compare struct {
 	settings    request.CompareSettings
 	replacer    *strings.Replacer
 	verseRm     *regexp.Regexp
+	isLatin     sql.NullBool
 	diffMatch   *diffmatchpatch.DiffMatchPatch
 	results     []Pair
 }
@@ -57,6 +59,7 @@ func NewCompare(ctx context.Context, user string, baseDSet string, db db.DBAdapt
 	c.settings = settings
 	c.replacer = c.cleanUpSetup()
 	c.verseRm = regexp.MustCompile(`\{[0-9\-\,]+\}\s?`) // used by compareScriptLine
+	c.isLatin.Valid = false
 	c.diffMatch = diffmatchpatch.New()
 	return c
 }
@@ -149,6 +152,9 @@ func (c *Compare) process(conn db.DBAdapter, bookId string, chapterNum int) ([]V
 	scripts, status := conn.SelectScriptsByChapter(bookId, chapterNum)
 	if status != nil {
 		return lines, status
+	}
+	if !c.isLatin.Valid {
+		c.SetIsLatin(scripts)
 	}
 	for _, script := range scripts {
 		var vs Verse
@@ -403,10 +409,11 @@ func (c *Compare) diff(baseVS []Verse, compVS []Verse) {
 		}
 	}
 	for _, par := range pairs {
-		if len(par.Base.Uroman) > 0 || len(par.Comp.Uroman) > 0 {
-			par.Base.Uroman = strings.TrimSpace(par.Base.Uroman)
-			par.Comp.Uroman = strings.TrimSpace(par.Comp.Uroman)
-			diffs := c.diffMatch.DiffMain(par.Comp.Uroman, par.Base.Uroman, false)
+		baseText, compText := par.Text(c.isLatin)
+		if len(baseText) > 0 || len(compText) > 0 {
+			baseText = strings.TrimSpace(baseText)
+			compText = strings.TrimSpace(compText)
+			diffs := c.diffMatch.DiffMain(compText, baseText, false)
 			par.Diffs = c.diffMatch.DiffCleanupMerge(diffs) // required for measure to compute largest
 			if !c.isMatch(par.Diffs) {
 				par.HTML = c.diffMatch.DiffPrettyHtml(diffs)
@@ -455,4 +462,22 @@ func (c *Compare) generateBookChapterFilenameMap() (string, *log.Status) {
 		}
 	}
 	return strings.Join(result, ""), status
+}
+
+func (c *Compare) SetIsLatin(records []db.Script) {
+	if !c.isLatin.Valid {
+		var numChars = 0
+		var numLatin = 0
+		for _, rec := range records {
+			for _, ch := range []rune(rec.ScriptText) {
+				numChars++
+				if ch <= '\u024F' { // Upper Bound of Latin Extended-B
+					numLatin++
+				}
+			}
+		}
+		pct := float64(numLatin) / float64(numChars)
+		c.isLatin.Valid = true
+		c.isLatin.Bool = pct > 0.9
+	}
 }

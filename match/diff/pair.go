@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"database/sql"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/generic"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -62,6 +63,14 @@ func (p *Pair) ScriptId() int {
 		return p.Base.ScriptId
 	} else {
 		return p.Comp.ScriptId
+	}
+}
+
+func (p *Pair) Text(isLatin sql.NullBool) (string, string) {
+	if isLatin.Bool {
+		return p.Base.Text, p.Comp.Text
+	} else {
+		return p.Base.Uroman, p.Comp.Uroman
 	}
 }
 
