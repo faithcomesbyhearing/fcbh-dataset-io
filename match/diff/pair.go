@@ -6,7 +6,7 @@ import (
 )
 
 type Pair struct {
-	Ref     generic.LineRef
+	Ref     generic.VerseRef
 	BeginTS float64
 	EndTS   float64
 	Base    PairText

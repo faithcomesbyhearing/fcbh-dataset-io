@@ -434,15 +434,15 @@ func (d *DBAdapter) insertMFCCS(query string, mfccs []MFCC) *log.Status {
 
 func (d *DBAdapter) CheckScriptInserts(records []Script) *log.Status {
 	var duplicates []string
-	var keyMap = make(map[generic.LineRef]bool)
+	var keyMap = make(map[generic.VerseRef]bool)
 	for _, rec := range records {
-		var key generic.LineRef
+		var key generic.VerseRef
 		key.BookId = rec.BookId
 		key.ChapterNum = rec.ChapterNum
 		key.VerseStr = rec.VerseStr
 		_, found := keyMap[key]
 		if found {
-			duplicates = append(duplicates, key.ComposeKey())
+			duplicates = append(duplicates, key.UniqueKey())
 		}
 		keyMap[key] = true
 	}
@@ -810,7 +810,7 @@ func (d *DBAdapter) SelectFACharTimestamps() ([]generic.AlignChar, *log.Status) 
 		return chars, log.Error(d.Ctx, 500, err, "Error during SelectFACharTimestamps.")
 	}
 	defer d.closeDef(rows, "SelectFACharTimestamps stmt")
-	var ref generic.LineRef
+	var ref generic.VerseRef
 	for rows.Next() {
 		var ch generic.AlignChar
 		err = rows.Scan(&ch.AudioFile, &ch.LineId, &ref.BookId, &ref.ChapterNum, &ref.VerseStr,
@@ -819,7 +819,7 @@ func (d *DBAdapter) SelectFACharTimestamps() ([]generic.AlignChar, *log.Status) 
 		if err != nil {
 			return chars, log.Error(d.Ctx, 500, err, "Error in SelectFACharTimestamps.")
 		}
-		ch.LineRef = ref.ComposeKey()
+		ch.LineRef = ref.UniqueKey()
 		chars = append(chars, ch)
 	}
 	return chars, nil

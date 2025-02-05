@@ -13,10 +13,11 @@ import (
 
 type LogicalKey interface {
 	IsLogicalKey()
-	ComposeKey() string
+	UniqueKey() string
+	Description() string
 }
 
-type LineRef struct {
+type VerseRef struct {
 	BookId     string
 	ChapterNum int
 	VerseStr   string
@@ -24,9 +25,21 @@ type LineRef struct {
 	VerseEnd   string
 }
 
-func (r LineRef) IsLogicalKey() {}
+func (r VerseRef) IsLogicalKey() {}
 
-func (r LineRef) ComposeKey() string {
+func (r VerseRef) UniqueKey() string {
+	var result string
+	if r.ChapterNum == 0 {
+		result = r.BookId
+	} else if r.VerseStr == `` {
+		result = r.BookId + ` ` + strconv.Itoa(r.ChapterNum)
+	} else {
+		result = r.BookId + ` ` + strconv.Itoa(r.ChapterNum) + `:` + r.VerseStr
+	}
+	return result
+}
+
+func (r VerseRef) Description() string {
 	var result string
 	if r.ChapterNum == 0 {
 		result = r.BookId
@@ -43,8 +56,8 @@ func (r LineRef) ComposeKey() string {
 	return result
 }
 
-func NewLineRef(key string) LineRef {
-	var r LineRef
+func NewLineRef(key string) VerseRef {
+	var r VerseRef
 	parts := strings.Split(key, ` `)
 	r.BookId = parts[0]
 	if len(parts) > 1 {

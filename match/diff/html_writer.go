@@ -123,7 +123,7 @@ func (h *HTMLWriter) WriteLine(verse Pair) {
 		params = append(params, strconv.FormatFloat(verse.EndTS, 'f', 4, 64))
 		h.writeCell("<button title=\"" + h.minSecFormat(verse.BeginTS) + "\" onclick=\"playVerse(" + strings.Join(params, ",") + ")\">Play</button>")
 		h.writeCell(`+` + strconv.Itoa(inserts) + ` -` + strconv.Itoa(deletes))
-		h.writeCell(verse.Ref.ComposeKey())
+		h.writeCell(verse.Ref.Description())
 		h.writeCell(verse.HTML)
 		_, _ = h.out.WriteString("</tr>\n")
 	}

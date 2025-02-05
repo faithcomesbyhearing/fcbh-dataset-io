@@ -456,10 +456,13 @@ func (c *Controller) audioProofing(audioFiles []input.InputFile) (string, *log.S
 }
 
 func (c *Controller) matchText() (string, *log.Status) {
-	var filename string
+	var records []diff.Pair
+	var fileMap string
 	var status *log.Status
 	compare := diff.NewCompare(c.ctx, c.req.Username, c.req.Compare.BaseDataset, c.database, c.ident.LanguageISO, c.req.Testament, c.req.Compare.CompareSettings)
-	filename, status = compare.Process()
+	records, fileMap, status = compare.Process()
+	writer := diff.NewHTMLWriter(c.ctx, c.req.DatasetName)
+	filename, status := writer.WriteReport(c.req.Compare.BaseDataset, records, fileMap)
 	return filename, status
 }
 

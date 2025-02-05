@@ -53,22 +53,22 @@ func DifferenceTest(database1 string, database2 string) int {
 	}
 	var usxMap = make(map[string]string)
 	for _, rec := range records1 {
-		var lf generic.LineRef
+		var lf generic.VerseRef
 		lf.BookId = rec.BookId
 		lf.ChapterNum = rec.ChapterNum
 		lf.VerseStr = rec.VerseStr
-		usxMap[lf.ComposeKey()] = rec.ScriptText
+		usxMap[lf.UniqueKey()] = rec.ScriptText
 	}
 	conn1.Close()
 	conn2 := db.NewDBAdapter(ctx, "./"+database2)
 	plainRec2, _ := conn2.SelectScripts()
 	var diffCount = 0
 	for _, rec := range plainRec2 {
-		var lf generic.LineRef
+		var lf generic.VerseRef
 		lf.BookId = rec.BookId
 		lf.ChapterNum = rec.ChapterNum
 		lf.VerseStr = rec.VerseStr
-		lineRef := lf.ComposeKey()
+		lineRef := lf.UniqueKey()
 		usxTxt, ok := usxMap[lineRef]
 		if !ok {
 			usxTxt = ""
