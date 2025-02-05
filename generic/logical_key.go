@@ -91,6 +91,7 @@ type Publish struct {
 	sequence   int
 }
 
-func (p Publish) IsLogicalKey()      {}
-func (p Publish) ComposeKey() string { return "" }
-func NewPublish(key string) Publish  { return Publish{} }
+func (p Publish) IsLogicalKey()       {}
+func (p Publish) UniqueKey() string   { return "" }
+func (p Publish) Description() string { return "" }
+func NewPublish(key string) Publish   { return Publish{} }
