@@ -1,4 +1,4 @@
-package timestamp
+package gen_yaml
 
 import (
 	"context"

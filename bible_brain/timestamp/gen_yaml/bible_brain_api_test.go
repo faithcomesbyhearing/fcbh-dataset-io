@@ -1,6 +1,8 @@
-package timestamp
+package gen_yaml
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestFetchBibles(t *testing.T) {
 	FetchBibles()
