@@ -159,7 +159,8 @@ func GenerateOneYaml(bible fetch.BibleInfoType, audio fetch.FilesetType, text fe
 	var updateList []string
 	for _, fileset := range bible.DbpProd.Filesets {
 		filesetList = append(filesetList, fileset.Id)
-		if fileset.Type == "audio" || fileset.Type == "audio_drama" {
+		if fileset.Type == "audio" || fileset.Type == "audio_drama" ||
+			fileset.Type == "audio_stream" || fileset.Type == "audio_drama_stream" {
 			switch ReduceSize(fileset.Size) {
 			case "C":
 				updateList = append(updateList, fileset.Id)
