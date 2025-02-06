@@ -1,9 +1,8 @@
-package timestamp
+package update
 
 import (
 	"context"
 	"fmt"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/bible_brain"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,7 +10,7 @@ import (
 
 func TestGetBoundaries(t *testing.T) {
 	ctx := context.Background()
-	conn, status := bible_brain.NewDBPAdapter(ctx)
+	conn, status := NewDBPAdapter(ctx)
 	if status != nil {
 		t.Fatal(status)
 	}

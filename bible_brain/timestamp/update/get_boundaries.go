@@ -1,10 +1,9 @@
-package timestamp
+package update
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/bible_brain"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"math"
@@ -21,7 +20,7 @@ type Frame struct {
 	PacketSize          string `json:"pkt_size"`
 }
 
-func GetBoundaries(ctx context.Context, file string, segments []bible_brain.Segment) ([]bible_brain.Segment, *log.Status) {
+func GetBoundaries(ctx context.Context, file string, segments []Segment) ([]Segment, *log.Status) {
 	if len(segments) == 0 {
 		return segments, log.ErrorNoErr(ctx, 500, "no time segments provided")
 	}

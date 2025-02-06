@@ -1,4 +1,4 @@
-package bible_brain
+package update
 
 type Segment struct {
 	TimestampId int64

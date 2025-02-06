@@ -1,8 +1,7 @@
-package timestamp
+package update
 
 import (
 	"context"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/bible_brain"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
@@ -14,7 +13,7 @@ const (
 type UpdateTimestamps struct {
 	ctx     context.Context
 	conn    db.DBAdapter
-	dbpConn bible_brain.DBPAdapter
+	dbpConn DBPAdapter
 }
 
 func (d *UpdateTimestamps) Process(filesetId string) *log.Status {
