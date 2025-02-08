@@ -239,7 +239,9 @@ func (m *MMSAlign) processPyOutput(file input.InputFile, wordRefs []Word, respon
 				log.ErrorNoErr(m.ctx, 500, "Norm", ref.uroman, "does not match")
 			}
 		}
-		word.FAScore = word.FAScore / float64(len(faWd))
+		if len(faWd) > 0 {
+			word.FAScore = word.FAScore / float64(len(faWd))
+		}
 		word.Chars = faWd
 		words = append(words, word)
 	}

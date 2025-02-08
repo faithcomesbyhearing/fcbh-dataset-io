@@ -10,6 +10,7 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -108,5 +109,31 @@ func TestMMSFA_processPyOutput(t *testing.T) {
 	}
 	if wordRows != 882 {
 		t.Error("wordRows is", wordRows, "it should be 882")
+	}
+}
+
+// TestDebugMMSFA is to be used for debugging
+func _TestDebugMMSAlign(t *testing.T) {
+	directory := filepath.Join(os.Getenv("FCBH_DATASET_DB"), "TestDebugMMSAlign")
+	database := filepath.Join("TestDebugMMSAlign", "N2DWW_WBT")
+	ctx := context.Background()
+	//user := request.GetTestUser()
+	user := ""
+	conn, status := db.NewerDBAdapter(ctx, false, user, database)
+	if status != nil {
+		t.Fatal(status)
+	}
+	fa := NewMMSAlign(ctx, conn, "dww", "")
+	var files []input.InputFile
+	var file input.InputFile
+	file.BookId = "LUK"
+	file.Chapter = 4
+	file.MediaId = "N2DWWWBT"
+	file.Directory = directory
+	file.Filename = "N2_DWW_WBT_048_LUK_004_VOX.mp3"
+	files = append(files, file)
+	status = fa.ProcessFiles(files)
+	if status != nil {
+		t.Fatal(status)
 	}
 }
