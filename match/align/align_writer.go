@@ -125,7 +125,7 @@ func (a *AlignWriter) WriteLine(chars []generic.AlignChar) {
 	a.writeCell(strconv.FormatFloat(logTotal, 'f', 2, 64))
 	//a.writeCell(strconv.FormatInt(int64(asrChars), 10))
 	a.writeCell(a.minSecFormat(firstChar.BeginTS))
-	ref := generic.NewLineRef(firstChar.LineRef)
+	ref := generic.NewVerseRef(firstChar.LineRef)
 	var params []string
 	params = append(params, "'"+ref.BookId+"'")
 	params = append(params, strconv.Itoa(ref.ChapterNum))

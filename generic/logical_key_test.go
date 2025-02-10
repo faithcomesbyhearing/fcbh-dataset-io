@@ -5,8 +5,8 @@ import (
 )
 
 func TestLineRef_Parse(t *testing.T) {
-	var a LineRef
-	a = NewLineRef("NUM 22:12")
+	var a VerseRef
+	a = NewVerseRef("NUM 22:12")
 	if a.BookId != "NUM" {
 		t.Error("BookId should be NUM")
 	}
@@ -19,8 +19,8 @@ func TestLineRef_Parse(t *testing.T) {
 }
 
 func TestLineRef_Compose(t *testing.T) {
-	a := LineRef{BookId: "NUM", ChapterNum: 22, VerseStr: "12"}
-	b := a.ComposeKey()
+	a := VerseRef{BookId: "NUM", ChapterNum: 22, VerseStr: "12"}
+	b := a.UniqueKey()
 	if b != "NUM 22:12" {
 		t.Error("BookId should be NUM 22:12")
 	}

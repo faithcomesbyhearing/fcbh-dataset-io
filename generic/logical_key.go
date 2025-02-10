@@ -56,7 +56,7 @@ func (r VerseRef) Description() string {
 	return result
 }
 
-func NewLineRef(key string) VerseRef {
+func NewVerseRef(key string) VerseRef {
 	var r VerseRef
 	parts := strings.Split(key, ` `)
 	r.BookId = parts[0]
