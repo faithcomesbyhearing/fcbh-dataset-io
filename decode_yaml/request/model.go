@@ -18,6 +18,7 @@ type Request struct {
 	TextEncoding  TextEncoding  `yaml:"text_encoding,omitempty"`
 	AudioProof    AudioProof    `yaml:"audio_proof,omitempty"`
 	Compare       Compare       `yaml:"compare,omitempty"`
+	UpdateDBP     UpdateDBP     `yaml:"update_dbp,omitempty"`
 }
 
 // GetTestUser is used for testing when there is no full request object.
@@ -262,4 +263,8 @@ type DiacriticalChoice struct {
 	NormalizeNFD  bool `yaml:"normalize_nfd,omitempty"`
 	NormalizeNFKC bool `yaml:"normalize_nfkc,omitempty"`
 	NormalizeNFKD bool `yaml:"normalize_nfkd,omitempty"`
+}
+
+type UpdateDBP struct {
+	Timestamps []string `yaml:"timestamps,omitempty"`
 }

@@ -770,7 +770,7 @@ func (d *DBAdapter) SelectScriptIds() ([]Script, *log.Status) {
 
 func (d *DBAdapter) SelectFAScriptTimestamps(bookId string, chapter int) ([]Audio, *log.Status) {
 	var results []Audio
-	var query = `SELECT script_id, audio_file, verse_str, verse_num, 
+	var query = `SELECT script_id, audio_file, verse_str, verse_end, verse_num, 
 			script_text, uroman, script_begin_ts, script_end_ts, fa_score 
 			FROM scripts WHERE book_id = ? AND chapter_num = ?
 			ORDER BY script_id`
@@ -783,7 +783,7 @@ func (d *DBAdapter) SelectFAScriptTimestamps(bookId string, chapter int) ([]Audi
 		var rec Audio
 		rec.BookId = bookId
 		rec.ChapterNum = chapter
-		err = rows.Scan(&rec.ScriptId, &rec.AudioFile, &rec.VerseStr, &rec.VerseSeq,
+		err = rows.Scan(&rec.ScriptId, &rec.AudioFile, &rec.VerseStr, &rec.VerseEnd, &rec.VerseSeq,
 			&rec.Text, &rec.Uroman, &rec.BeginTS, &rec.EndTS, &rec.FAScore)
 		if err != nil {
 			return results, log.Error(d.Ctx, 500, err, "Error during SelectFAScriptTimestamps By Book Chapter.")

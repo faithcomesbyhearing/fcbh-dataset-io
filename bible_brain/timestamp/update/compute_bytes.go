@@ -20,7 +20,7 @@ type Frame struct {
 	PacketSize          string `json:"pkt_size"`
 }
 
-func GetBoundaries(ctx context.Context, file string, segments []Segment) ([]Segment, *log.Status) {
+func ComputeBytes(ctx context.Context, file string, segments []Timestamp) ([]Timestamp, *log.Status) {
 	if len(segments) == 0 {
 		return segments, log.ErrorNoErr(ctx, 500, "no time segments provided")
 	}
@@ -45,7 +45,7 @@ func GetBoundaries(ctx context.Context, file string, segments []Segment) ([]Segm
 	var i int
 	var time, prevTime float64
 	var pos, prevPos int64
-	bound := segments[i].Timestamp
+	bound := segments[i].BeginTS
 	for _, frame := range response.Frames {
 		time, err = strconv.ParseFloat(frame.BestEffortTimestamp, 64)
 		if err != nil {
@@ -67,7 +67,7 @@ func GetBoundaries(ctx context.Context, file string, segments []Segment) ([]Segm
 			prevPos = pos
 			if i+1 != len(segments) {
 				i++
-				bound = segments[i].Timestamp
+				bound = segments[i].BeginTS
 			} else {
 				bound = 9999999.9 // search to end of pipe
 			}
