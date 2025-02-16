@@ -95,7 +95,7 @@ func TestUpdateTimestamps(t *testing.T) {
 	if status != nil {
 		t.Fatal(status)
 	}
-	timestamps := FauxTimesheetData(dbpTimestamps)
+	timestamps := fauxTimesheetData(dbpTimestamps)
 	// Remove some DBP Records
 	var dbp2Timestamps []Timestamp
 	for i := 0; i < len(dbpTimestamps); i += 2 {
@@ -107,68 +107,59 @@ func TestUpdateTimestamps(t *testing.T) {
 		t.Fatal(status)
 	}
 	if rowCount != 12 {
-		t.Fatal("rowCount should be 12, but is", rowCount)
+		t.Error("rowCount should be 12, but is", rowCount)
+	}
+	timestamps, rowCount, status = conn.InsertTimestamps(fileId, timestamps)
+	if status != nil {
+		t.Fatal(status)
+	}
+	if rowCount != 12 {
+		t.Error("rowCount should be 12, but is", rowCount)
+	}
+	for _, ts := range timestamps {
+		fmt.Println(ts)
 	}
 }
 
-/*
-func TestInsertTimestamps(t *testing.T) {
-	bookId := "MAT"
-	chapter := 1
-	ctx := context.Background()
-	var datasetConn UpdateTimestamps
-	var status *log.Status
-	datasetConn.conn, status = db.NewerDBAdapter(ctx, true, user, project)
-	if status != nil {
-		t.Fatal(status)
-	}
+func TestUpdateSegments(t *testing.T) {
 	var timestamps []Timestamp
-	timestamps, status = datasetConn.SelectTimestamps(bookId, chapter)
-	// select timestamps from
+	timestampIds := []int64{}
+	for i, id := range timestampIds {
+		var ts Timestamp
+		ts.TimestampId = id
+		ts.Duration = float64(i + 10)
+		ts.Position = int64(i * 10)
+		ts.NumBytes = int64(ts.Duration) * 10
+		timestamps = append(timestamps, ts)
+	}
 	conn := getDBPConnection(t)
 	defer conn.Close()
+	rowCount, status := conn.UpdateSegments(timestamps)
+	if status != nil {
+		t.Fatal(status)
+	}
+	if rowCount != len(timestamps) {
+		t.Error("rowCount should be len", len(timestamps))
+	}
 
-	timestamps, status := conn.SelectTimestamps("ENGWEBN2DA", "MAT", 1)
-	if status != nil {
-		t.Fatal(status)
-	}
-	for i := range timestamps {
-		timestamps[i].BeginTS = timestamps[i].BeginTS * 2.0
-		timestamps[i].EndTS = timestamps[i].EndTS * 2.0
-	}
-	times, _, status := conn.InsertTimestamps(timestamps)
-	if status != nil {
-		t.Fatal(status)
-	}
-	if len(times) != len(timestamps) {
-		t.Error("len times and timestamps not equal")
-	}
-	for i := range times {
-		if times[i].BeginTS != timestamps[i].BeginTS*2.0 {
-			t.Error("Update was to double times")
-		}
-	}
 }
 
 func TestUpdateFilesetTimingEstTag(t *testing.T) {
 	conn := getDBPConnection(t)
 	defer conn.Close()
-	hashId, status := conn.SelectHashId("ENGWEBN2DA")
+	hashId, status := conn.SelectHashId("ENGKJVN2DA")
 	if status != nil {
 		t.Fatal(status)
 	}
-	status = conn.UpdateFilesetTimingEstTag(hashId, "Bob") //mmsAlignTimingEstErr)
+	rowCount, status := conn.UpdateFilesetTimingEstTag(hashId, mmsAlignTimingEstErr)
 	if status != nil {
 		t.Fatal(status)
+	}
+	if rowCount != 1 {
 	}
 }
-*/
-//InsertBandwidth
-//InsertSegments
 
-//func TestDeleteTimestamps()
-
-func FauxTimesheetData(timestamps []Timestamp) []Timestamp {
+func fauxTimesheetData(timestamps []Timestamp) []Timestamp {
 	var priorTS = 0.0
 	var lastVerse string
 	var lastSeq int

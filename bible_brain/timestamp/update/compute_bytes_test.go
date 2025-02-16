@@ -1,27 +1,38 @@
 package update
 
-/*
-func TestGetBoundaries(t *testing.T) {
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestComputeBytes(t *testing.T) {
 	ctx := context.Background()
-	conn, status := NewDBPAdapter(ctx)
+	conn := getDBPConnection(t)
+	defer conn.Close()
+	hashId, status := conn.SelectHashId("ENGKJVN2DA")
 	if status != nil {
 		t.Fatal(status)
 	}
-	timestamps, status := conn.SelectTimestamps("ENGWEBN2DA", "MRK", 1)
+	fileId, _, status := conn.SelectFileId(hashId, "MAT", 1)
 	if status != nil {
 		t.Fatal(status)
 	}
-	directory := filepath.Join(os.Getenv("FCBH_DATASET_FILES"), "ENGWEB", "ENGWEBN2DA")
-	filename := filepath.Join(directory, "B02___01_Mark________ENGWEBN2DA.mp3")
+	timestamps, status := conn.SelectTimestamps(fileId)
+	if status != nil {
+		t.Fatal(status)
+	}
+	directory := filepath.Join(os.Getenv("FCBH_DATASET_FILES"), "ENGKJV", "ENGKJVN2DA")
+	filename := filepath.Join(directory, "B01___01_Matthew_____ENGKJVN2DA.mp3")
 	fmt.Println(timestamps[0])
-	var segments []Segment
-	segments, status = GetBoundaries(ctx, filename, segments)
+	timestamps, status = ComputeBytes(ctx, filename, timestamps)
 	if status != nil {
 		t.Fatal(status)
 	}
-	for _, seg := range segments {
+	for _, seg := range timestamps {
 		fmt.Println(seg)
 	}
-	fmt.Println(len(segments))
+	fmt.Println(len(timestamps))
 }
-*/

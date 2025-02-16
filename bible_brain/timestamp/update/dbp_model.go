@@ -22,16 +22,6 @@ type Timestamp struct {
 //  `timestamp_end` float DEFAULT NULL,
 //  `verse_sequence` tinyint unsigned NOT NULL,
 
-type Segment struct {
-	TimestampId int64
-	BandwidthId int64
-	VerseStr    string // this is not returned by select, or entered into segments
-	Timestamp   float64
-	Duration    float64
-	Position    int64
-	NumBytes    int64
-}
-
 // `id` int unsigned NOT NULL AUTO_INCREMENT,
 // `stream_bandwidth_id` int unsigned NOT NULL,
 // `runtime` double(8,2) NOT NULL,

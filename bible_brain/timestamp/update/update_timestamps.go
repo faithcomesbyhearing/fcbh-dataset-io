@@ -57,7 +57,7 @@ func (d *UpdateTimestamps) UpdateFileset(filesetId string, directory string) *lo
 		lastChapter, _ := db.BookChapterMap[book]
 		for chap := 1; chap <= lastChapter; chap++ {
 			var timestamps []Timestamp
-			timestamps, status = d.SelectTimestamps(book, chap)
+			timestamps, status = d.SelectFATimestamps(book, chap)
 			if len(timestamps) > 0 {
 				var bibleFileId int64
 				var audioFile string
@@ -85,7 +85,7 @@ func (d *UpdateTimestamps) UpdateFileset(filesetId string, directory string) *lo
 					if status != nil {
 						return status
 					}
-					status = d.dbpConn.UpdateSegments(timestamps)
+					_, status = d.dbpConn.UpdateSegments(timestamps)
 					if status != nil {
 						return status
 					}
@@ -93,14 +93,14 @@ func (d *UpdateTimestamps) UpdateFileset(filesetId string, directory string) *lo
 			}
 		}
 	}
-	status = d.dbpConn.UpdateFilesetTimingEstTag(hashId, mmsAlignTimingEstErr)
+	_, status = d.dbpConn.UpdateFilesetTimingEstTag(hashId, mmsAlignTimingEstErr)
 	if status != nil {
 		return status
 	}
 	return nil
 }
 
-func (d *UpdateTimestamps) SelectTimestamps(bookId string, chapter int) ([]Timestamp, *log.Status) {
+func (d *UpdateTimestamps) SelectFATimestamps(bookId string, chapter int) ([]Timestamp, *log.Status) {
 	var result []Timestamp
 	datasetTS, status := d.conn.SelectFAScriptTimestamps(bookId, chapter)
 	if status != nil {

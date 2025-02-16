@@ -120,9 +120,9 @@ func (d *DBPAdapter) SelectTimestamps(fileId int64) ([]Timestamp, *log.Status) {
 	return result, nil
 }
 
-func (d *DBPAdapter) UpdateTimestamps(timestamps []Timestamp) (int64, *log.Status) {
-	var rowCount int64
-	var mustUpdate int64
+func (d *DBPAdapter) UpdateTimestamps(timestamps []Timestamp) (int, *log.Status) {
+	var rowCount int
+	var mustUpdate int
 	for _, rec := range timestamps {
 		if rec.TimestampId > 0 {
 			mustUpdate++
@@ -141,17 +141,18 @@ func (d *DBPAdapter) UpdateTimestamps(timestamps []Timestamp) (int64, *log.Statu
 		}
 		defer stmt.Close()
 		var result sql.Result
+		var count int64
 		for _, rec := range timestamps {
 			if rec.TimestampId > 0 {
 				result, err = stmt.Exec(rec.BeginTS, rec.VerseEnd, rec.VerseSeq, rec.EndTS, rec.TimestampId)
 				if err != nil {
 					return rowCount, log.Error(d.ctx, 500, err, query)
 				}
-				count, err := result.RowsAffected()
+				count, err = result.RowsAffected()
 				if err != nil {
 					return rowCount, log.Error(d.ctx, 500, err, query)
 				}
-				rowCount += count
+				rowCount += int(count)
 			}
 		}
 		err = tx.Commit()
@@ -166,9 +167,9 @@ func (d *DBPAdapter) UpdateTimestamps(timestamps []Timestamp) (int64, *log.Statu
 	return rowCount, nil
 }
 
-func (d *DBPAdapter) InsertTimestamps(bibleFileId int64, timestamps []Timestamp) ([]Timestamp, int64, *log.Status) {
-	var rowCount int64
-	var mustInsert int64
+func (d *DBPAdapter) InsertTimestamps(bibleFileId int64, timestamps []Timestamp) ([]Timestamp, int, *log.Status) {
+	var rowCount int
+	var mustInsert int
 	for _, rec := range timestamps {
 		if rec.TimestampId == 0 {
 			mustInsert++
@@ -187,6 +188,7 @@ func (d *DBPAdapter) InsertTimestamps(bibleFileId int64, timestamps []Timestamp)
 		}
 		defer stmt.Close()
 		var result sql.Result
+		var count int64
 		for i, rec := range timestamps {
 			if rec.TimestampId == 0 {
 				result, err = stmt.Exec(bibleFileId, rec.VerseStr, rec.VerseEnd, rec.BeginTS, rec.EndTS, rec.VerseSeq)
@@ -197,11 +199,11 @@ func (d *DBPAdapter) InsertTimestamps(bibleFileId int64, timestamps []Timestamp)
 				if err != nil {
 					return timestamps, rowCount, log.Error(d.ctx, 500, err, `Error getting lastInsertId, while inserting Timestamps.`)
 				}
-				count, err := result.RowsAffected()
+				count, err = result.RowsAffected()
 				if err != nil {
 					return timestamps, rowCount, log.Error(d.ctx, 500, err, query)
 				}
-				rowCount += count
+				rowCount += int(count)
 			}
 		}
 		err = tx.Commit()
@@ -216,62 +218,80 @@ func (d *DBPAdapter) InsertTimestamps(bibleFileId int64, timestamps []Timestamp)
 	return timestamps, rowCount, nil
 }
 
-func (d *DBPAdapter) UpdateSegments(segments []Timestamp) *log.Status {
-	var rowCount int64
+func (d *DBPAdapter) UpdateSegments(segments []Timestamp) (int, *log.Status) {
+	var rowCount int
 	query := `UPDATE bible_file_stream_bytes SET runtime = ?, offset = ?, bytes = ?
 		WHERE timestamp_id = ?`
 	tx, err := d.conn.Begin()
 	if err != nil {
-		return log.Error(d.ctx, 500, err, query)
+		return rowCount, log.Error(d.ctx, 500, err, query)
 	}
 	stmt, err := tx.Prepare(query)
 	if err != nil {
-		return log.Error(d.ctx, 500, err, query)
+		return rowCount, log.Error(d.ctx, 500, err, query)
 	}
 	defer stmt.Close()
 	var result sql.Result
+	var count int64
 	for _, rec := range segments {
 		result, err = stmt.Exec(rec.Duration, rec.Position, rec.NumBytes, rec.TimestampId)
 		if err != nil {
-			return log.Error(d.ctx, 500, err, `Error while inserting dbp timestamp.`)
+			return rowCount, log.Error(d.ctx, 500, err, `Error while inserting dbp timestamp.`)
 		}
-		count, err := result.RowsAffected()
+		count, err = result.RowsAffected()
 		if err != nil {
-			return log.Error(d.ctx, 500, err, query)
+			return rowCount, log.Error(d.ctx, 500, err, query)
 		}
-		rowCount += count
+		rowCount += int(count)
 	}
 	err = tx.Commit()
 	if err != nil {
-		return log.Error(d.ctx, 500, err, query)
+		return rowCount, log.Error(d.ctx, 500, err, query)
 	}
-	if rowCount != int64(len(segments)) {
-		return log.ErrorNoErr(d.ctx, 500,
+	if rowCount != len(segments) {
+		return rowCount, log.ErrorNoErr(d.ctx, 500,
 			"Row count expected:", len(segments), "Actual Count:", rowCount, query)
 	}
-	return nil
+	return rowCount, nil
 }
 
-func (d *DBPAdapter) UpdateFilesetTimingEstTag(hashId string, timingEstErr string) *log.Status {
+func (d *DBPAdapter) UpdateFilesetTimingEstTag(hashId string, timingEstErr string) (int, *log.Status) {
+	var rowCount int
 	query := `SELECT description FROM bible_fileset_tags WHERE hash_id = ? AND name = 'timing_est_err'`
 	var currEstErr string
 	err := d.conn.QueryRow(query, hashId).Scan(&currEstErr)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return log.Error(d.ctx, 500, err, query)
+		return 0, log.Error(d.ctx, 500, err, query)
 	}
+	var result sql.Result
+	var count int64
 	if errors.Is(err, sql.ErrNoRows) {
 		query = `INSERT INTO bible_fileset_tags (hash_id, name, description, admin_only, iso, language_id)
 		VALUES (?, 'timing_est_err', ?, 0, 'eng', 6414)`
-		_, err = d.conn.Exec(query, hashId, timingEstErr)
+		result, err = d.conn.Exec(query, hashId, timingEstErr)
 		if err != nil {
-			return log.Error(d.ctx, 500, err, query)
+			return 0, log.Error(d.ctx, 500, err, query)
 		}
+		count, err = result.RowsAffected()
+		if err != nil {
+			return rowCount, log.Error(d.ctx, 500, err, query)
+		}
+		rowCount = int(count)
 	} else if currEstErr != timingEstErr {
 		query = `UPDATE bible_fileset_tags SET description = ? WHERE hash_id = ? AND name = 'timing_est_err'`
-		_, err = d.conn.Exec(query, hashId, timingEstErr)
+		result, err = d.conn.Exec(query, hashId, timingEstErr)
 		if err != nil {
-			return log.Error(d.ctx, 500, err, query)
+			return rowCount, log.Error(d.ctx, 500, err, query)
+		}
+		count, err = result.RowsAffected()
+		if err != nil {
+			return rowCount, log.Error(d.ctx, 500, err, query)
+		}
+		rowCount += int(count)
+		if rowCount != 1 {
+			return rowCount, log.ErrorNoErr(d.ctx, 500,
+				"Row count expected:", 1, "Actual Count:", rowCount, query)
 		}
 	}
-	return nil
+	return rowCount, nil
 }
