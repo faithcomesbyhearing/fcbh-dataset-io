@@ -413,10 +413,10 @@ func (c *Compare) diff(baseVS []Verse, compVS []Verse) {
 		if len(baseText) > 0 || len(compText) > 0 {
 			baseText = strings.TrimSpace(baseText)
 			compText = strings.TrimSpace(compText)
-			diffs := c.diffMatch.DiffMain(compText, baseText, false)
+			diffs := c.diffMatch.DiffMain(baseText, compText, false)
 			par.Diffs = c.diffMatch.DiffCleanupMerge(diffs) // required for measure to compute largest
 			if !c.isMatch(par.Diffs) {
-				par.HTML = c.diffMatch.DiffPrettyHtml(diffs)
+				par.HTML = c.diffMatch.DiffPrettyHtml(par.Diffs)
 				c.results = append(c.results, par)
 			}
 		}
