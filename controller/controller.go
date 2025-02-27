@@ -461,7 +461,7 @@ func (c *Controller) matchText() (string, *log.Status) {
 	var status *log.Status
 	compare := diff.NewCompare(c.ctx, c.req.Username, c.req.Compare.BaseDataset, c.database, c.ident.LanguageISO, c.req.Testament, c.req.Compare.CompareSettings)
 	records, fileMap, status = compare.Process()
-	writer := diff.NewHTMLWriter(c.ctx, c.req.DatasetName)
+	writer := diff.NewHTMLWriter(c.ctx, c.database.Project)
 	filename, status := writer.WriteReport(c.req.Compare.BaseDataset, records, fileMap)
 	return filename, status
 }
