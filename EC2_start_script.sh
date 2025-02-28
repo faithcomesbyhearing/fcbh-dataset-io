@@ -1,7 +1,7 @@
 #!/bin/bash -v
 
 runuser --login ec2-user --shell=/bin/bash << 'EOF'
-#source ~/.bashrc
+source ~/.bashrc
 env
 cd ~/go/src/fcbh-dataset-io
 git pull
