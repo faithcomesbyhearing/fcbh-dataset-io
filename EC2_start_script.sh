@@ -1,4 +1,4 @@
-#!/bin/bash -iv
+#!/bin/bash -v
 
 runuser --login ec2-user --shell=/bin/bash << 'EOF'
 source ~/.bashrc
