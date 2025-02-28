@@ -246,7 +246,8 @@ func ParseVOXAudioFilename(ctx context.Context, file *InputFile) *log.Status {
 	} else if parts[0][0] == 'O' {
 		file.Testament = `OT`
 	} else if parts[0][0] == 'P' {
-		file.Testament = `PT` // what should this really be
+		//file.Testament = `PT` // what should this really be
+		file.Testament = db.Testament(file.BookId)
 	} else {
 		return log.ErrorNoErr(ctx, 500, "Unknown media type", parts[0])
 	}
