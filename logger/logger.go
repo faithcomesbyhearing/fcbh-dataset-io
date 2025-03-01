@@ -194,7 +194,7 @@ func dumpLines() string {
 	var ok = true
 	for i := 2; ok; i++ {
 		_, file, line, ok = runtime.Caller(i)
-		pos := strings.Index(file, `/dataset`)
+		pos := strings.Index(file, `fcbh-dataset-io`)
 		if pos >= 0 {
 			results = append(results, file[pos:]+":"+strconv.Itoa(line))
 		}

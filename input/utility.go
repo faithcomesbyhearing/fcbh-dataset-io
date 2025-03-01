@@ -241,16 +241,6 @@ func ParseVOXAudioFilename(ctx context.Context, file *InputFile) *log.Status {
 	if len(parts) != 7 {
 		return log.ErrorNoErr(ctx, 500, "A VOX. filename is expected to have 7 parts", parts)
 	}
-	if parts[0][0] == 'N' {
-		file.Testament = `NT`
-	} else if parts[0][0] == 'O' {
-		file.Testament = `OT`
-	} else if parts[0][0] == 'P' {
-		//file.Testament = `PT` // what should this really be
-		file.Testament = db.Testament(file.BookId)
-	} else {
-		return log.ErrorNoErr(ctx, 500, "Unknown media type", parts[0])
-	}
 	drama := parts[0]
 	langCode := parts[1]
 	versionCode := parts[2]
@@ -262,6 +252,15 @@ func ParseVOXAudioFilename(ctx context.Context, file *InputFile) *log.Status {
 	file.Chapter, err = strconv.Atoi(parts[5])
 	if err != nil {
 		return log.Error(ctx, 500, err, `Error convert chapter to int`, parts[5])
+	}
+	if parts[0][0] == 'N' {
+		file.Testament = `NT`
+	} else if parts[0][0] == 'O' {
+		file.Testament = `OT`
+	} else if parts[0][0] == 'P' {
+		file.Testament = db.Testament(file.BookId)
+	} else {
+		return log.ErrorNoErr(ctx, 500, "Unknown media type", parts[0])
 	}
 	file.MediaId = langCode + versionCode + drama + "DA"
 	return status
