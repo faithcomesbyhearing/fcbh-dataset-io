@@ -24,7 +24,7 @@ testament: # Choose one or both
   ot_books: [] # To process part of the OT, list specific USFM OT book codes, e.g. [GEN,EXO,LEV,NUM]
 # Default: nt
 
-database:
+database: # Use to access database outside server
   aws_s3: # e.g. s3://{bucket}/path/database_name.db (no wild care allowed here)
 
 audio_data: # Choose one of the following
