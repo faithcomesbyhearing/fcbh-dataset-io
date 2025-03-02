@@ -9,6 +9,11 @@ func (r *RequestDecoder) Prereq(req *request.Request) {
 }
 
 func (r *RequestDecoder) Depend(req request.Request) {
+	if req.Database.AWSS3 != "" {
+		if req.IsNew {
+			r.errors = append(r.errors, `When database.aws_s3 is set, is_new must be false`)
+		}
+	}
 	if !req.Timestamps.NoTimestamps {
 		if req.AudioData.NoAudio {
 			r.errors = append(r.errors, `Timestamps are requested, but there is no audio`)

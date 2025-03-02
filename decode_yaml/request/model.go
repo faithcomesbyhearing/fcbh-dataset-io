@@ -9,6 +9,7 @@ type Request struct {
 	AltLanguage   string        `yaml:"alt_language,omitempty"`
 	Output        Output        `yaml:"output,omitempty"`
 	Testament     Testament     `yaml:"testament,omitempty"`
+	Database      Database      `yaml:"database,omitempty"`
 	AudioData     AudioData     `yaml:"audio_data,omitempty"`
 	TextData      TextData      `yaml:"text_data,omitempty"`
 	Timestamps    Timestamps    `yaml:"timestamps,omitempty"`
@@ -75,6 +76,10 @@ func (t *Testament) HasNT(bookId string) bool {
 	}
 	_, ok := t.ntMap[bookId]
 	return ok
+}
+
+type Database struct {
+	AWSS3 string `yaml:"aws_s3,omitempty"`
 }
 
 type AudioData struct {

@@ -96,6 +96,19 @@ func (c *Controller) processSteps() *log.Status {
 	}
 	c.ctx = context.WithValue(c.ctx, `request`, string(c.yamlRequest))
 	// Open Database
+	if c.req.Database.AWSS3 != "" {
+		// Create an empty database in order to get the correct path.
+		c.database, status = db.NewerDBAdapter(c.ctx, true, c.req.Username, c.req.DatasetName)
+		if status != nil {
+			return status
+		}
+		c.database.Close()
+		// Import an existing database from S3.
+		status = input.DownloadFile(c.ctx, c.req.Database.AWSS3, c.database.DatabasePath)
+		if status != nil {
+			return status
+		}
+	}
 	c.database, status = db.NewerDBAdapter(c.ctx, c.req.IsNew, c.req.Username, c.req.DatasetName)
 	if status != nil {
 		return status

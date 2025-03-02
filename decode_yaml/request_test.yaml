@@ -24,6 +24,9 @@ testament: # Choose one or both
   ot_books: [] # To process part of the OT, list specific USFM OT book codes, e.g. [GEN,EXO,LEV,NUM]
 # Default: nt
 
+database:
+  aws_s3: # e.g. s3://{bucket}/path/database_name.db (no wild care allowed here)
+
 audio_data: # Choose one of the following
   bible_brain: # If Bible Brain put Yes by the desired type
     mp3_64: yes # Mark Yes for 64 bit MP3
