@@ -85,7 +85,7 @@ func SetMediaType(ctx context.Context, file *InputFile) *log.Status {
 		file.MediaType = request.TextUSXEdit
 	} else if (fN[0] == 'A' || fN[0] == 'B') && (fN[1] >= '0' && fN[1] <= '9') {
 		file.MediaType = request.Audio
-	} else if strings.HasSuffix(fN, `ST.xlsx`) || strings.HasSuffix(fN, `.xlsm`) {
+	} else if strings.HasSuffix(fN, `.xlsx`) || strings.HasSuffix(fN, `.xlsm`) {
 		file.MediaType = request.TextScript
 	} else if strings.HasSuffix(fN, `.csv`) {
 		file.MediaType = request.TextCSV

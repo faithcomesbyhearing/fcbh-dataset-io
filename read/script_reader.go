@@ -77,14 +77,19 @@ func (r ScriptReader) Read(filePath string) *log.Status {
 			if err != nil {
 				return log.Error(r.ctx, 500, err, "Error: chapter num is not numeric", row[col.ChapterCol])
 			}
-			if col.VerseCol == 0 || row[col.VerseCol] == `<<` {
+			if col.VerseCol < 0 || row[col.VerseCol] == `<<` {
 				rec.VerseStr = `0`
 			} else {
 				rec.VerseStr = row[col.VerseCol]
 			}
 			rec.VerseStr = r.uniqueVerse(uniqueRefs, rec)
 			rec.VerseNum = safe.SafeVerseNum(rec.VerseStr)
-			rec.Person = row[col.CharacterCol]
+			if col.CharacterCol >= 0 {
+				rec.Person = row[col.CharacterCol]
+			}
+			if col.ActorCol >= 0 {
+				rec.Actor = row[col.ActorCol]
+			}
 			rec.ScriptNum = row[col.LineCol]
 			text := row[col.TextCol]
 			//text = strings.Replace(text,'_x000D_','' ) // remove excel CR
@@ -103,12 +108,20 @@ type ColIndex struct {
 	ChapterCol   int
 	VerseCol     int
 	CharacterCol int
+	ActorCol     int
 	LineCol      int
 	TextCol      int
 }
 
 func (r ScriptReader) FindColIndexes(heading []string) (ColIndex, *log.Status) {
 	var c ColIndex
+	c.BookCol = -1
+	c.ChapterCol = -1
+	c.VerseCol = -1
+	c.CharacterCol = -1
+	c.ActorCol = -1
+	c.LineCol = -1
+	c.TextCol = -1
 	for col, head := range heading {
 		switch strings.ToLower(head) {
 		case `book`, `bk`:
@@ -117,30 +130,35 @@ func (r ScriptReader) FindColIndexes(heading []string) (ColIndex, *log.Status) {
 			c.ChapterCol = col
 		case `verse`, `verse_number`:
 			c.VerseCol = col
-		case `line_number`, `line id:`, `line`:
+		case `line #`, `line_number`, `line id:`, `line`:
 			c.LineCol = col
-		case `characters1`, `character`:
+		case `character`, `characters1`:
 			c.CharacterCol = col
-		case `verse_content1`, `target language`:
+		case `reader`:
+			c.ActorCol = col
+		case `target language`, `verse_content1`:
 			c.TextCol = col
 		}
 	}
 	var msgs []string
-	if c.BookCol == 0 {
+	if c.BookCol < 0 {
 		msgs = append(msgs, `Book column was not found`)
 	}
-	if c.ChapterCol == 0 {
+	if c.ChapterCol < 0 {
 		msgs = append(msgs, `Chapter column was not found`)
 	}
-	if c.LineCol == 0 {
+	if c.VerseCol < 0 {
+		msgs = append(msgs, `Verse column was not found`)
+	}
+	if c.LineCol < 0 {
 		msgs = append(msgs, `Line column was not found`)
 	}
-	if c.TextCol == 0 {
+	if c.TextCol < 0 {
 		msgs = append(msgs, `Text column was not found`)
 	}
 	var status *log.Status
 	if len(msgs) > 0 {
-		status = log.ErrorNoErr(r.ctx, 500, `Columns missing in script`, strings.Join(msgs, `; `))
+		status = log.ErrorNoErr(r.ctx, 500, `Columns missing in script:`, strings.Join(msgs, `; `))
 	}
 	return c, status
 }
