@@ -7,14 +7,14 @@ import (
 )
 
 type Pair struct {
-	Ref     generic.VerseRef
-	BeginTS float64
-	EndTS   float64
-	Base    PairText
-	Comp    PairText
-	Diffs   []diffmatchpatch.Diff
-	HTML    string
-	//reference generic.LineRef
+	Ref       generic.VerseRef
+	ScriptNum string
+	BeginTS   float64
+	EndTS     float64
+	Base      PairText
+	Comp      PairText
+	Diffs     []diffmatchpatch.Diff
+	HTML      string
 }
 
 type PairText struct {
@@ -31,6 +31,7 @@ func NewPair(base *Verse, comp *Verse) Pair {
 		p.Ref.ChapterEnd = base.chapterEnd
 		p.Ref.VerseStr = base.verse
 		p.Ref.VerseEnd = base.verseEnd
+		p.ScriptNum = base.scriptNum
 		p.BeginTS = base.beginTS
 		p.EndTS = base.endTS
 		p.Base.ScriptId = base.scriptId
@@ -44,6 +45,7 @@ func NewPair(base *Verse, comp *Verse) Pair {
 			p.Ref.ChapterEnd = comp.chapterEnd
 			p.Ref.VerseStr = comp.verse
 			p.Ref.VerseEnd = comp.verseEnd
+			p.ScriptNum = comp.scriptNum
 			if comp.beginTS != 0.0 {
 				p.BeginTS = comp.beginTS
 			}

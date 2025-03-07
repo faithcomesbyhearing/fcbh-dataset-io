@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// CompareChapters deprecated 3/6/2025. It was determined to not be necessary
 func (c *Compare) CompareChapters() ([]Pair, string, *log.Status) {
 	var fileMap string
 	var status *log.Status
@@ -31,7 +32,7 @@ func (c *Compare) CompareChapters() ([]Pair, string, *log.Status) {
 		}
 		pair.Comp.Text = c.cleanup(text)
 		pair.Comp.ScriptId = scp.ScriptId
-		c.chapterDiff(pair)
+		c.diffPair(pair)
 	}
 	fileMap, status = c.generateBookChapterFilenameMap()
 	c.baseDb.Close()
@@ -53,14 +54,4 @@ func (c *Compare) concatText(conn db.DBAdapter, bookId string, chapter int) (str
 		priorText = scp.ScriptText
 	}
 	return strings.Join(results, ""), status
-}
-
-func (c *Compare) chapterDiff(chapter Pair) {
-	diffs := c.diffMatch.DiffMain(chapter.Comp.Uroman, chapter.Base.Uroman, false)
-	diffs = c.diffMatch.DiffCleanupMerge(diffs)
-	if !c.isMatch(diffs) {
-		chapter.Diffs = diffs
-		chapter.HTML = c.diffMatch.DiffPrettyHtml(diffs)
-		c.results = append(c.results, chapter)
-	}
 }

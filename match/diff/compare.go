@@ -40,6 +40,7 @@ type Verse struct {
 	chapterEnd int
 	verse      string
 	verseEnd   string
+	scriptNum  string
 	text       string
 	uRoman     string
 	beginTS    float64
@@ -52,7 +53,7 @@ func NewCompare(ctx context.Context, user string, baseDSet string, db db.DBAdapt
 	c.ctx = ctx
 	c.user = user
 	c.baseDataset = baseDSet
-	c.dataset = strings.Split(db.Database, `.`)[0]
+	c.dataset = db.Project
 	c.database = db
 	c.lang = lang
 	c.testament = testament
@@ -76,79 +77,43 @@ func (c *Compare) Process() ([]Pair, string, *log.Status) {
 	if status != nil {
 		return records, fileMap, status
 	}
-	var compHasVerse, compHasLine, baseHasVerse, baseHasLine bool
-	compHasVerse, compHasLine, c.compIdent, status = c.hasVerseLine(c.database)
-	if status != nil {
-		return records, fileMap, status
-	}
-	baseHasVerse, baseHasLine, c.baseIdent, status = c.hasVerseLine(c.baseDb)
-	if status != nil {
-		return records, fileMap, status
-	}
-	if compHasVerse && baseHasVerse {
-		records, fileMap, status = c.CompareVerses()
-	} else if compHasLine && baseHasLine {
-		records, fileMap, status = c.CompareScriptLines()
-	} else {
-		records, fileMap, status = c.CompareChapters()
-	}
+	records, fileMap, status = c.CompareVerses()
 	return records, fileMap, status
 }
 
-func (c *Compare) hasVerseLine(conn db.DBAdapter) (bool, bool, db.Ident, *log.Status) {
-	var hasVerse bool
-	var hasLine bool
-	var ident db.Ident
-	var status *log.Status
-	ident, status = conn.SelectIdent()
-	if status != nil {
-		return hasVerse, hasLine, ident, status
-	}
-	verseColLen, status := conn.SelectVerseLength()
-	if status != nil {
-		return hasVerse, hasLine, ident, status
-	}
-	hasVerse = verseColLen > 0 || ident.TextSource == request.TextScript
-	lineColLen, status := conn.SelectScriptLineLength()
-	if status != nil {
-		return hasVerse, hasLine, ident, status
-	}
-	hasLine = lineColLen > 0 && (ident.TextSource == request.TextScript || ident.TextSource == request.TextCSV)
-	return hasVerse, hasLine, ident, status
-}
-
 func (c *Compare) CompareVerses() ([]Pair, string, *log.Status) {
+	var filenameMap string
 	var status *log.Status
+	var ident db.Ident
+	ident, status = c.database.SelectIdent() // TextSource should be a parameter
+	if status != nil {
+		return c.results, filenameMap, status
+	}
 	for _, bookId := range db.RequestedBooks(c.testament) {
 		var chapInBook, _ = db.BookChapterMap[bookId]
 		var chapter = 1
 		for chapter <= chapInBook {
-			var baseLines, compLinees []Verse
-			baseLines, status = c.process(c.baseDb, bookId, chapter)
+			var baseLines, compLines []Verse
+			baseLines, status = c.process(c.baseDb, bookId, chapter, ident.TextSource)
 			if status != nil {
 				return c.results, "", status
 			}
-			compLinees, status = c.process(c.database, bookId, chapter)
+			compLines, status = c.process(c.database, bookId, chapter, ident.TextSource)
 			if status != nil {
 				return c.results, "", status
 			}
-			c.diff(baseLines, compLinees)
+			c.diff(baseLines, compLines)
 			chapter++
 		}
 	}
-	filenameMap, status := c.generateBookChapterFilenameMap()
+	filenameMap, status = c.generateBookChapterFilenameMap()
 	c.baseDb.Close()
 	return c.results, filenameMap, status
 }
 
-func (c *Compare) process(conn db.DBAdapter, bookId string, chapterNum int) ([]Verse, *log.Status) {
+func (c *Compare) process(conn db.DBAdapter, bookId string, chapterNum int, mediaType request.MediaType) ([]Verse, *log.Status) {
 	var lines []Verse
 	var status *log.Status
-	var ident db.Ident
-	ident, status = conn.SelectIdent() // TextSource should be a parameter
-	if status != nil {
-		return lines, status
-	}
 	scripts, status := conn.SelectScriptsByChapter(bookId, chapterNum)
 	if status != nil {
 		return lines, status
@@ -164,19 +129,23 @@ func (c *Compare) process(conn db.DBAdapter, bookId string, chapterNum int) ([]V
 		vs.chapterEnd = script.ChapterEnd
 		vs.verse = script.VerseStr
 		vs.verseEnd = script.VerseEnd
+		if mediaType == request.TextScript {
+			vs.scriptNum = script.ScriptNum
+		}
 		vs.text = script.ScriptText
 		vs.uRoman = script.URoman
 		vs.beginTS = script.ScriptBeginTS
 		vs.endTS = script.ScriptEndTS
 		lines = append(lines, vs)
 	}
-	if ident.TextSource == request.TextScript {
-		lines = c.consolidateScript(lines)
-	}
-	lines = c.cleanUpVerses(lines)
+	//if ident.TextSource == request.TextScript {
+	//	lines = c.consolidateScript(lines)
+	//}
+	lines = c.cleanUpVerses(lines, mediaType)
 	return lines, status
 }
 
+// consolidateScript breaks a script into verses, it is needed for compare of script to USX or plain text
 func (c *Compare) consolidateScript(verses []Verse) []Verse {
 	const (
 		begin = iota + 1
@@ -340,10 +309,13 @@ func (c *Compare) cleanUpSetup() *strings.Replacer {
 	return replacer
 }
 
-func (c *Compare) cleanUpVerses(verses []Verse) []Verse {
-	for i, vs := range verses {
-		verses[i].text = c.cleanup(vs.text)
-		verses[i].uRoman = c.cleanup(vs.uRoman)
+func (c *Compare) cleanUpVerses(verses []Verse, mediaType request.MediaType) []Verse {
+	for i := range verses {
+		verses[i].text = c.cleanup(verses[i].text)
+		verses[i].uRoman = c.cleanup(verses[i].uRoman)
+		if mediaType == request.TextScript {
+			verses[i].text = c.verseRm.ReplaceAllString(verses[i].text, ``)
+		}
 	}
 	return verses
 }
@@ -381,7 +353,6 @@ func (c *Compare) cleanup(text string) string {
 
 /* This diff method assumes one chapter at a time */
 func (c *Compare) diff(baseVS []Verse, compVS []Verse) {
-	var pairs = make([]Pair, 0, len(baseVS))
 	var didMatch = make(map[string]bool)
 	// Put the second data in a map
 	var verse2Map = make(map[string]Verse)
@@ -398,27 +369,28 @@ func (c *Compare) diff(baseVS []Verse, compVS []Verse) {
 		} else {
 			p = NewPair(&vs1, nil)
 		}
-		pairs = append(pairs, p)
+		c.diffPair(p)
 	}
 	// pick up any verse2 that did not match verse1
 	for _, vs2 := range compVS {
 		_, ok := didMatch[vs2.verse]
 		if !ok {
 			p = NewPair(nil, &vs2)
-			pairs = append(pairs, p)
+			c.diffPair(p)
 		}
 	}
-	for _, par := range pairs {
-		baseText, compText := par.Text(c.isLatin)
-		if len(baseText) > 0 || len(compText) > 0 {
-			baseText = strings.TrimSpace(baseText)
-			compText = strings.TrimSpace(compText)
-			diffs := c.diffMatch.DiffMain(baseText, compText, false)
-			par.Diffs = c.diffMatch.DiffCleanupMerge(diffs) // required for measure to compute largest
-			if !c.isMatch(par.Diffs) {
-				par.HTML = c.diffMatch.DiffPrettyHtml(par.Diffs)
-				c.results = append(c.results, par)
-			}
+}
+
+func (c *Compare) diffPair(pair Pair) {
+	baseText, compText := pair.Text(c.isLatin)
+	if len(baseText) > 0 || len(compText) > 0 {
+		baseText = strings.TrimSpace(baseText)
+		compText = strings.TrimSpace(compText)
+		diffs := c.diffMatch.DiffMain(baseText, compText, false)
+		pair.Diffs = c.diffMatch.DiffCleanupMerge(diffs) // required for measure to compute largest
+		if !c.isMatch(pair.Diffs) {
+			pair.HTML = c.diffMatch.DiffPrettyHtml(pair.Diffs)
+			c.results = append(c.results, pair)
 		}
 	}
 }

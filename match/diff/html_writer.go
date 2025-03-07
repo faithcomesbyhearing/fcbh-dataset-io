@@ -109,7 +109,11 @@ func (h *HTMLWriter) WriteLine(verse Pair) {
 		h.deleteSum += deletes
 		errPct := verse.ErrorPct(inserts, deletes)
 		_, _ = h.out.WriteString("<tr>\n")
-		h.writeCell(strconv.Itoa(verse.ScriptId()))
+		if verse.ScriptNum != "" {
+			h.writeCell(verse.ScriptNum)
+		} else {
+			h.writeCell(strconv.Itoa(verse.ScriptId()))
+		}
 		h.writeCell(strconv.FormatFloat(errPct, 'f', 0, 64))
 		h.writeCell(strconv.Itoa(inserts + deletes))
 		h.writeCell(strconv.Itoa(int(math.Abs(float64(inserts - deletes)))))
@@ -129,31 +133,32 @@ func (h *HTMLWriter) WriteLine(verse Pair) {
 	}
 }
 
-func (h *HTMLWriter) WriteChapterDiff(bookId string, chapter int, inserts int, deletes int, errPct float64, diffHtml string) {
-	var lineNum = 1 // replace with scriptId
-	_, _ = h.out.WriteString("<tr>\n")
-	h.writeCell(strconv.Itoa(lineNum))
-	h.writeCell(strconv.FormatFloat(errPct, 'f', 0, 64))
-	h.writeCell(strconv.Itoa(inserts + deletes))
-	h.writeCell(strconv.Itoa(int(math.Abs(float64(inserts - deletes)))))
-	h.writeCell(`+` + strconv.Itoa(inserts) + ` -` + strconv.Itoa(deletes))
-	h.writeCell(bookId + ` ` + strconv.Itoa(chapter))
-	h.writeCell(diffHtml)
-	_, _ = h.out.WriteString("</tr>\n")
-}
+/*
+	func (h *HTMLWriter) WriteChapterDiff(bookId string, chapter int, inserts int, deletes int, errPct float64, diffHtml string) {
+		var lineNum = 1 // replace with scriptId
+		_, _ = h.out.WriteString("<tr>\n")
+		h.writeCell(strconv.Itoa(lineNum))
+		h.writeCell(strconv.FormatFloat(errPct, 'f', 0, 64))
+		h.writeCell(strconv.Itoa(inserts + deletes))
+		h.writeCell(strconv.Itoa(int(math.Abs(float64(inserts - deletes)))))
+		h.writeCell(`+` + strconv.Itoa(inserts) + ` -` + strconv.Itoa(deletes))
+		h.writeCell(bookId + ` ` + strconv.Itoa(chapter))
+		h.writeCell(diffHtml)
+		_, _ = h.out.WriteString("</tr>\n")
+	}
 
-func (h *HTMLWriter) WriteScriptLineDiff(bookId string, chapter int, line string, inserts int, deletes int, errPct float64, diffHtml string) {
-	_, _ = h.out.WriteString("<tr>\n")
-	h.writeCell(line)
-	h.writeCell(strconv.FormatFloat(errPct, 'f', 0, 64))
-	h.writeCell(strconv.Itoa(inserts + deletes))
-	h.writeCell(strconv.Itoa(int(math.Abs(float64(inserts - deletes)))))
-	h.writeCell(`+` + strconv.Itoa(inserts) + ` -` + strconv.Itoa(deletes))
-	h.writeCell(bookId + ` ` + strconv.Itoa(chapter))
-	h.writeCell(diffHtml)
-	_, _ = h.out.WriteString("</tr>\n")
-}
-
+	func (h *HTMLWriter) WriteScriptLineDiff(bookId string, chapter int, line string, inserts int, deletes int, errPct float64, diffHtml string) {
+		_, _ = h.out.WriteString("<tr>\n")
+		h.writeCell(line)
+		h.writeCell(strconv.FormatFloat(errPct, 'f', 0, 64))
+		h.writeCell(strconv.Itoa(inserts + deletes))
+		h.writeCell(strconv.Itoa(int(math.Abs(float64(inserts - deletes)))))
+		h.writeCell(`+` + strconv.Itoa(inserts) + ` -` + strconv.Itoa(deletes))
+		h.writeCell(bookId + ` ` + strconv.Itoa(chapter))
+		h.writeCell(diffHtml)
+		_, _ = h.out.WriteString("</tr>\n")
+	}
+*/
 func (h *HTMLWriter) writeCell(content string) {
 	_, _ = h.out.WriteString(`<td>`)
 	_, _ = h.out.WriteString(content)

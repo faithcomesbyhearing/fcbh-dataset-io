@@ -4,27 +4,21 @@ import (
 	"testing"
 )
 
-const scriptCompare = `is_new: yes
-dataset_name: N2IKHMLT
+const scriptCompare = `is_new: no
+dataset_name: 15d_script_compare_audio
 bible_id: IKHMLT
 username: GaryNTest
 email: gary@shortsands.com
 output:
   sqlite: yes
 testament:
-  nt: yes 
-text_data:
-  file: /Users/gary/FCBH2024/download/IKHMLT/Vessel Text_Aokho_N2IKHMLT.xlsx
-audio_data:
-  aws_s3: s3://pretest-audio/N2IKHMLT Aokho (IKH)/N2IKHMLT Chapter VOX/*.mp3
-timestamps:
-  mms_align: no
-speech_to_text:
-  mms_asr: no
+  nt: yes
 audio_proof:
-  html_report: no
+  html_report: no # must eliminate directory input files passed into module to do this
+  base_dataset: 15d_script_compare
 compare:
-  html_report: no
+  html_report: yes
+  base_dataset: 15d_script_compare
   compare_settings: 
     lower_case: y
     remove_prompt_chars: y

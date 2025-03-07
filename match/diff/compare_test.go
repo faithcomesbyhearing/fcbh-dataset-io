@@ -19,10 +19,10 @@ type compareTest struct {
 
 func TestCompare(t *testing.T) {
 	var tests []compareTest
-	//tests = append(tests, testCase{baseDB: "ATIWBT_SCRIPT.db", project: "ATIWBT_USXEDIT", expect: 2})
-	//tests = append(tests, testCase{baseDB: `ENGWEB_WHISPER.db`, project: `ENGWEB_WHISPER_STT`, expect: 90})
-	//tests = append(tests, testCase{baseDB: `APFCMU_WHISPER.db`, project: `APFCMU_WHISPER_STT`, expect: 91})
-	//tests = append(tests, testCase{baseDB: `DYIIBS_WHISPER.db`, project: `DYIIBS_WHISPER_STT`, expect: 91})
+	//tests = append(tests, compareTest{baseDB: "ATIWBT_SCRIPT.db", project: "ATIWBT_USXEDIT", expect: 2})
+	//tests = append(tests, compareTest{baseDB: `ENGWEB_WHISPER.db`, project: `ENGWEB_WHISPER_STT`, expect: 90})
+	//tests = append(tests, compareTest{baseDB: `APFCMU_WHISPER.db`, project: `APFCMU_WHISPER_STT`, expect: 91})
+	//tests = append(tests, compareTest{baseDB: `DYIIBS_WHISPER.db`, project: `DYIIBS_WHISPER_STT`, expect: 91})
 	tests = append(tests, compareTest{baseDB: "N2ENGWEB", project: "N2ENGWEB_audio", expect: 2479})
 
 	for _, tst := range tests {

@@ -6,6 +6,7 @@ import (
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
+// CompareScriptLines was deprecated 3/6/2025 its functionality was integrated into compare_verses
 func (c *Compare) CompareScriptLines() ([]Pair, string, *log.Status) {
 	var fileMap string
 	var status *log.Status
@@ -40,12 +41,14 @@ func (c *Compare) CompareScriptLines() ([]Pair, string, *log.Status) {
 			}
 			pair.Base.Text = baseText
 			pair.Comp.Text = compText
-			c.scriptLineDiff(pair)
+			//c.scriptLineDiff(pair)
+			c.diffPair(pair)
 			delete(compareMap, base.ScriptNum)
 		} else {
 			pair.Base.Text = baseText
 			pair.Comp.Text = ""
-			c.scriptLineDiff(pair)
+			//c.scriptLineDiff(pair)
+			c.diffPair(pair)
 		}
 	}
 	// Report any compare scripts that had no entry in base
@@ -60,19 +63,10 @@ func (c *Compare) CompareScriptLines() ([]Pair, string, *log.Status) {
 		pair.Ref.VerseStr = comp.ScriptNum
 		pair.Base.Text = ""
 		pair.Comp.Text = compText
-		c.scriptLineDiff(pair)
+		//c.scriptLineDiff(pair)
+		c.diffPair(pair)
 	}
 	fileMap, status = c.generateBookChapterFilenameMap()
 	c.baseDb.Close()
 	return c.results, fileMap, status
-}
-
-func (c *Compare) scriptLineDiff(script Pair) {
-	diffs := c.diffMatch.DiffMain(script.Comp.Text, script.Base.Text, false)
-	diffs = c.diffMatch.DiffCleanupMerge(diffs)
-	if !c.isMatch(diffs) {
-		script.Diffs = diffs
-		script.HTML = c.diffMatch.DiffPrettyHtml(diffs)
-		c.results = append(c.results, script)
-	}
 }
