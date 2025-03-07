@@ -8,7 +8,7 @@ import (
 // Test expects JMDYPM_audio.db and JMDYPM_text.db to exist.
 
 const compareOnly = `is_new: no
-dataset_name: JMDYPM_audio
+dataset_name: 15b_compare_only_audio
 bible_id: JMDYPM
 username: GaryNTest
 email: gary@shortsands.com
@@ -16,7 +16,7 @@ testament:
   nt_books: [MAT,MRK,LUK,JHN,ACT]
 compare:
   html_report: yes
-  base_dataset: JMDYPM_text
+  base_dataset: 15b_compare_only
   compare_settings: 
     lower_case: y
     remove_prompt_chars: y
