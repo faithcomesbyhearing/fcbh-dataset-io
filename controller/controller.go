@@ -18,6 +18,8 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/run_control"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/speech_to_text"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/timestamp"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -474,6 +476,8 @@ func (c *Controller) matchText() (string, *log.Status) {
 	var status *log.Status
 	compare := diff.NewCompare(c.ctx, c.req.Username, c.req.Compare.BaseDataset, c.database, c.ident.LanguageISO, c.req.Testament, c.req.Compare.CompareSettings)
 	records, fileMap, status = compare.Process()
+	tempFilePath := filepath.Join(os.TempDir(), c.database.Project+"_compare.json")
+	c.bucket.AddJson(records, tempFilePath)
 	writer := diff.NewHTMLWriter(c.ctx, c.database.Project)
 	filename, status := writer.WriteReport(c.req.Compare.BaseDataset, records, fileMap)
 	return filename, status

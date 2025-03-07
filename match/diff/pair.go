@@ -7,20 +7,20 @@ import (
 )
 
 type Pair struct {
-	Ref       generic.VerseRef
-	ScriptNum string
-	BeginTS   float64
-	EndTS     float64
-	Base      PairText
-	Comp      PairText
-	Diffs     []diffmatchpatch.Diff
-	HTML      string
+	Ref       generic.VerseRef      `json:"ref"`
+	ScriptNum string                `json:"script_num"`
+	BeginTS   float64               `json:"begin_ts"`
+	EndTS     float64               `json:"end_ts"`
+	Base      PairText              `json:"base"`
+	Comp      PairText              `json:"comp"`
+	Diffs     []diffmatchpatch.Diff `json:"diffs"`
+	HTML      string                `json:"html""`
 }
 
 type PairText struct {
-	ScriptId int
-	Text     string
-	Uroman   string
+	ScriptId int    `json:"script_id"`
+	Text     string `json:"text"`
+	Uroman   string `json:"uroman"`
 }
 
 func NewPair(base *Verse, comp *Verse) Pair {

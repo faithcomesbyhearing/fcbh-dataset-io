@@ -2,6 +2,7 @@ package run_control
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -58,6 +59,20 @@ func (b *RunBucket) AddDatabase(conn db.DBAdapter) {
 func (b *RunBucket) AddOutput(outputPath string) {
 	if len(outputPath) > 0 {
 		b.outputs = append(b.outputs, outputPath)
+	}
+}
+
+func (b *RunBucket) AddJson(records any, filePath string) {
+	jsonData, err := json.MarshalIndent(records, "", "  ")
+	if err != nil {
+		log.Warn(b.ctx, err, "Failed to marshal ", filePath)
+	} else {
+		err = os.WriteFile(filePath, jsonData, 0644)
+		if err != nil {
+			log.Warn(b.ctx, err, "Failed to write ", filePath)
+		} else {
+			b.AddOutput(filePath)
+		}
 	}
 }
 

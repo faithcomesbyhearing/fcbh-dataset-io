@@ -18,11 +18,11 @@ type LogicalKey interface {
 }
 
 type VerseRef struct {
-	BookId     string
-	ChapterNum int
-	VerseStr   string
-	ChapterEnd int
-	VerseEnd   string
+	BookId     string `json:"book_id"`
+	ChapterNum int    `json:"chapter_num"`
+	VerseStr   string `json:"verse_str"`
+	ChapterEnd int    `json:"chapter_end"`
+	VerseEnd   string `json:"verse_end"`
 }
 
 func (r VerseRef) IsLogicalKey() {}
