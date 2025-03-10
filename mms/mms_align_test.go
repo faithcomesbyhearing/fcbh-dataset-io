@@ -82,7 +82,8 @@ func TestMMSFA_processPyOutput(t *testing.T) {
 	file.Directory = os.Getenv("FCBH_DATASET_FILES") + "/ENGWEB/ENGWEBN2DA-mp3-64/"
 	//file.Filename = "B02___01_Mark________ENGWEBN2DA.mp3"
 	//file.Filename = "B01___22_Matthew_____ENGWEBN2DA.mp3" // I think it doesn't matter
-	file.Filename = "TestFile.mp3"
+	//file.Filename = "TestFile.mp3"
+	file.Filename = "B17___01_Titus_______ENGWEBN2DA.mp3"
 	var wordList []Word
 	_, wordList, status = fa.prepareText("eng", file.BookId, file.Chapter)
 	if status != nil {
@@ -100,15 +101,15 @@ func TestMMSFA_processPyOutput(t *testing.T) {
 	if status != nil {
 		t.Fatal(status)
 	}
-	if scriptRows != 46 {
-		t.Error("scriptRows is", scriptRows, "it should be 46")
+	if scriptRows != 17 {
+		t.Error("scriptRows is", scriptRows, "it should be 17")
 	}
 	wordRows, status := conn.SelectScalarInt("select count(*) from words where fa_score != 0.0")
 	if status != nil {
 		t.Fatal(status)
 	}
-	if wordRows != 882 {
-		t.Error("wordRows is", wordRows, "it should be 882")
+	if wordRows != 352 {
+		t.Error("wordRows is", wordRows, "it should be 352")
 	}
 }
 
