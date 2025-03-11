@@ -455,6 +455,7 @@ func (d *DBAdapter) CheckScriptInserts(records []Script) *log.Status {
 }
 
 func (d *DBAdapter) InsertScripts(records []Script) *log.Status {
+	records = d.parseVerseStr(records)
 	status := d.CheckScriptInserts(records)
 	if status != nil {
 		return status
@@ -476,6 +477,17 @@ func (d *DBAdapter) InsertScripts(records []Script) *log.Status {
 	}
 	status = d.commitDML(tx, query)
 	return status
+}
+
+func (d *DBAdapter) parseVerseStr(records []Script) []Script {
+	for i := range records {
+		parts := strings.Split(records[i].VerseStr, "-")
+		if len(parts) > 1 {
+			records[i].VerseStr = parts[0]
+			records[i].VerseEnd = parts[len(parts)-1]
+		}
+	}
+	return records
 }
 
 func (d *DBAdapter) InsertScriptMFCCS(mfccs []MFCC) *log.Status {
