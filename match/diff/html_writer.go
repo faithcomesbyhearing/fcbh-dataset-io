@@ -100,7 +100,7 @@ func (h *HTMLWriter) WriteHeading(baseDataset string) string {
 }
 
 func (h *HTMLWriter) WriteLine(verse Pair) {
-	largest := verse.largestLength()
+	largest := verse.LargestLength()
 	if largest > 2 {
 		h.diffCount++
 		inserts := verse.Inserts()

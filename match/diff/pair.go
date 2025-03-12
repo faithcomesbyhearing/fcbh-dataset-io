@@ -98,7 +98,7 @@ func (p *Pair) Deletes() int {
 	return deletes
 }
 
-func (p *Pair) largestLength() int {
+func (p *Pair) LargestLength() int {
 	var result int
 	var length int
 	for _, diff := range p.Diffs {
