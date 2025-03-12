@@ -82,7 +82,7 @@ var usfm = map[string]bool{
 	`para.q`:  true,  // poetic line
 	`para.qr`: true,  // right aligned poetic line
 	`para.qc`: true,  // centered poetic line
-	`para.qa`: true,  // acrostic heading
+	`para.qa`: false, // acrostic heading
 	`para.qm`: true,  // embedded text poetic line
 	`para.qd`: false, // Hebrew note - false?
 	`para.b`:  false, // blank line
