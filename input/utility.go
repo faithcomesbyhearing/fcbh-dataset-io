@@ -180,7 +180,8 @@ func ParseV2AudioFilename(ctx context.Context, file *InputFile) *log.Status {
 	}
 	seq := filename[1:4]
 	file.BookSeq = strings.Trim(seq, `_`)
-	file.Chapter, err = strconv.Atoi(file.Filename[6:8])
+	chapter := strings.Trim(filename[5:8], `_`)
+	file.Chapter, err = strconv.Atoi(chapter)
 	if err != nil {
 		return log.Error(ctx, 500, err, `Error convert chapter to int`, file.Filename[6:8])
 	}
