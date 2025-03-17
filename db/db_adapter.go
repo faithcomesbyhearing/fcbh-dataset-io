@@ -528,7 +528,7 @@ func (d *DBAdapter) prepareDML(query string) (*sql.Tx, *sql.Stmt) {
 
 func (d *DBAdapter) SelectBookChapter() ([]Script, *log.Status) {
 	var results []Script
-	query := `SELECT distinct book_id, chapter_num FROM scripts`
+	query := `SELECT distinct book_id, chapter_num FROM scripts ORDER BY script_id`
 	rows, err := d.DB.Query(query)
 	if err != nil {
 		return results, log.Error(d.Ctx, 500, err, `Error reading rows in SelectBookChapter`)
