@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/courier"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
@@ -15,7 +16,6 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms/fa_score_analysis"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/output"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/read"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/run_control"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/speech_to_text"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/timestamp"
 	"os"
@@ -32,7 +32,7 @@ type Controller struct {
 	ctx         context.Context
 	yamlRequest []byte
 	req         request.Request
-	bucket      run_control.RunBucket
+	bucket      courier.Courier
 	ident       db.Ident
 	database    db.DBAdapter
 	postFiles   *input.PostFiles
@@ -43,8 +43,8 @@ func NewController(ctx context.Context, yamlContent []byte) Controller {
 	c.ctx = ctx
 	log.Info(ctx, "Request: ", string(yamlContent))
 	c.yamlRequest = yamlContent
-	c.bucket = run_control.NewRunBucket(ctx, yamlContent)
-	c.bucket.IsUnitTest = false // set to true when testing to make RunBucket work.
+	c.bucket = courier.NewCourier(ctx, yamlContent)
+	c.bucket.IsUnitTest = false // set to true when testing to make Courier work.
 	return c
 }
 
@@ -82,7 +82,8 @@ func (c *Controller) ProcessV2() (OutputFiles, *log.Status) {
 	output.FilePaths = c.bucket.GetOutputPaths()
 	log.Info(c.ctx, "Duration", time.Since(start))
 	log.Debug(c.ctx)
-	c.bucket.PersistToBucket()
+	_ = c.bucket.PersistToBucket() // do not propagate error
+	//_ = c.bucket.Notification(status, time.Since(start)) // do not propagate error
 	return output, status
 }
 
@@ -476,6 +477,9 @@ func (c *Controller) matchText() (string, *log.Status) {
 	var status *log.Status
 	compare := diff.NewCompare(c.ctx, c.req.Username, c.req.Compare.BaseDataset, c.database, c.ident.LanguageISO, c.req.Testament, c.req.Compare.CompareSettings)
 	records, fileMap, status = compare.Process()
+	if status != nil {
+		return "", status
+	}
 	tempFilePath := filepath.Join(os.TempDir(), c.database.Project+"_compare.json")
 	c.bucket.AddJson(records, tempFilePath)
 	writer := diff.NewHTMLWriter(c.ctx, c.database.Project)

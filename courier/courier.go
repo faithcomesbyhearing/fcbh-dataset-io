@@ -1,4 +1,4 @@
-package run_control
+package courier
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-type RunBucket struct {
+type Courier struct {
 	ctx         context.Context
 	IsUnitTest  bool // Set to true by run_bucket_test.
 	start       time.Time
@@ -30,8 +30,8 @@ type RunBucket struct {
 	outputs     []string
 }
 
-func NewRunBucket(ctx context.Context, yaml []byte) RunBucket {
-	var b RunBucket
+func NewCourier(ctx context.Context, yaml []byte) Courier {
+	var b Courier
 	b.ctx = ctx
 	b.start = time.Now()
 	b.bucket = os.Getenv("FCBH_DATASET_IO_BUCKET")
@@ -45,24 +45,24 @@ func NewRunBucket(ctx context.Context, yaml []byte) RunBucket {
 	return b
 }
 
-func (b *RunBucket) AddLogFile(logPath string) {
+func (b *Courier) AddLogFile(logPath string) {
 	b.logFile = logPath
 	if !b.IsUnitTest {
 		_ = os.Truncate(b.logFile, 0)
 	}
 }
 
-func (b *RunBucket) AddDatabase(conn db.DBAdapter) {
+func (b *Courier) AddDatabase(conn db.DBAdapter) {
 	b.databases = append(b.databases, conn.DatabasePath)
 }
 
-func (b *RunBucket) AddOutput(outputPath string) {
+func (b *Courier) AddOutput(outputPath string) {
 	if len(outputPath) > 0 {
 		b.outputs = append(b.outputs, outputPath)
 	}
 }
 
-func (b *RunBucket) AddJson(records any, filePath string) {
+func (b *Courier) AddJson(records any, filePath string) {
 	jsonData, err := json.MarshalIndent(records, "", "  ")
 	if err != nil {
 		log.Warn(b.ctx, err, "Failed to marshal ", filePath)
@@ -76,11 +76,11 @@ func (b *RunBucket) AddJson(records any, filePath string) {
 	}
 }
 
-func (b *RunBucket) GetOutputPaths() []string {
+func (b *Courier) GetOutputPaths() []string {
 	return b.outputs
 }
 
-func (b *RunBucket) PersistToBucket() *log.Status {
+func (b *Courier) PersistToBucket() *log.Status {
 	var allStatus []*log.Status
 	var status *log.Status
 	if !testing.Testing() || b.IsUnitTest {
@@ -120,7 +120,7 @@ func (b *RunBucket) PersistToBucket() *log.Status {
 	return status
 }
 
-func (b *RunBucket) parseYaml(name string) string {
+func (b *Courier) parseYaml(name string) string {
 	var result string
 	index := strings.Index(b.yamlContent, name+":")
 	if index == -1 {
@@ -133,7 +133,7 @@ func (b *RunBucket) parseYaml(name string) string {
 	return result
 }
 
-func (b *RunBucket) findLastRun(client *s3.Client) (int, *log.Status) {
+func (b *Courier) findLastRun(client *s3.Client) (int, *log.Status) {
 	var result int
 	var status *log.Status
 	prefix := b.username + "/" + b.dataset + "/"
@@ -163,7 +163,7 @@ func (b *RunBucket) findLastRun(client *s3.Client) (int, *log.Status) {
 	return maxRun, status
 }
 
-func (b *RunBucket) uploadString(client *s3.Client, run int, typ string, filename string, content string) *log.Status {
+func (b *Courier) uploadString(client *s3.Client, run int, typ string, filename string, content string) *log.Status {
 	var status *log.Status
 	key := b.createKey(run, typ, filename)
 	input := &s3.PutObjectInput{
@@ -178,7 +178,7 @@ func (b *RunBucket) uploadString(client *s3.Client, run int, typ string, filenam
 	return status
 }
 
-func (b *RunBucket) uploadFile(client *s3.Client, run int, typ string, filePath string) *log.Status {
+func (b *Courier) uploadFile(client *s3.Client, run int, typ string, filePath string) *log.Status {
 	var status *log.Status
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -198,7 +198,7 @@ func (b *RunBucket) uploadFile(client *s3.Client, run int, typ string, filePath 
 	return status
 }
 
-func (b *RunBucket) createKey(run int, typ string, filename string) string {
+func (b *Courier) createKey(run int, typ string, filename string) string {
 	runStr := fmt.Sprintf("%05d", run)
 	return b.username + "/" + b.dataset + "/" + runStr + "/" + typ + "/" + filename
 }

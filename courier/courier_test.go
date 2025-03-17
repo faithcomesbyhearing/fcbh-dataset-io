@@ -1,10 +1,12 @@
-package run_control
+package courier
 
 import (
 	"context"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"os"
 	"testing"
+	"time"
 )
 
 const runBucketTest = `is_new: yes
@@ -15,9 +17,10 @@ email: gary@shortsands.com
 output_file: abc/my_project.csv
 `
 
-func TestRunBucket(t *testing.T) {
+func TestCourier(t *testing.T) {
 	ctx := context.Background()
-	b := NewRunBucket(ctx, []byte(runBucketTest))
+	start := time.Now()
+	b := NewCourier(ctx, []byte(runBucketTest))
 	b.IsUnitTest = true
 	if b.username != "GaryNTest" {
 		t.Error("Username should be GaryNTest, it is: ", b.username)
@@ -29,12 +32,12 @@ func TestRunBucket(t *testing.T) {
 		t.Error("Project should be MyProject, it is:", b.dataset)
 	}
 	b.AddLogFile(os.Getenv("FCBH_DATASET_LOG_FILE"))
-	database1, status := db.NewerDBAdapter(ctx, true, b.username, "TestRunBucket1")
+	database1, status := db.NewerDBAdapter(ctx, true, b.username, "TestCourier1")
 	if status != nil {
 		t.Fatal(status)
 	}
 	b.AddDatabase(database1)
-	database2, status := db.NewerDBAdapter(ctx, true, b.username, "TestRunBucket2")
+	database2, status := db.NewerDBAdapter(ctx, true, b.username, "TestCourier2")
 	if status != nil {
 		t.Fatal(status)
 	}
@@ -45,4 +48,8 @@ func TestRunBucket(t *testing.T) {
 	if status != nil {
 		t.Fatal(status)
 	}
+	duration := time.Since(start)
+	status = b.Notification(status, duration)
+	status = log.ErrorNoErr(ctx, 400, "Test Error")
+	status = b.Notification(status, duration)
 }
