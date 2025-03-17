@@ -37,7 +37,8 @@ func GetDBPMySqlDSN() string {
 	host := os.Getenv("DBP_MYSQL_HOST")
 	port := os.Getenv("DBP_MYSQL_PORT")
 	database := os.Getenv("DBP_MYSQL_DATABASE")
-	result = username + ":" + password + "@tcp(" + host + ":" + port + ")/" + database
+	options := "?clientFoundRows=true" // makes affected row count number matched, not number updated
+	result = username + ":" + password + "@tcp(" + host + ":" + port + ")/" + database + options
 	return result
 }
 
@@ -93,7 +94,8 @@ func (d *DBPAdapter) SelectFileId(hashId string, bookId string, chapterNum int) 
 func (d *DBPAdapter) SelectTimestamps(fileId int64) ([]Timestamp, *log.Status) {
 	var result []Timestamp
 	query := `SELECT id, verse_start, verse_end, verse_sequence, timestamp, timestamp_end 
-		FROM bible_file_timestamps WHERE bible_file_id = ? ORDER BY verse_sequence`
+		FROM bible_file_timestamps WHERE bible_file_id = ? 
+		ORDER BY verse_sequence, id`
 	rows, err := d.conn.Query(query, fileId)
 	if err != nil {
 		return result, log.Error(d.ctx, 500, err, query)
@@ -129,8 +131,8 @@ func (d *DBPAdapter) UpdateTimestamps(timestamps []Timestamp) (int, *log.Status)
 		}
 	}
 	if mustUpdate > 0 {
-		query := `UPDATE bible_file_timestamps SET verse_end = ?, verse_sequence = ?,
-				timestamp = ?, timestamp_end = ? WHERE id = ?`
+		query := `UPDATE bible_file_timestamps SET timestamp = ?, timestamp_end = ? 
+			WHERE id = ?`
 		tx, err := d.conn.Begin()
 		if err != nil {
 			return rowCount, log.Error(d.ctx, 500, err, query)
@@ -144,7 +146,7 @@ func (d *DBPAdapter) UpdateTimestamps(timestamps []Timestamp) (int, *log.Status)
 		var count int64
 		for _, rec := range timestamps {
 			if rec.TimestampId > 0 {
-				result, err = stmt.Exec(rec.BeginTS, rec.VerseEnd, rec.VerseSeq, rec.EndTS, rec.TimestampId)
+				result, err = stmt.Exec(rec.BeginTS, rec.EndTS, rec.TimestampId)
 				if err != nil {
 					return rowCount, log.Error(d.ctx, 500, err, query)
 				}
