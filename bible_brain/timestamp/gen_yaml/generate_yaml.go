@@ -8,6 +8,7 @@ import (
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -158,7 +159,11 @@ func GenerateOneYaml(bible fetch.BibleInfoType, audio fetch.FilesetType, text fe
 	list = write(list, 0, "update_dbp", "")
 	var filesetList []string
 	var updateList []string
-	for _, fileset := range bible.DbpProd.Filesets {
+	filesets := bible.DbpProd.Filesets
+	sort.Slice(filesets, func(i, j int) bool {
+		return filesets[i].Id < filesets[j].Id
+	})
+	for _, fileset := range filesets {
 		filesetList = append(filesetList, fileset.Id)
 		if fileset.Type == "audio" || fileset.Type == "audio_drama" ||
 			fileset.Type == "audio_stream" || fileset.Type == "audio_drama_stream" {
