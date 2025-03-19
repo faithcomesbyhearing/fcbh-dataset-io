@@ -82,8 +82,8 @@ func (c *Controller) ProcessV2() (OutputFiles, *log.Status) {
 	output.FilePaths = c.bucket.GetOutputPaths()
 	log.Info(c.ctx, "Duration", time.Since(start))
 	log.Debug(c.ctx)
-	_ = c.bucket.PersistToBucket() // do not propagate error
-	//_ = c.bucket.Notification(status, time.Since(start)) // do not propagate error
+	_ = c.bucket.PersistToBucket()                              // do not propagate error
+	_ = c.bucket.Notification(c.req, status, time.Since(start)) // do not propagate error
 	return output, status
 }
 
