@@ -5,26 +5,30 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	req "github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"strings"
 	"testing"
 	"time"
 )
 
-func (b *Courier) Notification(status *log.Status, duration time.Duration) *log.Status {
+func (b *Courier) Notification(req req.Request, status *log.Status, duration time.Duration) *log.Status {
 	var st *log.Status
 	if !testing.Testing() || b.IsUnitTest {
 		var subject string
 		var message string
+		var recipients []string
 		if status == nil {
 			subject = "SUCCESS: " + b.dataset
 			message = b.successMsg(duration)
+			recipients = req.NotifyOk
 		} else {
 			subject = "FAILED: " + b.dataset
 			message = b.failureMsg(status, duration)
+			recipients = req.NotifyErr
 		}
-		st = SendMessage(b.ctx, recipients, subject, message)
-		st = SendEmail(b.ctx, emailRecipients, subject, message)
+		//st = SendMessage(b.ctx, recipients, subject, message)
+		st = SendEmail(b.ctx, recipients, subject, message)
 	}
 	return st
 }

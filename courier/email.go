@@ -8,7 +8,7 @@ import (
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
-var emailRecipients = []string{"gary@shortsands.com"}
+const emailSender = "apolyglot@fcbhmail.org"
 
 // SendEmail sends an email to multiple recipients using AWS SES
 func SendEmail(ctx context.Context, recipients []string, subject string, msg string) *log.Status {
@@ -19,7 +19,7 @@ func SendEmail(ctx context.Context, recipients []string, subject string, msg str
 		return log.Error(ctx, 500, err, "Error creating email session")
 	}
 	input := &ses.SendEmailInput{
-		Source: aws.String("gary@shortsands.com"),
+		Source: aws.String(emailSender),
 		Destination: &ses.Destination{
 			ToAddresses: aws.StringSlice(recipients),
 			//CcAddresses:  aws.StringSlice(email.Cc),

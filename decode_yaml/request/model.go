@@ -5,8 +5,9 @@ type Request struct {
 	DatasetName   string        `yaml:"dataset_name"`
 	BibleId       string        `yaml:"bible_id"`
 	Username      string        `yaml:"username"`
-	Email         string        `yaml:"email"`
 	AltLanguage   string        `yaml:"alt_language,omitempty"`
+	NotifyOk      []string      `yaml:"notify_ok"`
+	NotifyErr     []string      `yaml:"notify_err"`
 	Output        Output        `yaml:"output,omitempty"`
 	Testament     Testament     `yaml:"testament,omitempty"`
 	Database      Database      `yaml:"database,omitempty"`

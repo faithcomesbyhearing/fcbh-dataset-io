@@ -3,6 +3,7 @@ package courier
 import (
 	"context"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
+	req "github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"os"
 	"testing"
@@ -44,12 +45,25 @@ func TestCourier(t *testing.T) {
 	b.AddDatabase(database2)
 	b.AddOutput("../tests/02__plain_text_edit_script.csv")
 	b.AddOutput("../tests/02__plain_text_edit_script.json")
+	req1 := req.Request{
+		NotifyOk:  []string{"gary@shortsands.com"},
+		NotifyErr: []string{"gary@shortsands.com"},
+	}
 	status = b.PersistToBucket()
 	if status != nil {
 		t.Fatal(status)
 	}
 	duration := time.Since(start)
-	status = b.Notification(status, duration)
+	status = b.Notification(req1, status, duration)
+	if status != nil {
+		t.Fatal(status)
+	}
 	status = log.ErrorNoErr(ctx, 400, "Test Error")
-	status = b.Notification(status, duration)
+	if status != nil {
+		t.Fatal(status)
+	}
+	status = b.Notification(req1, status, duration)
+	if status != nil {
+		t.Fatal(status)
+	}
 }

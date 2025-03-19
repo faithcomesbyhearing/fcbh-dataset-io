@@ -29,8 +29,9 @@ func TestParser(t *testing.T) {
 dataset_name: Test1  # should be a unique name
 bible_id: ENGWEB
 username: GaryNGriswold
-email: gary@gmail.com
 alt_language: en
+notify_ok: [emille@fcbhmail.org]
+notify_err: [jbarndt@fcbhmail.org]
 output:
   directory: /Users/gary
   csv: Yes
@@ -176,7 +177,6 @@ compare:
 	var strs = []string{req.DatasetName,
 		req.BibleId,
 		req.Username,
-		req.Email,
 		req.Output.Directory,
 		req.AudioData.File,
 		req.AudioData.AWSS3,
@@ -193,5 +193,11 @@ compare:
 	}
 	if len(req.Testament.NTBooks) != 0 {
 		t.Error(`NTBooks should have a length of 0, not`, len(req.Testament.NTBooks))
+	}
+	if len(req.NotifyOk) != 1 {
+		t.Error(`NotifyOk should have a length of 1, not`, len(req.NotifyOk))
+	}
+	if len(req.NotifyErr) != 1 {
+		t.Error(`NotifyErr should have a length of 1, not`, len(req.NotifyErr))
 	}
 }
