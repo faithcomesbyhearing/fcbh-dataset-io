@@ -7,9 +7,11 @@ is_new: yes # Answer yet to start with a clean project
 dataset_name: Test1_ATIWBT # Use a unique name to keep runs separate, or reuse a name to add to a prior run
 bible_id: ATIWBT
 username: GaryNGriswold
-email: gary@shortsands.com
-alt_language: # To force the use of an alternate language, use this field
 # The remaining configuration choices are all optional, but something must be selected in order for some processing to be done.
+
+notify_ok: [emille@fcbhmail.org] # recipients of successful completion
+notify_err: [jbarndt@fcbhmail.org, gary@shortsands.com] # recipients of errors
+alt_language: # To force the use of an alternate language, use this field
 
 output: #
   directory: # Enter the directory path where output should be written

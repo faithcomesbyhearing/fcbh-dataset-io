@@ -33,9 +33,6 @@ func (r *RequestDecoder) checkRequired(req *request.Request) {
 	if req.Username == `` {
 		r.errors = append(r.errors, `Required field username: is empty`)
 	}
-	if req.Email == `` {
-		r.errors = append(r.errors, `Required field email: is empty`)
-	}
 	req.DatasetName = strings.Replace(req.DatasetName, ` `, `_`, -1)
 	if req.Compare.BaseDataset != `` {
 		req.Compare.BaseDataset = strings.Replace(req.Compare.BaseDataset, ` `, `_`, -1)
