@@ -8,8 +8,6 @@ import (
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
-var recipients = []string{"+15135086127"}
-
 // SendMessage sends a text message to the specified phone number
 func SendMessage(ctx context.Context, recipients []string, subject string, msg string) *log.Status {
 	sess, err := session.NewSession(&aws.Config{

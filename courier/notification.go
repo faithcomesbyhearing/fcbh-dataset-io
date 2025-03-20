@@ -47,30 +47,30 @@ func (b *Courier) successMsg(duration time.Duration) string {
 	var message []string
 	message = append(message, "SUCCESS: "+b.dataset)
 	message = append(message, "Duration: "+duration.String())
-	s3Client, status := b.presignedURLClient()
+	s3Client, status := b.preSignedURLClient()
 	if status == nil {
 		for _, output := range b.outputs {
 			message = append(message, output)
 			key := b.createKey(b.run, "output", output)
-			signedURL := b.genLongPresignedURL(s3Client, key)
+			signedURL := b.genLongPreSignedURL(s3Client, key)
 			message = append(message, signedURL)
 		}
 	}
 	return strings.Join(message, "\n")
 }
 
-func (b *Courier) presignedURLClient() (*s3.S3, *log.Status) {
+func (b *Courier) preSignedURLClient() (*s3.S3, *log.Status) {
 	sess, err := session.NewSession(&aws.Config{
 		Region:           aws.String("us-west-2"),
 		S3ForcePathStyle: aws.Bool(true),
 	})
 	if err != nil {
-		return nil, log.Error(b.ctx, 500, err, "unable to create S3 presigned URL session")
+		return nil, log.Error(b.ctx, 500, err, "unable to create S3 preSigned URL session")
 	}
 	return s3.New(sess), nil
 }
 
-func (b *Courier) genLongPresignedURL(client *s3.S3, key string) string {
+func (b *Courier) genLongPreSignedURL(client *s3.S3, key string) string {
 	// Important: Use v2 signing for longer expiration
 	var input s3.GetObjectInput
 	input.Bucket = aws.String(b.bucket)
