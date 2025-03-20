@@ -419,7 +419,7 @@ func (c *Controller) speechToText(audioFiles []input.InputFile) *log.Status {
 			if len(c.ident.AudioNTId) >= 10 {
 				c.ident.TextNTId = c.ident.AudioNTId[:7] + `_TT`
 			}
-			c.database.UpdateIdent(c.ident)
+			_ = c.database.UpdateIdent(c.ident)
 		}
 	}
 	return status
@@ -448,7 +448,7 @@ func (c *Controller) encodeText() *log.Status {
 }
 
 func (c *Controller) audioProofing(audioFiles []input.InputFile) (string, *log.Status) {
-	// Using audioFiles here should be tempoary, once the timestamps are updated with duration
+	// Using audioFiles here should be temporary, once the timestamps are updated with duration
 	// there should be no need for the audio files to be present.
 	var filename string
 	var status *log.Status
