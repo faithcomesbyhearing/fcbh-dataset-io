@@ -6,6 +6,7 @@ import (
 	req "github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -43,11 +44,14 @@ func TestCourier(t *testing.T) {
 		t.Fatal(status)
 	}
 	b.AddDatabase(database2)
-	b.AddOutput("../tests/02__plain_text_edit_script.csv")
-	b.AddOutput("../tests/02__plain_text_edit_script.json")
+	//b.AddOutput("../tests/02__plain_text_edit_script.csv")
+	//b.AddOutput("../tests/02__plain_text_edit_script.json")
+	b.AddOutput(filepath.Join(os.Getenv("GOPROJ"), "tests/15a_mms_asr_audio_compare.html"))
+	b.AddOutput("courier.go")
+	b.AddOutput("courier_test.go")
 	req1 := req.Request{
 		NotifyOk:  []string{"gary@shortsands.com"},
-		NotifyErr: []string{"gary@shortsands.com"},
+		NotifyErr: []string{"gary.griswold@gmail.com"},
 	}
 	status = b.PersistToBucket()
 	if status != nil {
@@ -59,9 +63,7 @@ func TestCourier(t *testing.T) {
 		t.Fatal(status)
 	}
 	status = log.ErrorNoErr(ctx, 400, "Test Error")
-	if status != nil {
-		t.Fatal(status)
-	}
+	// do not report status, pass into Notification
 	status = b.Notification(req1, status, duration)
 	if status != nil {
 		t.Fatal(status)

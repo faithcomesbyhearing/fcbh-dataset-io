@@ -80,6 +80,16 @@ func (b *Courier) GetOutputPaths() []string {
 	return b.outputs
 }
 
+func (b *Courier) GetOutputByExt(fileExt string) []string {
+	var results []string
+	for _, path := range b.outputs {
+		if strings.HasSuffix(path, fileExt) {
+			results = append(results, path)
+		}
+	}
+	return results
+}
+
 func (b *Courier) PersistToBucket() *log.Status {
 	var allStatus []*log.Status
 	var status *log.Status
