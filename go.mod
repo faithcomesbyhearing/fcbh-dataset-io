@@ -5,11 +5,13 @@ go 1.23.0
 toolchain go1.23.3
 
 require (
+	github.com/aws/aws-sdk-go v1.38.20
 	github.com/aws/aws-sdk-go-v2 v1.35.0
 	github.com/aws/aws-sdk-go-v2/config v1.29.3
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.63.0
 	github.com/aws/aws-sdk-go-v2/service/ses v1.29.1
 	github.com/divan/num2words v1.0.1
+	github.com/go-gomail/gomail v0.0.0-20160411212932-81ebce5c23df
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/sergi/go-diff v1.3.1
@@ -22,7 +24,6 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/aws/aws-sdk-go v1.38.20 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.5 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.56 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.26 // indirect
@@ -50,5 +51,7 @@ require (
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
 	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/net v0.29.0 // indirect
+	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
+	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df // indirect
 )
