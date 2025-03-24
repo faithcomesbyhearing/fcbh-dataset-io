@@ -9,7 +9,6 @@ const librosa = `is_new: yes
 dataset_name: 12a_librosa
 bible_id: {bibleId}
 username: GaryNTest
-email: gary@shortsands.com
 output:
   sqlite: yes
 text_data:

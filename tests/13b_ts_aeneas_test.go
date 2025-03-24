@@ -9,7 +9,6 @@ const tSAeneasTest = `is_new: yes
 dataset_name: 13b_ts_aeneas
 bible_id: {bibleId}
 username: GaryNTest
-email: gary@shortsands.com
 output:
   sqlite: yes
 text_data:

@@ -9,7 +9,6 @@ const tSBibleBrain = `is_new: yes
 dataset_name: 13a_ts_bb
 bible_id: {bibleId}
 username: GaryNTest
-email: gary@shortsands.com
 output:
   sqlite: yes
 text_data:

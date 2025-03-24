@@ -8,7 +8,6 @@ const mMSASRTest = `is_new: yes
 dataset_name: 14a_mms_asr
 bible_id: ENGWEB
 username: GaryNTest
-email: gary@shortsands.com
 output:
   sqlite: yes
 text_data:

@@ -8,7 +8,6 @@ const databaseS3 = `is_new: no
 dataset_name: 4a_database_s3_ENGWEB
 bible_id: ENGWEB
 username: GaryNTest
-email: gary@shortsands.com
 output:
   sqlite: yes
 database:

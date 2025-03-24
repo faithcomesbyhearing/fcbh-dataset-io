@@ -8,7 +8,6 @@ const whisperTest = `is_new: yes
 dataset_name: 14b_whisper
 bible_id: ENGWEB
 username: GaryNTest
-email: gary@shortsands.com
 output:
   sqlite: yes
 testament: 
@@ -20,7 +19,7 @@ audio_data:
   bible_brain:
     mp3_64: yes
 timestamps:
-  ts_bucket: yes
+  bible_brain: yes
 speech_to_text:
   whisper:
     model:

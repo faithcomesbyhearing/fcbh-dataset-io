@@ -8,7 +8,8 @@ const proofCompare = `is_new: no
 dataset_name: 15c_proof_compare_audio
 bible_id: ENGWEB
 username: GaryNTest
-email: gary@shortsands.com
+notify_ok: [gary@shortsands.com]
+notify_err: [gary@shortsands.com]
 testament:
   nt: yes
 audio_data:
