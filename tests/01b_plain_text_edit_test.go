@@ -14,7 +14,6 @@ const plainTextEditScript = `is_new: yes
 dataset_name: 01b_plain_text_edit_{bibleId}
 bible_id: {bibleId}
 username: GaryNTest
-email: gary@shortsands.com
 output:
   sqlite: yes
 text_data:

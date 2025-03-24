@@ -11,7 +11,6 @@ const compareOnly = `is_new: no
 dataset_name: 15b_compare_only_audio
 bible_id: JMDYPM
 username: GaryNTest
-email: gary@shortsands.com
 testament:
   nt_books: [MAT,MRK,LUK,JHN,ACT]
 compare:

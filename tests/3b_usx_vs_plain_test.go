@@ -15,7 +15,6 @@ const usxVsPlain = `is_new: yes
 dataset_name: 3b_usx_vs_plain_{BIBLE_ID}
 bible_id: {BIBLE_ID}
 username: GaryNTest
-email: gary@shortsands.com
 output:
   sqlite: yes
 text_data:

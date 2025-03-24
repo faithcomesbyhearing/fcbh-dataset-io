@@ -8,7 +8,6 @@ const scriptCompare = `is_new: no
 dataset_name: 15d_script_compare_audio
 bible_id: IKHMLT
 username: GaryNTest
-email: gary@shortsands.com
 output:
   sqlite: yes
 testament:

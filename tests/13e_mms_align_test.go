@@ -8,7 +8,6 @@ const mmsAlignTest = `is_new: yes
 dataset_name: 13e_mms_align
 bible_id: ENGWEB
 username: GaryNTest
-email: gary@shortsands.com
 output:
   sqlite: yes
 text_data:

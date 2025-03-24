@@ -14,7 +14,6 @@ const scriptTextScript = `is_new: yes
 dataset_name: 01d_script_text_{bibleId}
 bible_id: {bibleId}
 username: GaryNTest
-email: gary@shortsands.com
 output:
   sqlite: yes
 text_data:

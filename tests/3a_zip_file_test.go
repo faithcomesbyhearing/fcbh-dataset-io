@@ -8,7 +8,6 @@ const zipFile = `is_new: yes
 dataset_name: 3a_zip_file
 bible_id: ENGWEB
 username: GaryNTest
-email: gary@shortsands.com
 output:
   sqlite: yes
 audio_data:
