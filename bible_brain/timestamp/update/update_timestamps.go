@@ -5,6 +5,7 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
+	"math"
 	"os"
 	"path/filepath"
 )
@@ -35,23 +36,17 @@ func (d *UpdateTimestamps) Process() *log.Status {
 		return status
 	}
 	defer d.dbpConn.Close()
-	directory := os.Getenv("FCBH_DATASET_FILES")
-	for _, filesetId := range d.req.UpdateDBP.Timestamps {
-		status = d.UpdateFileset(filesetId, directory)
-		if status != nil {
-			return status
-		}
-	}
-	return nil
-}
-
-func (d *UpdateTimestamps) UpdateFileset(filesetId string, directory string) *log.Status {
-	var status *log.Status
-	var hashId string
-	hashId, status = d.dbpConn.SelectHashId(filesetId)
+	var ident db.Ident
+	ident, status = d.conn.SelectIdent()
 	if status != nil {
 		return status
 	}
+	bibleId := ident.BibleId
+	filesetId := ident.AudioNTId // base this on bookId
+	if filesetId == "" {
+		filesetId = ident.AudioOTId
+	}
+	log.Info(d.ctx, "Processing:", filesetId)
 	var chapters []db.Script
 	chapters, status = d.conn.SelectBookChapter()
 	if status != nil {
@@ -64,45 +59,65 @@ func (d *UpdateTimestamps) UpdateFileset(filesetId string, directory string) *lo
 			return status
 		}
 		if len(timestamps) > 0 {
-			var bibleFileId int64
-			var audioFile string
-			bibleFileId, audioFile, status = d.dbpConn.SelectFileId(hashId, ch.BookId, ch.ChapterNum)
+			directory := os.Getenv("FCBH_DATASET_FILES")
+			audioPath := filepath.Join(directory, bibleId, filesetId, timestamps[0].AudioFile)
+			timestamps, status = ComputeBytes(d.ctx, audioPath, timestamps)
 			if status != nil {
-				return status // what is the correct response for not found
+				return status
 			}
-			if bibleFileId > 0 {
-				var dbpTimestamps []Timestamp
-				dbpTimestamps, status = d.dbpConn.SelectTimestamps(bibleFileId)
-				if status != nil {
-					return status
-				}
-				if len(dbpTimestamps) > 0 {
-					timestamps = MergeTimestamps(timestamps, dbpTimestamps)
-				}
-				_, status = d.dbpConn.UpdateTimestamps(timestamps)
-				if status != nil {
-					return status
-				}
-				timestamps, _, status = d.dbpConn.InsertTimestamps(bibleFileId, timestamps)
-				if status != nil {
-					return status
-				}
-				//bibleId := filesetId[:6]
-				//audioPath := filepath.Join(directory, bibleId, filesetId, audioFile)
-				//timestamps, status = ComputeBytes(d.ctx, audioPath, timestamps)
-				//if status != nil {
-				//	return status
-				//}
-				_, status = d.dbpConn.UpdateSegments(timestamps)
+			for i := range timestamps {
+				timestamps[i].BeginTS = math.Round(timestamps[i].BeginTS*100.0) / 100.0
+				timestamps[i].EndTS = math.Round(timestamps[i].EndTS*100.0) / 100.0
+			}
+			for _, subFilesetId := range d.req.UpdateDBP.Timestamps {
+				log.Info(d.ctx, "Updating:", subFilesetId, ch.BookId, ch.ChapterNum)
+				status = d.UpdateFileset(subFilesetId, ch.BookId, ch.ChapterNum, timestamps)
 				if status != nil {
 					return status
 				}
 			}
 		}
 	}
-	_, status = d.dbpConn.UpdateFilesetTimingEstTag(hashId, mmsAlignTimingEstErr)
+	return nil
+}
+
+func (d *UpdateTimestamps) UpdateFileset(filesetId string, bookId string, chapterNum int, timestamps []Timestamp) *log.Status {
+	var status *log.Status
+	var hashId string
+	hashId, status = d.dbpConn.SelectHashId(filesetId)
 	if status != nil {
 		return status
+	}
+	var bibleFileId int64
+	bibleFileId, _, status = d.dbpConn.SelectFileId(hashId, bookId, chapterNum)
+	if status != nil {
+		return status // what is the correct response for not found
+	}
+	if bibleFileId > 0 {
+		var dbpTimestamps []Timestamp
+		dbpTimestamps, status = d.dbpConn.SelectTimestamps(bibleFileId)
+		if status != nil {
+			return status
+		}
+		if len(dbpTimestamps) > 0 {
+			timestamps = MergeTimestamps(timestamps, dbpTimestamps)
+		}
+		_, status = d.dbpConn.UpdateTimestamps(timestamps)
+		if status != nil {
+			return status
+		}
+		timestamps, _, status = d.dbpConn.InsertTimestamps(bibleFileId, timestamps)
+		if status != nil {
+			return status
+		}
+		_, status = d.dbpConn.UpdateSegments(timestamps)
+		if status != nil {
+			return status
+		}
+		_, status = d.dbpConn.UpdateFilesetTimingEstTag(hashId, mmsAlignTimingEstErr)
+		if status != nil {
+			return status
+		}
 	}
 	return nil
 }
@@ -125,6 +140,7 @@ func (d *UpdateTimestamps) SelectFATimestamps(bookId string, chapter int) ([]Tim
 		t.VerseSeq = i + 1
 		t.BeginTS = db.BeginTS
 		t.EndTS = db.EndTS
+		t.AudioFile = db.AudioFile
 		result = append(result, t)
 	}
 	return result, nil

@@ -250,10 +250,6 @@ func (d *DBPAdapter) UpdateSegments(segments []Timestamp) (int, *log.Status) {
 	if err != nil {
 		return rowCount, log.Error(d.ctx, 500, err, query)
 	}
-	if rowCount != len(segments) {
-		return rowCount, log.ErrorNoErr(d.ctx, 500,
-			"Row count expected:", len(segments), "Actual Count:", rowCount, query)
-	}
 	return rowCount, nil
 }
 
@@ -281,7 +277,7 @@ func (d *DBPAdapter) UpdateFilesetTimingEstTag(hashId string, timingEstErr strin
 		rowCount = int(count)
 	} else if currEstErr != timingEstErr {
 		query = `UPDATE bible_fileset_tags SET description = ? WHERE hash_id = ? AND name = 'timing_est_err'`
-		result, err = d.conn.Exec(query, hashId, timingEstErr)
+		result, err = d.conn.Exec(query, timingEstErr, hashId)
 		if err != nil {
 			return rowCount, log.Error(d.ctx, 500, err, query)
 		}
