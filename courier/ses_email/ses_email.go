@@ -16,11 +16,10 @@ import (
 )
 
 func sendEmailWithAttachments(sender, recipient, subject, bodyText string, attachmentPaths []string) error {
-	// Create a buffer to build our message
-	buf := new(bytes.Buffer)
+	boundary := fmt.Sprintf("_boundary_%d", time.Now().Unix())
+	var buf bytes.Buffer
 
 	// Create a unique boundary for multipart message
-	boundary := fmt.Sprintf("_boundary_%d", time.Now().Unix())
 
 	// Set up message headers
 	headers := map[string]string{
@@ -34,15 +33,15 @@ func sendEmailWithAttachments(sender, recipient, subject, bodyText string, attac
 
 	// Write headers
 	for key, value := range headers {
-		fmt.Fprintf(buf, "%s: %s\r\n", key, value)
+		buf.WriteString(key + ": " + value + "\r\n")
 	}
-	fmt.Fprintf(buf, "\r\n")
+	buf.WriteString("\r\n")
 
 	// Text part
-	fmt.Fprintf(buf, "--%s\r\n", boundary)
-	fmt.Fprintf(buf, "Content-Type: text/plain; charset=UTF-8\r\n")
-	fmt.Fprintf(buf, "Content-Transfer-Encoding: 7bit\r\n\r\n")
-	fmt.Fprintf(buf, "%s\r\n\r\n", bodyText)
+	buf.WriteString("--" + boundary + "\r\n")
+	buf.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
+	buf.WriteString("Content-Transfer-Encoding: 7bit\r\n\r\n")
+	buf.WriteString(bodyText + "\r\n\r\n")
 
 	// Add attachments
 	for _, attachmentPath := range attachmentPaths {
@@ -72,20 +71,26 @@ func sendEmailWithAttachments(sender, recipient, subject, bodyText string, attac
 			mimeType = "application/vnd.ms-excel"
 		}
 
-		fmt.Fprintf(buf, "--%s\r\n", boundary)
-		fmt.Fprintf(buf, "Content-Type: %s; name=\"%s\"\r\n", mimeType, fileName)
-		fmt.Fprintf(buf, "Content-Disposition: attachment; filename=\"%s\"\r\n", fileName)
-		fmt.Fprintf(buf, "Content-Transfer-Encoding: base64\r\n\r\n")
+		buf.WriteString("--" + boundary + "\r\n")
+		buf.WriteString("Content-Type: " + mimeType + "; name=\"" + fileName + "\"\r\n")
+		buf.WriteString("Content-Disposition: attachment; filename=\"" + fileName + "\"\r\n")
+		buf.WriteString("Content-Transfer-Encoding: base64\r\n\r\n")
 
 		// Encode attachment content to base64
-		encoder := base64.NewEncoder(base64.StdEncoding, buf)
-		encoder.Write(fileBytes)
-		encoder.Close()
-		fmt.Fprintf(buf, "\r\n")
+		encoder := base64.NewEncoder(base64.StdEncoding, &buf)
+		_, err = encoder.Write(fileBytes)
+		if err != nil {
+			return fmt.Errorf("failed to encode attachment %s: %v", fileName, err)
+		}
+		err = encoder.Close()
+		if err != nil {
+			return fmt.Errorf("failed to close encoder for %s: %v", fileName, err)
+		}
+		buf.WriteString("\r\n")
 	}
 
 	// End multipart message
-	fmt.Fprintf(buf, "--%s--\r\n", boundary)
+	buf.WriteString("--" + boundary + "--\r\n")
 
 	// Create a new AWS session
 	sess, err := session.NewSession(&aws.Config{
