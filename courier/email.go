@@ -37,6 +37,7 @@ func GoMailSendMail(ctx context.Context, recipients []string, subject string, ms
 	if err != nil {
 		return log.Error(ctx, 500, err, "Error sending email")
 	}
+	log.Info(ctx, "Email sent", smtpHost, smtpPort, subject, recipients)
 	return nil
 }
 
