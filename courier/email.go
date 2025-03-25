@@ -12,10 +12,6 @@ import (
 	"strings"
 )
 
-// const emailSender1 = "apolyglot@fcbh.us"
-// const emailSender = "noreply@sns.amazonses.com"
-const emailSender = "noreply@shortsands.org"
-
 func GoMailSendMail(ctx context.Context, recipients []string, subject string, msg string,
 	attachments []string) *log.Status {
 	senderEmail := os.Getenv("SMTP_SENDER_EMAIL")
@@ -42,7 +38,9 @@ func GoMailSendMail(ctx context.Context, recipients []string, subject string, ms
 }
 
 // SESSendEmail sends an email to multiple recipients using AWS SES
-func SESSendEmail(ctx context.Context, recipients []string, subject string, msg string) *log.Status {
+func SESSendEmail(ctx context.Context, recipients []string, subject string, msg string,
+	attachments []string) *log.Status {
+	senderEmail := os.Getenv("SMTP_SENDER_EMAIL")
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String("us-west-2"),
 	})
@@ -50,7 +48,7 @@ func SESSendEmail(ctx context.Context, recipients []string, subject string, msg 
 		return log.Error(ctx, 500, err, "Error creating email session")
 	}
 	input := &ses.SendEmailInput{
-		Source: aws.String(emailSender),
+		Source: aws.String(senderEmail),
 		Destination: &ses.Destination{
 			ToAddresses: aws.StringSlice(recipients),
 			//CcAddresses:  aws.StringSlice(email.Cc),
