@@ -3,7 +3,6 @@ package update
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"math"
@@ -40,14 +39,12 @@ func ComputeBytes(ctx context.Context, file string, segments []Timestamp) ([]Tim
 	if err != nil {
 		return segments, log.ErrorNoErr(ctx, 500, "probe error: %s", err.Error())
 	}
-	a := len(probe)
-	fmt.Println(a)
 	var i int
-	var time, prevTime float64
+	var time1, prevTime float64
 	var pos, prevPos int64
 	bound := segments[i].BeginTS
 	for _, frame := range response.Frames {
-		time, err = strconv.ParseFloat(frame.BestEffortTimestamp, 64)
+		time1, err = strconv.ParseFloat(frame.BestEffortTimestamp, 64)
 		if err != nil {
 			log.Warn(ctx, "time parse error:", err.Error())
 			continue
@@ -57,13 +54,13 @@ func ComputeBytes(ctx context.Context, file string, segments []Timestamp) ([]Tim
 			log.Warn(ctx, "position parse error:", err.Error())
 			continue
 		}
-		if time >= bound {
-			duration := time - prevTime
+		if time1 >= bound {
+			duration := time1 - prevTime
 			nbytes := pos - prevPos
 			segments[i].Duration = math.Round(duration*10000) / 10000
 			segments[i].Position = prevPos
 			segments[i].NumBytes = nbytes
-			prevTime = time
+			prevTime = time1
 			prevPos = pos
 			if i+1 != len(segments) {
 				i++
