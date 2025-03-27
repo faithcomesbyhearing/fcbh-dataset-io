@@ -14,7 +14,7 @@ import (
 )
 
 //{
-//  "operation": "start",
+//  "operation": "start", or "stop",
 //   "instanceId": "i-0b22222aa0f43d1a5",
 //   "bucket": "dataset-queue",
 //   "folder": "input/"
