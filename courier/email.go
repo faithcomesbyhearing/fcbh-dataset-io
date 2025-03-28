@@ -10,7 +10,6 @@ import (
 	"github.com/go-gomail/gomail"
 	"os"
 	"strconv"
-	"strings"
 )
 
 func GoMailSendMail(ctx context.Context, recipients []string, subject string, msg string,
@@ -22,7 +21,7 @@ func GoMailSendMail(ctx context.Context, recipients []string, subject string, ms
 
 	m := gomail.NewMessage()
 	m.SetHeader("From", senderEmail)
-	m.SetHeader("To", strings.Join(recipients, ","))
+	m.SetHeader("To", recipients...)
 	//m.SetAddressHeader("Cc", "cc1@company.com", "Dan")
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/plain", msg)
