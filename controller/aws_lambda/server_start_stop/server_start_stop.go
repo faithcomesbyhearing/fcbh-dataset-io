@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
@@ -79,24 +78,10 @@ func handler(ctx context.Context, event events.CloudWatchEvent) error {
 }
 
 func startServer(ctx context.Context, client *ec2.Client, instanceId string) error {
-	// load user_data.sh script
-	userData := `#!/bin/bash
-echo "Starting a_polyglot application $(date)" >> /var/log/app-startup.log
-/home/ec2-user/go/src/fcbh-dataset-io/EC2_start_script.sh
-`
-	_, err := client.ModifyInstanceAttribute(ctx, &ec2.ModifyInstanceAttributeInput{
-		InstanceId: aws.String(instanceId),
-		UserData: &types.BlobAttributeValue{
-			Value: []byte(userData),
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("error updating user data: %v", err)
-	}
-	// Start the server
-	_, err = client.StartInstances(ctx, &ec2.StartInstancesInput{
+	input := &ec2.StartInstancesInput{
 		InstanceIds: []string{instanceId},
-	})
+	}
+	_, err := client.StartInstances(ctx, input)
 	if err != nil {
 		return fmt.Errorf("error starting instance: %v", err)
 	}
