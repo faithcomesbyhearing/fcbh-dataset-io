@@ -32,3 +32,16 @@ func TestStopHandler(t *testing.T) {
 		t.Errorf("Handler returned error: %v", err)
 	}
 }
+
+func TestStartASAPHandler(t *testing.T) {
+	ctx := context.Background()
+	var event = events.CloudWatchEvent{}
+	event.Detail = json.RawMessage(`{"operation": "start_asap", 
+		"instance_id": "i-0b22222aa0f43d1a5",
+		"bucket": "dataset-queue",
+		"folder": "input/"}`)
+	err := handler(ctx, event)
+	if err != nil {
+		t.Errorf("Handler returned error: %v", err)
+	}
+}
