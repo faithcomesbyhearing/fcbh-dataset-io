@@ -2,9 +2,10 @@ package courier
 
 import (
 	"context"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ses"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ses"
+	"github.com/aws/aws-sdk-go-v2/service/ses/types"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"github.com/go-gomail/gomail"
 	"os"
@@ -41,33 +42,33 @@ func GoMailSendMail(ctx context.Context, recipients []string, subject string, ms
 func SESSendEmail(ctx context.Context, recipients []string, subject string, msg string,
 	attachments []string) *log.Status {
 	senderEmail := os.Getenv("SMTP_SENDER_EMAIL")
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("us-west-2"),
-	})
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion("us-west-2"),
+	)
 	if err != nil {
 		return log.Error(ctx, 500, err, "Error creating email session")
 	}
 	input := &ses.SendEmailInput{
 		Source: aws.String(senderEmail),
-		Destination: &ses.Destination{
-			ToAddresses: aws.StringSlice(recipients),
-			//CcAddresses:  aws.StringSlice(email.Cc),
+		Destination: &types.Destination{
+			ToAddresses: recipients,
+			//CcAddresses: email.Cc,
 		},
-		Message: &ses.Message{
-			Subject: &ses.Content{
+		Message: &types.Message{
+			Subject: &types.Content{
 				Data:    aws.String(subject),
 				Charset: aws.String("UTF-8"),
 			},
-			Body: &ses.Body{
-				Text: &ses.Content{
+			Body: &types.Body{
+				Text: &types.Content{
 					Data:    aws.String(msg),
 					Charset: aws.String("UTF-8"),
 				},
 			},
 		},
 	}
-	svc := ses.New(sess)
-	result, err := svc.SendEmail(input)
+	svc := ses.NewFromConfig(cfg)
+	result, err := svc.SendEmail(ctx, input)
 	if err != nil {
 		return log.Error(ctx, 500, err, "Error sending email")
 	}
