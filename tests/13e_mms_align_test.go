@@ -1,7 +1,9 @@
 package tests
 
 import (
+	"fmt"
 	"testing"
+	"time"
 )
 
 const mmsAlignTest = `is_new: yes
@@ -27,6 +29,8 @@ testament:
 // When I restore that the counts will need to be increased.
 
 func TestMMSAlignDirect(t *testing.T) {
+	start := time.Now()
+	//log.SetOutput("stdout")
 	var tests []SqliteTest
 	tests = append(tests, SqliteTest{"SELECT count(*) FROM scripts", 26})
 	tests = append(tests, SqliteTest{"SELECT count(*) FROM scripts WHERE script_begin_ts != 0.0", 25})
@@ -35,4 +39,5 @@ func TestMMSAlignDirect(t *testing.T) {
 	tests = append(tests, SqliteTest{"SELECT count(*) FROM chars", 1785})
 	tests = append(tests, SqliteTest{"SELECT count(distinct(word_id)) FROM chars", 446})
 	DirectSqlTest(mmsAlignTest, tests, t)
+	fmt.Println("Duration", time.Since(start))
 }
