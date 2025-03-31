@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"runtime"
 	"sort"
@@ -14,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/cleanup"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/controller"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
@@ -26,6 +26,7 @@ const (
 
 func main() {
 	ctx := context.WithValue(context.Background(), `runType`, `queue`)
+	cleanup.CleanupDownloadDirectory(ctx)
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion("us-west-2"),
 		config.WithLogger(logger),
