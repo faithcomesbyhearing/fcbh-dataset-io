@@ -1,0 +1,9 @@
+FCBH_AENEAS_PYTHON=/opt/conda/envs/aeneas/bin/python
+FCBH_FASTTEXT_EXE=/opt/conda/envs/fasttext/fastText/fasttext
+FCBH_LIBROSA_PYTHON=/opt/conda/envs/librosa/bin/python
+FCBH_MMS_ASR_PYTHON=/opt/conda/envs/mms_asr/bin/python
+FCBH_MMS_FA_PYTHON=/opt/conda/envs/mms_fa/bin/python
+FCBH_UROMAN_EXE=/opt/conda/envs/mms_fa/bin/uroman
+FCBH_WHISPER_EXE=/opt/conda/envs/whisper/bin/whisper
+FCBH_DATASET_LOG_LEVEL=DEBUG
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True

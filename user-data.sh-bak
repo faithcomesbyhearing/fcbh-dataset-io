@@ -1,0 +1,13 @@
+#!/bin/bash -xv
+## BWF March 31, 2025 I believe this is old. the correct user-data.sh file is in the terraform project
+export APPSOURCE="/home/ubuntu/app"
+
+mkdir -p $APPSOURCE
+cd $APPSOURCE
+rm -rf dataset
+git clone https://github.com/faithcomesbyhearing/fcbh-dataset-io.git dataset
+cd dataset
+go install dataset/controller/queue_server
+
+# queue_server is on GOPATH, which is on PATH
+queue_server &

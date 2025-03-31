@@ -35,6 +35,28 @@ variable "ssh_username" {
   default = "ubuntu"
 }
 
+variable "env_var_filename" {
+  type    = string
+  default = "env_vars.txt"
+}
+
+# these must be provided during packer invocation
+variable "fcbh_dataset_queue" {
+  type    = string
+}
+variable "fcbh_dataset_io_bucket" {
+  type    = string
+}
+variable "openai_api_key" {
+  type    = string
+}
+variable "fcbh_dbp_key" {
+  type    = string
+}
+
+
+## should be unchanged below here
+
 packer {
   required_plugins {
     amazon = {
@@ -58,6 +80,10 @@ source "amazon-ebs" "my-ami" {
     volume_type = "gp3"
     delete_on_termination = true
   }
+  
+
+  # note: user-data.sh will be provided by the launch template (must faster)
+
   profile = var.aws_profile
 
   vpc_id           = var.vpc_id
@@ -74,35 +100,66 @@ build {
     "source.amazon-ebs.my-ami"
   ]
 
+
+  # set config files and environment variables that are relative to another environment variable
   provisioner "file" {
     source      = "cloudwatch-nvidia.json"  
     destination = "/tmp/cloudwatch-nvidia.json"
   }
+  provisioner "shell" {
+    inline = [
+      "sudo mv /tmp/cloudwatch-nvidia.json  /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
+      "sudo chmod 644 /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
+      "sudo echo export HOME=/home/ubuntu >> /home/ubuntu/.bash_profile",
+      "sudo echo export GOPATH=$HOME/go  >> /home/ubuntu/.bash_profile",
+      "sudo echo export GOPROJ=$HOME/go/src  >> /home/ubuntu/.bash_profile",
+      "sudo echo export PATH=$PATH:$GOPATH/bin  >> /home/ubuntu/.bash_profile",
+      "sudo echo export FCBH_DATASET_DB=$HOME/data  >> /home/ubuntu/.bash_profile",
+      "sudo echo export FCBH_DATASET_FILES=$HOME/data/download  >> /home/ubuntu/.bash_profile",
+      "sudo echo export FCBH_DATASET_TMP=$HOME/data/tmp  >> /home/ubuntu/.bash_profile",
+      "sudo echo export FCBH_DATASET_LOG_FILE=$HOME/dataset.log  >> /home/ubuntu/.bash_profile"
+    ]
+  }
+
+  # set common environment variables into .bash_profile
   provisioner "file" {
-    source      = "env_vars_dev.txt"  
+    source      = "bash-vars.txt"  
     destination = "/tmp/env_vars.txt"
   }
   provisioner "shell" {
       inline = [
         "echo 'Setting environment variables from file:'",
-        // Read the file and set each variable
         "while IFS='=' read -r var val; do",
         "  echo \"Setting $var to $val\"",
-        "  echo \"export $var='$val'\" >> /home/ubuntu/.bashrc",
-        "done < /tmp/env_vars.txt",
+        "  echo \"export $var='$val'\" >> /home/ubuntu/.bash_profile",
+        "done < /tmp/env_vars.txt"
       ]
   }
 
-  # temporary, to verify file was copied with root permissions
+  # set environment-specific variables (eg the S3 buckets are different from dev to prod)
   provisioner "shell" {
-    inline = [
-      "sudo mv /tmp/cloudwatch-nvidia.json  /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
-      "sudo chmod 644 /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
-      "echo 'export GOPATH=/home/ubuntu/go' >> /home/ubuntu/.bashrc",
-      "echo 'export PATH=$PATH:$GOPATH/bin' >> /home/ubuntu/.bashrc"      
-    ]
+      environment_vars = [
+        "FCBH_DATASET_QUEUE=${var.fcbh_dataset_queue}",
+        "FCBH_DATASET_IO_BUCKET=${var.fcbh_dataset_io_bucket}",
+      ]
+      inline = [
+        "echo 'export FCBH_DATASET_QUEUE='$FCBH_DATASET_QUEUE >> /home/ubuntu/.bash_profile",
+        "echo 'export FCBH_DATASET_IO_BUCKET='$FCBH_DATASET_IO_BUCKET >> /home/ubuntu/.bash_profile",
+      ]
   }
-  
+
+  # set secrets
+  provisioner "shell" {
+      environment_vars = [
+        "OPENAI_API_KEY=${var.openai_api_key}",
+        "FCBH_DBP_KEY=${var.fcbh_dbp_key}",
+      ]
+      inline = [
+        "echo 'export OPENAI_API_KEY='$OPENAI_API_KEY >> /home/ubuntu/.bash_profile",
+        "echo 'export FCBH_DBP_KEY='$FCBH_DBP_KEY >> /home/ubuntu/.bash_profile",
+      ]
+  }
+  # install code
   provisioner "shell" {
     script = "provision-ami.sh"
   }

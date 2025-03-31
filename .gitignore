@@ -11,3 +11,5 @@
 user-data.sh
 test_data/*
 
+build-ami/user-data-base64.txt
+build-ami/secrets*.*

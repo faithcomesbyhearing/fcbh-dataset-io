@@ -3,18 +3,19 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/cleanup"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/controller"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"io"
+	"log"
 	"os"
 	"runtime"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/controller"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
 const (
@@ -24,10 +25,10 @@ const (
 )
 
 func main() {
-	var ctx = context.WithValue(context.Background(), `runType`, `queue`)
-	cleanup.CleanupDownloadDirectory(ctx)
+	ctx := context.WithValue(context.Background(), `runType`, `queue`)
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion("us-west-2"),
+		config.WithLogger(logger),
 	)
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err, "aws LoadDefaultConfig Failed In Queue Main")
@@ -37,6 +38,8 @@ func main() {
 	first := true
 	for {
 		bucketName := os.Getenv("FCBH_DATASET_QUEUE")
+		fmt.Printf("FCBH_DATASET_QUEUE: %s", bucketName)
+
 		object, key, status := getOldestObject(ctx, client, bucketName)
 		if first && status != nil {
 			_, _ = fmt.Fprintln(os.Stderr, err, "Reading First Input Failed In Queue Main")
@@ -44,7 +47,7 @@ func main() {
 		}
 		first = false
 		if status == nil && object != nil {
-			var control = controller.NewController(ctx, object)
+			control := controller.NewController(ctx, object)
 			_, status = control.ProcessV2()
 			var folder string
 			if status != nil {
@@ -61,7 +64,7 @@ func main() {
 func getOldestObject(ctx context.Context, client *s3.Client, bucket string) ([]byte, string, *log.Status) {
 	var content []byte
 	var key string
-	var inFolder = inputFolder
+	inFolder := inputFolder
 	if runtime.GOOS == "darwin" {
 		inFolder = "input_test/"
 	}
