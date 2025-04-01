@@ -13,7 +13,6 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/match/align"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/match/diff"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms/fa_score_analysis"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/output"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/read"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/speech_to_text"
@@ -390,8 +389,6 @@ func (c *Controller) timestamps(audioFiles []input.InputFile) *log.Status {
 		if status != nil {
 			return status
 		}
-		analysisRpt, _ := fa_score_analysis.FAScoreAnalysis(c.database)
-		c.bucket.AddOutput(analysisRpt)
 	}
 	return status
 }

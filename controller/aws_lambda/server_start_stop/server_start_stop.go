@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -14,42 +12,38 @@ import (
 
 //{
 //  "operation": "start", or "stop",
-//   "instanceId": "i-0b22222aa0f43d1a5",
+//   "instance_id": "i-0b22222aa0f43d1a5",
 //   "bucket": "dataset-queue",
 //   "folder": "input/"
 //}
 
-func handler(ctx context.Context, event events.CloudWatchEvent) error {
-	var parm struct {
-		Operation  string `json:"operation"`
-		InstanceID string `json:"instance_id"`
-		Bucket     string `json:"bucket"`
-		Folder     string `json:"folder"`
-	}
+func handler(ctx context.Context, event map[string]any) error {
+	fmt.Println("Starting AWS lambda handler", event)
+	operation := event["operation"].(string)
+	instanceId := event["instance_id"].(string)
+	bucket := event["bucket"].(string)
+	folder := event["folder"].(string)
 	var err error
-	if err = json.Unmarshal(event.Detail, &parm); err != nil {
-		return fmt.Errorf("error parsing detail: %v", err)
-	}
 	var cfg aws.Config
 	cfg, err = config.LoadDefaultConfig(ctx, config.WithRegion("us-west-2"))
 	if err != nil {
 		return fmt.Errorf("error loading AWS config: %v", err)
 	}
 	ec2Client := ec2.NewFromConfig(cfg)
-	if parm.Operation == "start_asap" {
-		err = startServer(ctx, ec2Client, parm.InstanceID)
-	} else if parm.Operation == "stop_asap" {
-		err = stopServer(ctx, ec2Client, parm.InstanceID)
+	if operation == "start_asap" {
+		err = startServer(ctx, ec2Client, instanceId)
+	} else if operation == "stop_asap" {
+		err = stopServer(ctx, ec2Client, instanceId)
 	} else {
 		var statusOutput *ec2.DescribeInstancesOutput
 		statusOutput, err = ec2Client.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
-			InstanceIds: []string{parm.InstanceID},
+			InstanceIds: []string{instanceId},
 		})
 		if err != nil {
 			return fmt.Errorf("error describing instance: %v", err)
 		}
 		if len(statusOutput.Reservations) == 0 || len(statusOutput.Reservations[0].Instances) == 0 {
-			return fmt.Errorf("instance %s not found", parm.InstanceID)
+			return fmt.Errorf("instance %s not found", instanceId)
 		}
 		instance := statusOutput.Reservations[0].Instances[0]
 		if instance.State == nil {
@@ -60,17 +54,17 @@ func handler(ctx context.Context, event events.CloudWatchEvent) error {
 			s3Client := s3.NewFromConfig(cfg)
 			var result *s3.ListObjectsV2Output
 			result, err = s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
-				Bucket:  aws.String(parm.Bucket),
-				Prefix:  aws.String(parm.Folder),
+				Bucket:  aws.String(bucket),
+				Prefix:  aws.String(folder),
 				MaxKeys: aws.Int32(1),
 			})
 			if err != nil {
 				return fmt.Errorf("error listing objects in queue: %v", err)
 			}
-			if parm.Operation == "start" && serverState == "stopped" && len(result.Contents) > 0 {
-				err = startServer(ctx, ec2Client, parm.InstanceID)
-			} else if parm.Operation == "stop" && serverState == "running" && len(result.Contents) == 0 {
-				err = stopServer(ctx, ec2Client, parm.InstanceID)
+			if operation == "start" && serverState == "stopped" && len(result.Contents) > 0 {
+				err = startServer(ctx, ec2Client, instanceId)
+			} else if operation == "stop" && serverState == "running" && len(result.Contents) == 0 {
+				err = stopServer(ctx, ec2Client, instanceId)
 			}
 		}
 	}
