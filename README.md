@@ -1,11 +1,319 @@
-# FCBH Data Preparation for Deep Learning
+# Artificial Polyglot
 
-## Introduction
+An application server that integrates AI technologies into a production system that 
+streamlines the creation of audio Bible recordings. This server integrates existing 
+AI tools to production workflows, automating and enhancing the process of developing 
+high-quality, multilingual audio Bibles.
+
+## Motivation
 
 > "And this gospel of the kingdom will be proclaimed throughout the whole world as a testimony to all nations, and then the end will come." Matt 24:14.
-This seems to describe a contingency on our Lord's coming, that the gospel has been proclaimed to all nations.  Certainly, the work that SIL is doing in translating the scriptures, and the work FCBH is doing are critical parts.  But is it possible that the word "proclaimed" implies more than the scriptures themselves, but also the preaching of those scriptures?  Recent advances in artificial intelligence (AI) make it conceivable that technology might someday provide the ability to translate spoken words into any language.  And even though this technology might be developed by a company such as OpenAI, Google, or Microsoft; FCBH houses data that is critical to this development by having audio Bibles in a large number of languages.  Because each language is a translation of the same document, these audio translations will be especially useful to this AI task.  So, this project hopes to be a help by preparing data.
+This seems to describe a contingency on the Lord's coming, that the gospel has been proclaimed to all nations.  Certainly, the work that many are doing in translating the scriptures, and the work FCBH (Faith Comes By Hearing) is doing are critical parts.  But is it possible that the word "proclaimed" implies more than the scriptures themselves, but also the preaching of those scriptures?  Recent advances in artificial intelligence (AI) make it conceivable that technology might someday provide the ability to translate spoken words into any language.  And even though this technology might be developed by a company such as OpenAI, Google, or Microsoft; FCBH houses data that is critical to this development by having audio Bibles in a large number of languages.  Because each language is a translation of the same document, these audio translations will be especially useful to this AI task.  So, this project hopes to be a help by preparing data.
+
+## The Opportunity
+
+Meta (formerly Facebook) has open-sourced an AI research project called MMS 
+(Massively Multilingual Speech) that supports over 1,100 languages. A significant 
+portion of the training data for this model came directly from Faith Comes By 
+Hearing (FCBH), specifically their online repository of text and audio Bible translations. 
+This creates a strategic advantage for FCBH: since the MMS model was partially 
+trained on their own New Testament and Old Testament content, FCBH can now leverage 
+this same model to verify the accuracy of their audio recordings against the corresponding 
+text.
+
+Introduction to MMS<br>
+https://ai.meta.com/blog/multilingual-model-speech-recognition/<br>
+Technical Paper on MMS<br>
+https://arxiv.org/pdf/2305.13516<br>
+MMS Repository on Github<br>
+https://github.com/facebookresearch/fairseq/tree/main/examples/mms<br>
+
+## Audio Proofing by Comparison
+
+The audio proofing module works through a multi-step process:<br>
+
+1. **Speech-to-Text Conversion**: The MMS model transcribes the audio Bible recordings into text.
+1. **Text Comparison**: The system compares this machine-generated transcript against the original source text using Google's diff-match-patch tool, which implements the Myers difference algorithm.
+1. **Prioritized Error Detection**: A custom sorting algorithm organizes the differences, placing likely audio errors at the top of the report for efficient review.
+1. **Interactive Results**: The system generates an HTML report that allows reviewers to:
+   - View all detected discrepancies
+   - Play the audio for each verse directly within the report
+   - Quickly identify and address the most problematic sections
+
+This automated approach has dramatically improved efficiency, reducing audio proofing time by 90-95% compared to traditional manual methods.
+
+<!-- Audio Proofing is done by using MMS to perform speech to text on the audio, and then 
+comparing that generated text to the original source text.  The comparison is performed using 
+a text difference tool using the Myers difference algorithm, named diff-match-patch,
+and developed by Google.  A custom algorithm to sort the result diff lines so that audio 
+errors are near the top of the report is key. Using these methods has reduced the time to 
+proof audio files by 90-95%.  The server delivers results as an HTML report that can be 
+opened locally and is able play the audio of each verse.-->
+
+MMS ASR<br>
+https://huggingface.co/docs/transformers/v4.50.0/en/model_doc/mms#automatic-speech-recognition-asr<br>
+Myers Diff Algorithm<br>
+https://neil.fraser.name/writing/diff/myers.pdf<br>
+Diff-Match-Patch<br>
+https://github.com/google/diff-match-patch?tab=readme-ov-file<br>
+A-Polyglot code for Speech to Text<br>
+https://github.com/faithcomesbyhearing/fcbh-dataset-io/blob/main/mms/mms_asr.go<br>
+
+## Audio Proofing by Forced Alignment
+
+TorchAudio provides multiple forced alignment methods that synchronize audio recordings 
+with their corresponding text. These systems:
+
+1. **Generate Precise Timestamps**: Map each character in the text to its exact start and end times in the audio
+2. **Calculate Confidence Scores**: Produce probability scores indicating how likely each character in the text matches what was actually spoken
+   - These character-level probabilities can be aggregated to assess word-level accuracy
+3. **Implementation Options**:
+   - **Multilingual Model**: Offers superior accuracy but requires significant GPU resources
+   - **CTC Model**: Used for processing longer audio files that would exceed GPU memory with the multilingual model
+
+While these forced alignment techniques have sometimes identified errors with remarkable 
+precision, they have proven less consistent than the "Audio Proofing by Comparison" 
+method described earlier. 
+
+
+<!-- Torchaudio includes a few different methods of forced alignment, by which one enters
+audio and text into a model that provides audio timestamps for the beginning and ending
+of each character in the audio.  In addition to timestamps, it also delivers a probability
+that the character in the text was correct in the audio.  These character probabilities
+can be summarized to word probabilities of correctness.  These probabilities have been
+very useful for identifying errors in the audio, in some cases they have been very precise,
+but have also been less consistent than the method above "Audio Proofing by Comparison".  
+Two methods of forced alignment are used.  The multilingual model is most accurate but requires more
+GPU.  The other is used when a audio requires too much GPU to process. -->
+
+Multilingual Forced Alignment<br>
+https://pytorch.org/audio/main/tutorials/forced_alignment_for_multilingual_data_tutorial.html<br>
+CTC Forced Alignment<br>
+https://pytorch.org/audio/main/tutorials/ctc_forced_alignment_api_tutorial.html<br>
+A-Polyglot code for Multilingual Forced Alignment<br>
+https://github.com/faithcomesbyhearing/fcbh-dataset-io/blob/main/mms/mms_align.go<br>
+
+## Audio Timestamps Generation
+
+Audio timestamps are essential for multiple purposes in audio Bible production:<br>
+1. **Core Applications**:
+   - Dividing audio chapters into verse and script segments for speech-to-text processing
+   - Pinpointing specific words for audio correction
+   - Validating character-level accuracy in recordings
+2. **Available Methods**:
+   - Aeneas forced alignment
+   - Standard forced alignment
+   - Multilingual forced alignment
+3. **Comparative Analysis**: We evaluated the accuracy of all three methods by performing speech-to-text conversion and analyzing positional errors. The multilingual forced alignment consistently delivered the highest precision.
+4. **Output Formats**: The system can export timestamp data in multiple formats:
+   - JSON
+   - CSV
+   - SQLite database
+   
+This flexibility allows timestamps to be integrated into various workflow systems and downstream applications.
+
+<!-- Audio timestamps are needed to chop audio chapters into verse segments and script segments for speech to text processing,
+or to locate the position of specific words for audio correction, or to identify the probability that
+specific characters are correctly presented in the audio.  This server is able to compute timestamps
+using Aeneas and by the two forced alignment methods described above.  The accuracy of these
+three methods was compared by doing speech to text and looking for errors of position.  
+The Multilingual Forced Alignment method was the most accurate.  Output of timestamp data
+can be delivered in json, csv, or as a sqlite database. -->
+
+## Text Input Adapters
+
+The server supports multiple Bible text formats through specialized adapters that:
+1. **Process Various File Types**:
+   - USX (Unified Scripture XML) an XML-based Bible encoding standard
+   - Plain text format used by FCBH Bible Brain system
+   - Excel (XLSX) production scripts used by FCBH for audio recording
+2. **Standardize Content**: Each adapter converts its specific format into a common internal schema
+3. **Store Data Efficiently**: All processed text is organized and stored in a SQLite database for unified access across the system
+
+This flexible input system allows the server to work with whatever text resources are available without requiring format conversion by users.
+
+<!-- Bible text can be read into the server from a number of formats, including: USX,
+a plain text format used by the FCBH Bible Brain system, and an xlxs format that
+FCBH uses as a script for audio production.  The system has adapters for each of
+these formats that loads the text into an internal schema and stored in a sqlite database. -->
+
+## Textual Comparison Tools
+
+The text comparison system extends beyond audio verification to support several critical workflows:
+
+1. **Version Control**:
+   - Compare different revisions of the same USX file to identify changes
+   - Track modifications between iterations of XLSX production scripts
+2. **Cross-Format Validation**:
+   - Verify that production scripts accurately reflect the source USX content
+   - Ensure consistency between different representations of the same biblical text
+3. **Intelligent Processing**:
+   - When comparing USX files with scripts or audio files, the system automatically filters the USX content to include only:
+       - Verse text
+       - Relevant heading text
+
+This adaptable comparison framework helps maintain content integrity across the various stages of Bible production and translation.
+
+<!-- ## Textual Comparison
+
+The text comparison tool that is used for audio proofing can be used in a variety of
+ways.  For example, two revisions of a USX file could be compared to see changes.
+Or, two revisions of a xlxs script could be compare to see changes. Or, a USX file
+could be compared with a script to verify that the script properly the USX file.
+When doing the USX to script comparison or USX to audio file comparison the USX file
+is parsed to include only verse text, and the expected heading text. -->
+
+## Language Selection
+
+Most of the audios to be proofed are not one of the languages supported by MMS.  The 
+current work-around of this problem is a module that selects a related language 
+by doing a search of the glottolog tree to find a related language that is supported
+by the MMS model.
+
+Glottolog<br>
+https://glottolog.org<br>
+
+## Current and Future Development
+
+* Identification and removal of false positives from proofing reports
+* Ability to learn languages not supported by the MMS model
+* Ability to correct selected words in audio files
+
+## System Architecture
+
+The server is architected as a collection of reasonably independent modules that all read 
+their inputs and write their outputs to one unified schema in a sqlite database.
+
+The user's primary input to the server is a configuration file in .yaml format where the
+user specifies their inputs, the tasks they would like performed, and how their output will be presented.
+
+The following is a master list of all of the possible entries one can make to a .yaml request file.
+
+```
+# These six fields are required
+is_new: yes # Answer yet to start a new project
+dataset_name: xxxxxx # Use a unique name to keep runs separate, or reuse a name to add to a prior run
+bible_id: ATIWBT # typically language code and version code
+username: JonDoe #
+# The remaining configuration choices are all optional, but something must be selected in order for some processing to be done.
+
+notify_ok: [emille@fcbhmail.org] # recipients of successful completion
+notify_err: [jbarndt@fcbhmail.org, gary@shortsands.com] # recipients of errors
+alt_language: # To force the use of an alternate language, use this field
+
+output: #
+  directory: # Enter the directory path where output should be written on server
+  csv: # Mark yes for csv output
+  json: # Mark yes for json output
+  sqlite: # Mark yes for sqlite output
+
+testament: # Choose one or both
+  nt: yes # Mark Yes for entire New Testament
+  nt_books: [] # To process part of the NT, list specific USFM NT book codes, e.g. [MAT,MRK,LUK,JHN]
+  ot: # Mark Yes for entire Old Testament
+  ot_books: [] # To process part of the OT, list specific USFM OT book codes, e.g. [GEN,EXO,LEV,NUM]
+# Default: nt
+
+database: # Use to access database outside server
+  aws_s3: # e.g. s3://{bucket}/path/database_name.db (no wild care allowed here)
+
+audio_data: # Choose one of the following
+  bible_brain: # If Bible Brain put Yes by the desired type
+    mp3_64: yes # Mark Yes for 64 bit MP3
+    mp3_16: # Mark Yes for 16 bit MP3
+    opus: # Mark Yes for OPUS
+  file: # e.g. /{directory}/{mediaId}/*.usx Note: include twice for OT and NT
+  aws_s3: # e.g. s3://{bucket}/audio/{bibleId}/{mediaId}/*.mp3  Note: include twice for OT and NT
+  post: # e.g. {mediaId}_{A/Bseq}_{book}_{chapter}_{verse}-{chapter_end}_{verse_end}, use detail as needed
+  no_audio: # If no audio put Yes here
+# Default:  no_audio
+
+text_data: # Choose one of the following
+  bible_brain: # If Bible Brain put Yes by the desired type
+    text_usx_edit: # Mark Yes, for USX with text not in audio removed
+    text_plain_edit: # Mark Yes, for plain_text with headings added to match audio
+    text_plain: # Mark Yes, for DBP plain_text
+  file: # e.g. /{directory}/{mediaId}/*.usx Note: include twice for OT and NT
+  aws_s3: # e.g. s3://{bucket}/text/{bibleId}/{mediaId}/*.usx  Note: include twice for OT and NT
+  post: # {mediaId}_{A/Bseq}_{book}_{chapter}_{verse}-{chapter_end}_{verse_end}, use detail as needed
+  no_text: # If there is no text yes here
+# Default: no_text
+
+timestamps: # If timestamps are needed, mark Yes by source
+  bible_brain: # Use is not recommended, because the last verse has no ending timestamp.
+  aeneas:  # This will cause aeneas to compute timestamps, audio and text are both required
+  ts_bucket: # This will pull timestamp data from Sandeep's bucket
+  mms_fa_verse: # This will compute timestamps using mms forced alignment
+  mms_align: # This is a second method for computing timestamps.  It also provides a score for each word and verse.
+  no_timestamps: # If time stamps are not needed
+# Default: no_timestamps
+
+speech_to_text: # If STT is source Yes by desired type
+  mms_asr: # This is Meta's MMS Speech to Text model
+  whisper: # This is OpenAI’s Speech to Text model
+    model: # If using Whisper, choose one of the model sizes by marking it Yes
+      large:
+      medium:
+      small:
+      base:
+      tiny:
+  no_speech_to_text: #
+# Default: no_speech_to_text
+
+detail: # Choose word or both
+  lines: # Mark yes to process script lines
+  words: # Mark yes to process individual words
+# Default: lines
+
+audio_encoding: # If audio encoding is needed, mark Yes by the method
+  mfcc:
+  no_encoding:
+# Default: no_encoding
+
+text_encoding:
+  fast_text:
+  no_encoding:
+# Default: no_encoding
+
+audio_proof:
+  html_report: # Mark yes to receive proof report
+  base_dataset: # Use only when is_new: false to identify the USX dataset, the dataset_name must be the ASR dataset
+
+compare: # To do a compare, put the names of the two projects here
+  html_report: # Mark yes to receive compare report
+  base_dataset:  # Name of dataset to compare to this one
+## compare entries go here
+## edit check, the two projects must exist, and both must have a text source.
+  compare_settings: # Mark yes, all settings that apply
+    lower_case: # Mark yes here to move to lower case
+    remove_prompt_chars: # Mark yes here to remove prompt chars found in audio transcript
+    remove_punctuation: # Mark yes here to remove punctuation
+    double_quotes: # Choose no more than one
+      remove: # Mark yes here to remove double quotes
+      normalize: # Mark yes here to normalize to ascii double quote
+    apostrophe: # Choose no more than one
+      remove: # Mark yes here to remove apostrophes
+      normalize: # Mark yes here to normalize to ascii apostrophe
+    hyphen: # Choose no more than one
+      remove: # Mark yes here to remove Hyphen
+      normalize: # Mark yes here to normalize to ascii hyphen
+    diacritical_marks: # Choose no more than one
+      remove: # Mark yes here to remove diacritical marks
+      normalize_nfc: # Mark yes here for Normalization Form Composition
+      normalize_nfd: # Mark yes here for Normalization Form Decomposition
+      normalize_nfkc: # Mark yes here for Normalization Form Compatibility Composition
+      normalize_nfkd: # Mark yes here for Normalization Form Compatibility Decomposition
+
+```
+<!--
 
 ## Methodology
+
+Text adapters for handling a variety of formats, and converting them all to a single format for further processing.
+So, 
+
+modules for timestamp, speech to text, and various kinds of encoding that work
+with the internal format.
 
 The FCBH audio production process breaks text Bible chapters into script 
 segments (called lines) that are often a sentence long, but always include one speaker.
@@ -155,21 +463,4 @@ The three fields (book_id, chapter_num, script_num) together uniquely identify a
 
 **mfcc_json** - Mel-Frequency Cepstral Coefficients of the audio as produced by the python library librosa, and broken into word segments using the timestamps.
 
-## Non-Canonical Text
-
-The USFM and USX text sources include footnotes, notes, cross references,
-and section headings that are not part of the canon of scripture.
-The plain text copies of scripture contain none of this non-canonical text,
-but contain only the verses, and none of the headings.
-When audio scripts are produced only the canonical text of scripture is
-included, except that book headings and chapter headings are included.
-
-When comparing USFM, USX, plain text, and scripts it is essential that
-these differences are taken into account.  While the Bible Brain system
-recognizes Bible text type "text_usx", this system has a text type of "text_usx_edit",
-which is USX data with all of the non-canonical text removed.  And, while
-the Bible Brain system has Bible text type "text_plain", this system has
-a text type of "text_plain_edit", which is text_plain with book and chapter
-headings added.
-
-Both text_plain_edit, and text_usx_edit formats will compare well with a script.
+-->
