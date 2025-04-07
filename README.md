@@ -190,22 +190,25 @@ user specifies their inputs, the tasks they would like performed, and how their 
 The following is a master list of all of the possible entries one can make to a .yaml request file.
 
 ```
-# These six fields are required
-is_new: yes # Answer yet to start a new project
-dataset_name: xxxxxx # Use a unique name to keep runs separate, or reuse a name to add to a prior run
-bible_id: ATIWBT # typically language code and version code
-username: JonDoe #
+## tab characters are NOT allowed.
+
+# These four fields are required
+is_new: yes # Answer yes to start a new project, answer no to do further processing
+dataset_name: Test1_ATIWBT # Use a unique name to keep runs separate, or reuse a name to add to a prior run
+bible_id: ATIWBT
+username: JohnDoe
+
 # The remaining configuration choices are all optional, but something must be selected in order for some processing to be done.
 
-notify_ok: [emille@fcbhmail.org] # recipients of successful completion
-notify_err: [jbarndt@fcbhmail.org, gary@shortsands.com] # recipients of errors
+notify_ok: [em@fcbhmail.org] # recipients of successful completion
+notify_err: [jb@fcbhmail.org, gary@shortsands.com] # recipients of errors
 alt_language: # To force the use of an alternate language, use this field
 
-output: #
-  directory: # Enter the directory path where output should be written on server
+output: # Use to specify form of output
+  directory: # Enter the server's directory path where output should be written
   csv: # Mark yes for csv output
   json: # Mark yes for json output
-  sqlite: # Mark yes for sqlite output
+  sqlite: # Mark yes for sqlite database output
 
 testament: # Choose one or both
   nt: yes # Mark Yes for entire New Testament
@@ -215,14 +218,14 @@ testament: # Choose one or both
 # Default: nt
 
 database: # Use to access database outside server
-  aws_s3: # e.g. s3://{bucket}/path/database_name.db (no wild care allowed here)
+  aws_s3: # e.g. s3://{bucket}/path/database_name.db (no wild card allowed here)
 
 audio_data: # Choose one of the following
   bible_brain: # If Bible Brain put Yes by the desired type
     mp3_64: yes # Mark Yes for 64 bit MP3
     mp3_16: # Mark Yes for 16 bit MP3
     opus: # Mark Yes for OPUS
-  file: # e.g. /{directory}/{mediaId}/*.usx Note: include twice for OT and NT
+  file: # e.g. /{directory}/{mediaId}/*.wav Note: include twice for OT and NT
   aws_s3: # e.g. s3://{bucket}/audio/{bibleId}/{mediaId}/*.mp3  Note: include twice for OT and NT
   post: # e.g. {mediaId}_{A/Bseq}_{book}_{chapter}_{verse}-{chapter_end}_{verse_end}, use detail as needed
   no_audio: # If no audio put Yes here
@@ -303,7 +306,6 @@ compare: # To do a compare, put the names of the two projects here
       normalize_nfd: # Mark yes here for Normalization Form Decomposition
       normalize_nfkc: # Mark yes here for Normalization Form Compatibility Composition
       normalize_nfkd: # Mark yes here for Normalization Form Compatibility Decomposition
-
 ```
 <!--
 

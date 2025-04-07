@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/bible_brain/timestamp/update"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/courier"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml"
@@ -224,6 +225,15 @@ func (c *Controller) processSteps() *log.Status {
 			return status
 		}
 		c.bucket.AddOutput(filename)
+	}
+	// Update DBP Timestamps
+	if len(c.req.UpdateDBP.Timestamps) > 0 {
+		log.Info(c.ctx, "Update DBP timestamps.")
+		upd := update.NewUpdateTimestamps(c.ctx, c.req, c.database)
+		status = upd.Process()
+		if status != nil {
+			return status
+		}
 	}
 	// Prepare output
 	log.Info(c.ctx, "Generate output.")

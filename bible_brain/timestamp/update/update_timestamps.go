@@ -46,7 +46,7 @@ func (d *UpdateTimestamps) Process() *log.Status {
 	if filesetId == "" {
 		filesetId = ident.AudioOTId
 	}
-	log.Info(d.ctx, "Processing:", filesetId)
+	log.Info(d.ctx, "DBP Update Processing:", filesetId)
 	var chapters []db.Script
 	chapters, status = d.conn.SelectBookChapter()
 	if status != nil {
@@ -66,8 +66,8 @@ func (d *UpdateTimestamps) Process() *log.Status {
 				return status
 			}
 			for i := range timestamps {
-				timestamps[i].BeginTS = math.Round(timestamps[i].BeginTS*100.0) / 100.0
-				timestamps[i].EndTS = math.Round(timestamps[i].EndTS*100.0) / 100.0
+				timestamps[i].BeginTS = math.Round(timestamps[i].BeginTS*1000.0) / 1000.0
+				timestamps[i].EndTS = math.Round(timestamps[i].EndTS*1000.0) / 1000.0
 			}
 			for _, subFilesetId := range d.req.UpdateDBP.Timestamps {
 				log.Info(d.ctx, "Updating:", subFilesetId, ch.BookId, ch.ChapterNum)
