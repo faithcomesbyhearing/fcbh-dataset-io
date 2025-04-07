@@ -29,7 +29,7 @@ func main() {
 	cleanup.CleanupDownloadDirectory(ctx)
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion("us-west-2"),
-		config.WithLogger(logger),
+		//config.WithLogger(logger),
 	)
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err, "aws LoadDefaultConfig Failed In Queue Main")

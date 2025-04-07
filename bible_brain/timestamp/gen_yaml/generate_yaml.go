@@ -104,7 +104,7 @@ func GenerateOneYaml(bible fetch.BibleInfoType, audio fetch.FilesetType, text fe
 	list = write(list, 0, "dataset_name", audio.Id+"_TS")
 	list = write(list, 0, "bible_id", bible.BibleId)
 	list = write(list, 0, "username", "GaryNGriswold")
-	list = write(list, 0, "email", "gary@shortsands.com")
+	list = write(list, 0, "notify_err", "[gary@shortsands.com]")
 	list = write(list, 0, "output", "")
 	list = write(list, 1, "json", "yes")
 	list = write(list, 0, "testament", "")
