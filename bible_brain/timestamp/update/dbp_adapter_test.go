@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/safe"
 	"strconv"
-
-	//"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"testing"
 )
 

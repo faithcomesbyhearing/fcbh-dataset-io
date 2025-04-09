@@ -114,6 +114,7 @@ func (a *AlignWriter) WriteLine(chars []generic.AlignChar) {
 	}
 	logTotal = a.findHighestScore(logMap, countMap)
 	logTotal += float64(asrChars) * 5.0
+	// skip lines with no errors
 	if logTotal == 0.0 {
 		return
 	}

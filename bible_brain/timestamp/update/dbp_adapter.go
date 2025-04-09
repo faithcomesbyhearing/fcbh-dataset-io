@@ -18,7 +18,9 @@ func NewDBPAdapter(ctx context.Context) (DBPAdapter, *log.Status) {
 	var dbp DBPAdapter
 	dbp.ctx = ctx
 	var err error
-	dbp.conn, err = sql.Open("mysql", GetDBPMySqlDSN())
+	mysqlDSN := os.Getenv("DBP_MYSQL_DSN")
+	mysqlDSN += "?clientFoundRows=true" // makes affected row count number matched, not number updated
+	dbp.conn, err = sql.Open("mysql", mysqlDSN)
 	if err != nil {
 		return dbp, log.Error(dbp.ctx, 500, err, "Error connecting to dbp database")
 	}
@@ -27,19 +29,6 @@ func NewDBPAdapter(ctx context.Context) (DBPAdapter, *log.Status) {
 		return dbp, log.Error(dbp.ctx, 500, err, "Connection to dbp database ping failed")
 	}
 	return dbp, nil
-}
-
-func GetDBPMySqlDSN() string {
-	// Format: username:password@tcp(hostname:port)/database_name
-	var result string
-	username := os.Getenv("DBP_MYSQL_USERNAME")
-	password := os.Getenv("DBP_MYSQL_PASSWORD")
-	host := os.Getenv("DBP_MYSQL_HOST")
-	port := os.Getenv("DBP_MYSQL_PORT")
-	database := os.Getenv("DBP_MYSQL_DATABASE")
-	options := "?clientFoundRows=true" // makes affected row count number matched, not number updated
-	result = username + ":" + password + "@tcp(" + host + ":" + port + ")/" + database + options
-	return result
 }
 
 func (d *DBPAdapter) Close() {
