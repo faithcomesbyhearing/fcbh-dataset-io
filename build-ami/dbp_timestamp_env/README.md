@@ -54,7 +54,8 @@ aws ec2 run-instances \
   --key-name GNG_Mac \
   --security-group-ids sg-02d16f1ea3ccb4c6c \
   --subnet-id subnet-0514270361bd9075e \
-  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=Dataset-TS-dev}]'
+  --associate-public-ip-address \
+  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=Dataset2-TS-dev}]'
  # --iam-instance-profile Name=YourIAMRole
  # --block-device-mappings 'DeviceName=/dev/sda1,Ebs={VolumeSize=100}' \
 ```
@@ -64,10 +65,10 @@ aws ec2 run-instances \
 {
 "AmiLaunchIndex": 0,
 "ImageId": "ami-05f4737ce5776c55b",
-"InstanceId": "i-0526bb0caca7826e3",
+"InstanceId": "i-00ca35014329edf84",
 "InstanceType": "g6e.xlarge",
 "KeyName": "GNG_Mac",
-"LaunchTime": "2025-04-09T14:32:04.000Z",
+"LaunchTime": "2025-04-09T14:55:14.000Z",
 "Monitoring": {
 "State": "disabled"
 },
@@ -76,8 +77,8 @@ aws ec2 run-instances \
 "GroupName": "",
 "Tenancy": "default"
 },
-"PrivateDnsName": "ip-172-17-21-39.us-west-2.compute.internal",
-"PrivateIpAddress": "172.17.21.39",
+"PrivateDnsName": "ip-172-17-12-240.us-west-2.compute.internal",
+"PrivateIpAddress": "172.17.12.240",
 "ProductCodes": [],
 "PublicDnsName": "",
 "State": {
@@ -89,15 +90,15 @@ aws ec2 run-instances \
 "VpcId": "vpc-0b6a6785e74d18db3",
 "Architecture": "x86_64",
 "BlockDeviceMappings": [],
-"ClientToken": "234bbd6e-9de5-45b4-ba51-99395eda431b",
+"ClientToken": "ff767f91-f7b6-476a-a9b6-352c146fb811",
 "EbsOptimized": false,
 "EnaSupport": true,
 "Hypervisor": "xen",
 "NetworkInterfaces": [
 {
 "Attachment": {
-"AttachTime": "2025-04-09T14:32:04.000Z",
-"AttachmentId": "eni-attach-074edd39fb0f12959",
+"AttachTime": "2025-04-09T14:55:14.000Z",
+"AttachmentId": "eni-attach-06d01c8cef4caecfa",
 "DeleteOnTermination": true,
 "DeviceIndex": 0,
 "Status": "attaching",
@@ -111,16 +112,16 @@ aws ec2 run-instances \
 }
 ],
 "Ipv6Addresses": [],
-"MacAddress": "02:ab:f0:8e:23:8d",
-"NetworkInterfaceId": "eni-0a7f2fed5ec92897e",
+"MacAddress": "02:f1:29:1d:48:b7",
+"NetworkInterfaceId": "eni-044c07d5765cadb2d",
 "OwnerId": "078432969830",
-"PrivateDnsName": "ip-172-17-21-39.us-west-2.compute.internal",
-"PrivateIpAddress": "172.17.21.39",
+"PrivateDnsName": "ip-172-17-12-240.us-west-2.compute.internal",
+"PrivateIpAddress": "172.17.12.240",
 "PrivateIpAddresses": [
 {
 "Primary": true,
-"PrivateDnsName": "ip-172-17-21-39.us-west-2.compute.internal",
-"PrivateIpAddress": "172.17.21.39"
+"PrivateDnsName": "ip-172-17-12-240.us-west-2.compute.internal",
+"PrivateIpAddress": "172.17.12.240"
 }
 ],
 "SourceDestCheck": true,
@@ -146,7 +147,7 @@ aws ec2 run-instances \
 "Tags": [
 {
 "Key": "Name",
-"Value": "Dataset-TS-dev"
+"Value": "Dataset2-TS-dev"
 }
 ],
 "VirtualizationType": "hvm",
@@ -181,7 +182,7 @@ aws ec2 run-instances \
 }
 ],
 "OwnerId": "078432969830",
-"ReservationId": "r-09c3cc8afa92ab13b"
+"ReservationId": "r-0ecec5645be1569ce"
 }
 
 # Edit .bash_profile
