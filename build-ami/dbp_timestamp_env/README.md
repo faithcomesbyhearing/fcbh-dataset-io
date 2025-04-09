@@ -1,19 +1,25 @@
 # Procedure to set up dbp_timestamp server
 
-## Describe current Dataset-V2
+## Describe current dbp-etl-dev
 ```
 aws ec2 describe-instances \
-  --instance-ids i-0b22222aa0f43d1a5 \
+  --instance-ids i-01613e74dc90be1e3 \
   --query 'Reservations[0].Instances[0].{SubnetId:SubnetId,SecurityGroups:SecurityGroups}'
   ```
 {
-"SubnetId": "subnet-57a4572f",
+"SubnetId": "subnet-0514270361bd9075e",
 "SecurityGroups": [
-"GroupName": "launch-wizard-5",
-"GroupId": "sg-0207014882af476de"
+{
+"GroupName": "dbp-etl",
+"GroupId": "sg-02d16f1ea3ccb4c6c"
+},
+{
+"GroupName": "Bastion Security Group-20200323112037932500000001",
+"GroupId": "sg-0b3bc5538486de5f5"
 }
 ]
 }
+
 
 ## Get user roles
 ```
@@ -46,23 +52,22 @@ aws ec2 run-instances \
   --image-id ami-05f4737ce5776c55b \
   --instance-type g6e.xlarge \
   --key-name GNG_Mac \
-  --security-group-ids sg-0207014882af476de \
-  --subnet-id subnet-57a4572f
+  --security-group-ids sg-02d16f1ea3ccb4c6c \
+  --subnet-id subnet-0514270361bd9075e \
+  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=Dataset-TS-dev}]'
  # --iam-instance-profile Name=YourIAMRole
  # --block-device-mappings 'DeviceName=/dev/sda1,Ebs={VolumeSize=100}' \
- # --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=Dataset-V2-Instance}]'
 ```
-NOTE: manually changed name to Dataset-TS
 {
 "Groups": [],
 "Instances": [
 {
 "AmiLaunchIndex": 0,
 "ImageId": "ami-05f4737ce5776c55b",
-"InstanceId": "i-0f81ce31c4fb86396",
+"InstanceId": "i-0526bb0caca7826e3",
 "InstanceType": "g6e.xlarge",
 "KeyName": "GNG_Mac",
-"LaunchTime": "2025-04-05T18:53:15.000Z",
+"LaunchTime": "2025-04-09T14:32:04.000Z",
 "Monitoring": {
 "State": "disabled"
 },
@@ -71,8 +76,8 @@ NOTE: manually changed name to Dataset-TS
 "GroupName": "",
 "Tenancy": "default"
 },
-"PrivateDnsName": "ip-172-31-26-15.us-west-2.compute.internal",
-"PrivateIpAddress": "172.31.26.15",
+"PrivateDnsName": "ip-172-17-21-39.us-west-2.compute.internal",
+"PrivateIpAddress": "172.17.21.39",
 "ProductCodes": [],
 "PublicDnsName": "",
 "State": {
@@ -80,19 +85,19 @@ NOTE: manually changed name to Dataset-TS
 "Name": "pending"
 },
 "StateTransitionReason": "",
-"SubnetId": "subnet-57a4572f",
-"VpcId": "vpc-4371173b",
+"SubnetId": "subnet-0514270361bd9075e",
+"VpcId": "vpc-0b6a6785e74d18db3",
 "Architecture": "x86_64",
 "BlockDeviceMappings": [],
-"ClientToken": "5d9611bb-4246-4d04-8fdd-a5b48a0baee1",
+"ClientToken": "234bbd6e-9de5-45b4-ba51-99395eda431b",
 "EbsOptimized": false,
 "EnaSupport": true,
 "Hypervisor": "xen",
 "NetworkInterfaces": [
 {
 "Attachment": {
-"AttachTime": "2025-04-05T18:53:15.000Z",
-"AttachmentId": "eni-attach-00be30589d35ddca6",
+"AttachTime": "2025-04-09T14:32:04.000Z",
+"AttachmentId": "eni-attach-074edd39fb0f12959",
 "DeleteOnTermination": true,
 "DeviceIndex": 0,
 "Status": "attaching",
@@ -101,27 +106,27 @@ NOTE: manually changed name to Dataset-TS
 "Description": "",
 "Groups": [
 {
-"GroupName": "launch-wizard-5",
-"GroupId": "sg-0207014882af476de"
+"GroupName": "dbp-etl",
+"GroupId": "sg-02d16f1ea3ccb4c6c"
 }
 ],
 "Ipv6Addresses": [],
-"MacAddress": "02:6c:e5:f1:5a:d5",
-"NetworkInterfaceId": "eni-0ac0b2b43d2b2cd8e",
+"MacAddress": "02:ab:f0:8e:23:8d",
+"NetworkInterfaceId": "eni-0a7f2fed5ec92897e",
 "OwnerId": "078432969830",
-"PrivateDnsName": "ip-172-31-26-15.us-west-2.compute.internal",
-"PrivateIpAddress": "172.31.26.15",
+"PrivateDnsName": "ip-172-17-21-39.us-west-2.compute.internal",
+"PrivateIpAddress": "172.17.21.39",
 "PrivateIpAddresses": [
 {
 "Primary": true,
-"PrivateDnsName": "ip-172-31-26-15.us-west-2.compute.internal",
-"PrivateIpAddress": "172.31.26.15"
+"PrivateDnsName": "ip-172-17-21-39.us-west-2.compute.internal",
+"PrivateIpAddress": "172.17.21.39"
 }
 ],
 "SourceDestCheck": true,
 "Status": "in-use",
-"SubnetId": "subnet-57a4572f",
-"VpcId": "vpc-4371173b",
+"SubnetId": "subnet-0514270361bd9075e",
+"VpcId": "vpc-0b6a6785e74d18db3",
 "InterfaceType": "interface"
 }
 ],
@@ -129,8 +134,8 @@ NOTE: manually changed name to Dataset-TS
 "RootDeviceType": "ebs",
 "SecurityGroups": [
 {
-"GroupName": "launch-wizard-5",
-"GroupId": "sg-0207014882af476de"
+"GroupName": "dbp-etl",
+"GroupId": "sg-02d16f1ea3ccb4c6c"
 }
 ],
 "SourceDestCheck": true,
@@ -138,6 +143,12 @@ NOTE: manually changed name to Dataset-TS
 "Code": "pending",
 "Message": "pending"
 },
+"Tags": [
+{
+"Key": "Name",
+"Value": "Dataset-TS-dev"
+}
+],
 "VirtualizationType": "hvm",
 "CpuOptions": {
 "CoreCount": 2,
@@ -170,7 +181,7 @@ NOTE: manually changed name to Dataset-TS
 }
 ],
 "OwnerId": "078432969830",
-"ReservationId": "r-0ed563ebf803ffe8c"
+"ReservationId": "r-09c3cc8afa92ab13b"
 }
 
 # Edit .bash_profile
