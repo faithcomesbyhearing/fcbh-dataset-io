@@ -30,13 +30,13 @@ func NewHTMLWriter(ctx context.Context, datasetName string) HTMLWriter {
 	return h
 }
 
-func (h *HTMLWriter) WriteReport(baseDataset string, records []Pair, fileMap string) (string, *log.Status) {
+func (h *HTMLWriter) WriteReport(baseDataset string, records []Pair, languageISO string, fileMap string) (string, *log.Status) {
 	var err error
 	h.out, err = os.Create(filepath.Join(os.Getenv(`FCBH_DATASET_TMP`), h.datasetName+"_compare.html"))
 	if err != nil {
 		return "", log.Error(h.ctx, 500, err, `Error creating output file for diff`)
 	}
-	filename := h.WriteHeading(baseDataset)
+	filename := h.WriteHeading(baseDataset, languageISO)
 	for _, pair := range records {
 		h.WriteLine(pair)
 	}
@@ -44,7 +44,7 @@ func (h *HTMLWriter) WriteReport(baseDataset string, records []Pair, fileMap str
 	return filename, nil
 }
 
-func (h *HTMLWriter) WriteHeading(baseDataset string) string {
+func (h *HTMLWriter) WriteHeading(baseDataset string, languageISO string) string {
 	head := `<!DOCTYPE html>
 <html>
  <head>
@@ -58,6 +58,8 @@ func (h *HTMLWriter) WriteHeading(baseDataset string) string {
 	_, _ = h.out.WriteString(baseDataset)
 	_, _ = h.out.WriteString(` to `)
 	_, _ = h.out.WriteString(h.datasetName)
+	_, _ = h.out.WriteString(` in `)
+	_, _ = h.out.WriteString(languageISO)
 	_, _ = h.out.WriteString("</h2>\n")
 	_, _ = h.out.WriteString(`<h3 style="text-align:center">`)
 	loc, _ := time.LoadLocation("America/Denver")
@@ -133,32 +135,6 @@ func (h *HTMLWriter) WriteLine(verse Pair) {
 	}
 }
 
-/*
-	func (h *HTMLWriter) WriteChapterDiff(bookId string, chapter int, inserts int, deletes int, errPct float64, diffHtml string) {
-		var lineNum = 1 // replace with scriptId
-		_, _ = h.out.WriteString("<tr>\n")
-		h.writeCell(strconv.Itoa(lineNum))
-		h.writeCell(strconv.FormatFloat(errPct, 'f', 0, 64))
-		h.writeCell(strconv.Itoa(inserts + deletes))
-		h.writeCell(strconv.Itoa(int(math.Abs(float64(inserts - deletes)))))
-		h.writeCell(`+` + strconv.Itoa(inserts) + ` -` + strconv.Itoa(deletes))
-		h.writeCell(bookId + ` ` + strconv.Itoa(chapter))
-		h.writeCell(diffHtml)
-		_, _ = h.out.WriteString("</tr>\n")
-	}
-
-	func (h *HTMLWriter) WriteScriptLineDiff(bookId string, chapter int, line string, inserts int, deletes int, errPct float64, diffHtml string) {
-		_, _ = h.out.WriteString("<tr>\n")
-		h.writeCell(line)
-		h.writeCell(strconv.FormatFloat(errPct, 'f', 0, 64))
-		h.writeCell(strconv.Itoa(inserts + deletes))
-		h.writeCell(strconv.Itoa(int(math.Abs(float64(inserts - deletes)))))
-		h.writeCell(`+` + strconv.Itoa(inserts) + ` -` + strconv.Itoa(deletes))
-		h.writeCell(bookId + ` ` + strconv.Itoa(chapter))
-		h.writeCell(diffHtml)
-		_, _ = h.out.WriteString("</tr>\n")
-	}
-*/
 func (h *HTMLWriter) writeCell(content string) {
 	_, _ = h.out.WriteString(`<td>`)
 	_, _ = h.out.WriteString(content)

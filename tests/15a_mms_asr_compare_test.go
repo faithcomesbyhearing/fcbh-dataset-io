@@ -9,7 +9,6 @@ const mMSASRCompare = `is_new: yes
 dataset_name: 15a_mms_asr
 bible_id: ENGWEB
 username: GaryNTest
-email: gary@shortsands.com
 text_data:
   bible_brain:
     text_usx_edit: yes

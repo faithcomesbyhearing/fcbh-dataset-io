@@ -1,11 +1,12 @@
 package align
 
+/*
 import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/generic"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
-
+*/
 /**
 FalsePosFilter is an experimental file to identify false positives.
 It used a concept identified by Gordon that if a pattern of errors in a word appears more
@@ -30,11 +31,12 @@ than 30 or 40 times it must be a consistent error in the AI process, not an erro
 //* Change WriteLine to iterate over words and chars, not just chars
 //* ignore char errors when in a word that is false positive
 
+/*
 func FalsePosFilter(lines []generic.AlignLine) ([]generic.AlignLine, *log.Status) {
 	var result []generic.AlignLine
 	var status *log.Status
 
-	return result
+	return result, status
 }
 
 func addWords(lines []generic.AlignLine, words []string) ([]generic.AlignLine, *log.Status) {
@@ -51,3 +53,5 @@ func addWords(lines []generic.AlignLine, words []string) ([]generic.AlignLine, *
 func selectWordsByScriptId(scriptId int64) ([]db.Word, *log.Status) {
 	query := `SELECT word_id FROM words WHERE script_id = ?`
 }
+
+*/

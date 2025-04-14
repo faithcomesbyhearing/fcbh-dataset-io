@@ -13,28 +13,26 @@ import (
 // Check that language is supported by mms_asr, and return alternate if it is not
 func checkLanguage(ctx context.Context, lang string, sttLang string, aiTool string) (string, *log.Status) {
 	var result string
-	var status *log.Status
 	if sttLang != `` {
 		result = sttLang
 	} else {
 		var tree = search.NewLanguageTree(ctx)
 		err := tree.Load()
 		if err != nil {
-			status = log.Error(ctx, 500, err, `Error loading language`)
-			return result, status
+			return result, log.Error(ctx, 500, err, `Error loading language`)
 		}
 		langs, distance, err2 := tree.Search(strings.ToLower(lang), aiTool)
 		if err2 != nil {
-			status = log.Error(ctx, 500, err2, `Error Searching for language`)
+			return result, log.Error(ctx, 500, err2, `Error Searching for language`)
 		}
 		if len(langs) > 0 {
 			result = langs[0]
 			log.Info(ctx, `Using language`, result, "distance:", distance)
 		} else {
-			status = log.ErrorNoErr(ctx, 400, `No compatible language code was found for`, lang)
+			return result, log.ErrorNoErr(ctx, 400, `No compatible language code was found for`, lang)
 		}
 	}
-	return result, status
+	return result, nil
 }
 
 // deprecated - use utility.StdioExec

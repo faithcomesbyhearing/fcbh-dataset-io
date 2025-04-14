@@ -128,8 +128,9 @@ func createDatabase(db *sql.DB) {
 		text_NT_id TEXT NOT NULL,
 		text_source TEXT NOT NULL,
 		language_iso TEXT NOT NULL,
+		asr_language_iso TEXT NOT NULL DEFAULT '',
 		version_code TEXT NOT NULL,
-		languge_id INTEGER NOT NULL,
+		language_id INTEGER NOT NULL,
 		rolv_id INTEGER NOT NULL,
 		alphabet TEXT NOT NULL,
 		language_name TEXT NOT NULL,
@@ -401,8 +402,9 @@ func (d *DBAdapter) InsertAudioChars(words []Audio) *log.Status {
 
 func (d *DBAdapter) InsertReplaceIdent(id Ident) *log.Status {
 	query := `REPLACE INTO ident(dataset_id, bible_id, audio_OT_id, audio_NT_id, text_OT_id, text_NT_id,
-		text_source, language_iso, version_code, languge_id, 
-		rolv_id, alphabet, language_name, version_name) VALUES (1,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+		text_source, language_iso, version_code, language_id, 
+		rolv_id, alphabet, language_name, version_name, asr_language_iso) 
+		VALUES (1,?,?,?,?,?,?,?,?,?,?,?,?,?,'')`
 	stmt, err := d.DB.Prepare(query)
 	if err != nil {
 		return log.Error(d.Ctx, 500, err, `Error while preparing Ident stmt.`)
@@ -573,31 +575,19 @@ func (d *DBAdapter) SelectBookChapterFilename() ([]Script, *log.Status) {
 }
 
 func (d *DBAdapter) SelectIdent() (Ident, *log.Status) {
-	var results Ident
+	var id Ident
 	query := `SELECT dataset_id, bible_id, audio_OT_id, audio_NT_id, text_OT_id, 
-		text_NT_id, text_source, language_iso, version_code, languge_id, 
+		text_NT_id, text_source, language_iso, asr_language_iso, version_code, language_id, 
 		rolv_id, alphabet, language_name, version_name 
 		FROM ident WHERE dataset_id = 1`
-	rows, err := d.DB.Query(query)
-	if err != nil {
-		return results, log.Error(d.Ctx, 500, err, `Error reading rows in SelectIdent`)
+	row := d.DB.QueryRow(query)
+	err := row.Scan(&id.DatasetId, &id.BibleId, &id.AudioOTId, &id.AudioNTId, &id.TextOTId,
+		&id.TextNTId, &id.TextSource, &id.LanguageISO, &id.ASRLanguageISO, &id.VersionCode,
+		&id.LanguageId, &id.RolvId, &id.Alphabet, &id.LanguageName, &id.VersionName)
+	if err != nil && err != sql.ErrNoRows {
+		return id, log.Error(d.Ctx, 500, err, `Error scanning in SelectIdent`)
 	}
-	defer d.closeDef(rows, `SelectIdent`)
-	for rows.Next() {
-		var id Ident
-		err = rows.Scan(&id.DatasetId, &id.BibleId, &id.AudioOTId, &id.AudioNTId, &id.TextOTId,
-			&id.TextNTId, &id.TextSource, &id.LanguageISO, &id.VersionCode, &id.LanguageId,
-			&id.RolvId, &id.Alphabet, &id.LanguageName, &id.VersionName)
-		if err != nil {
-			return results, log.Error(d.Ctx, 500, err, `Error scanning in SelectIdent`)
-		}
-		results = id
-	}
-	err = rows.Err()
-	if err != nil {
-		return results, log.Error(d.Ctx, 500, err, `Error at end of rows in SelectIdent`)
-	}
-	return results, nil
+	return id, nil
 }
 
 // SelectScriptLine selects by script_id and returns one line of script text
@@ -967,6 +957,15 @@ func (d *DBAdapter) UpdateIdent(ident Ident) *log.Status {
 		ident.TextSource)
 	if err != nil {
 		return log.Error(d.Ctx, 500, err, `Error while updating Ident.`)
+	}
+	return nil
+}
+
+func (d *DBAdapter) UpdateASRLanguage(isoCode string) *log.Status {
+	query := `UPDATE ident SET asr_language_iso = ? WHERE dataset_id = 1`
+	_, err := d.DB.Exec(query, isoCode)
+	if err != nil {
+		return log.Error(d.Ctx, 500, err, `Error executing Ident update.`)
 	}
 	return nil
 }

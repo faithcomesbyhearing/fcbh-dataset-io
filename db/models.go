@@ -6,20 +6,21 @@ import (
 )
 
 type Ident struct {
-	DatasetId    int64
-	BibleId      string
-	AudioOTId    string
-	AudioNTId    string
-	TextOTId     string
-	TextNTId     string
-	TextSource   request.MediaType
-	LanguageISO  string
-	VersionCode  string
-	LanguageId   int
-	RolvId       int
-	Alphabet     string
-	LanguageName string
-	VersionName  string
+	DatasetId      int64
+	BibleId        string
+	AudioOTId      string
+	AudioNTId      string
+	TextOTId       string
+	TextNTId       string
+	TextSource     request.MediaType
+	LanguageISO    string
+	ASRLanguageISO string
+	VersionCode    string
+	LanguageId     int
+	RolvId         int
+	Alphabet       string
+	LanguageName   string
+	VersionName    string
 }
 
 type Script struct {
@@ -96,28 +97,3 @@ type Audio struct {
 	AudioChapterWav string         `json:"-"`               // Transient
 	AudioVerseWav   string         `json:"-"`               // Transient
 }
-
-/*
-type AlignChar struct {
-	ScriptId     int64
-	BookId       string
-	ChapterNum   int
-	VerseStr     string
-	WordId       int64
-	WordSeq      int
-	Word         string
-	CharId       int64
-	CharSeq      int
-	CharNorm     rune
-	CharUroman   rune
-	BeginTS      float64
-	EndTS        float64
-	FAScore      float64
-	Duration     float64 // might not be needed
-	Silence      float64
-	SilencePos   int
-	ScoreError   int
-	DurationLong int
-	SilenceLong  int
-}
-*/

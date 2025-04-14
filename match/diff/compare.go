@@ -65,29 +65,38 @@ func NewCompare(ctx context.Context, user string, baseDSet string, db db.DBAdapt
 	return c
 }
 
-func (c *Compare) Process() ([]Pair, string, *log.Status) {
+func (c *Compare) Process() ([]Pair, string, string, *log.Status) {
 	var records []Pair
 	var fileMap string
+	var languageISO string
 	var status *log.Status
 	c.baseDb, status = db.NewerDBAdapter(c.ctx, false, c.user, c.baseDataset)
 	if status != nil {
-		return records, fileMap, status
+		return records, fileMap, languageISO, status
 	}
 	status = uroman.EnsureUroman(c.baseDb, c.lang)
 	if status != nil {
-		return records, fileMap, status
+		return records, fileMap, languageISO, status
 	}
-	records, fileMap, status = c.CompareVerses()
-	return records, fileMap, status
+	records, fileMap, languageISO, status = c.CompareVerses()
+	if status != nil {
+		return records, fileMap, languageISO, status
+	}
+	return records, fileMap, languageISO, nil
 }
 
-func (c *Compare) CompareVerses() ([]Pair, string, *log.Status) {
+func (c *Compare) CompareVerses() ([]Pair, string, string, *log.Status) {
 	var filenameMap string
+	var languageISO string
 	var status *log.Status
 	var ident db.Ident
 	ident, status = c.database.SelectIdent() // TextSource should be a parameter
 	if status != nil {
-		return c.results, filenameMap, status
+		return c.results, languageISO, filenameMap, status
+	}
+	languageISO = ident.ASRLanguageISO
+	if languageISO == "" {
+		languageISO = ident.LanguageISO
 	}
 	for _, bookId := range db.RequestedBooks(c.testament) {
 		var chapInBook, _ = db.BookChapterMap[bookId]
@@ -96,11 +105,11 @@ func (c *Compare) CompareVerses() ([]Pair, string, *log.Status) {
 			var baseLines, compLines []Verse
 			baseLines, status = c.process(c.baseDb, bookId, chapter, ident.TextSource)
 			if status != nil {
-				return c.results, "", status
+				return c.results, "", languageISO, status
 			}
 			compLines, status = c.process(c.database, bookId, chapter, ident.TextSource)
 			if status != nil {
-				return c.results, "", status
+				return c.results, "", languageISO, status
 			}
 			c.diff(baseLines, compLines)
 			chapter++
@@ -108,7 +117,7 @@ func (c *Compare) CompareVerses() ([]Pair, string, *log.Status) {
 	}
 	filenameMap, status = c.generateBookChapterFilenameMap()
 	c.baseDb.Close()
-	return c.results, filenameMap, status
+	return c.results, filenameMap, languageISO, status
 }
 
 func (c *Compare) process(conn db.DBAdapter, bookId string, chapterNum int, mediaType request.MediaType) ([]Verse, *log.Status) {

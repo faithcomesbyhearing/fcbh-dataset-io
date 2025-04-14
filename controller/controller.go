@@ -481,16 +481,17 @@ func (c *Controller) audioProofing(audioFiles []input.InputFile) (string, *log.S
 func (c *Controller) matchText() (string, *log.Status) {
 	var records []diff.Pair
 	var fileMap string
+	var languageISO string
 	var status *log.Status
 	compare := diff.NewCompare(c.ctx, c.req.Username, c.req.Compare.BaseDataset, c.database, c.ident.LanguageISO, c.req.Testament, c.req.Compare.CompareSettings)
-	records, fileMap, status = compare.Process()
+	records, fileMap, languageISO, status = compare.Process()
 	if status != nil {
 		return "", status
 	}
 	tempFilePath := filepath.Join(os.TempDir(), c.database.Project+"_compare.json")
 	c.bucket.AddJson(records, tempFilePath)
 	writer := diff.NewHTMLWriter(c.ctx, c.database.Project)
-	filename, status := writer.WriteReport(c.req.Compare.BaseDataset, records, fileMap)
+	filename, status := writer.WriteReport(c.req.Compare.BaseDataset, records, languageISO, fileMap)
 	return filename, status
 }
 

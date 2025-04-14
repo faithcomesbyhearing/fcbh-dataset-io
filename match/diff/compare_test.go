@@ -26,18 +26,22 @@ func TestCompare(t *testing.T) {
 	tests = append(tests, compareTest{baseDB: "N2ENGWEB", project: "N2ENGWEB_audio", expect: 2479})
 
 	for _, tst := range tests {
-		records, _, status := runCompareTest(tst)
+		records, _, language, status := runCompareTest(tst)
 		fmt.Println(status, len(records))
 		if len(records) != tst.expect {
 			t.Error(`Expected count is`, tst.expect, ` actual was`, len(records))
+		}
+		if language != "eng" {
+			t.Error("Expected language: eng, actual was", language)
 		}
 		//if len(fileMap) != tst.expect {}
 	}
 }
 
-func runCompareTest(tst compareTest) ([]Pair, string, *log.Status) {
+func runCompareTest(tst compareTest) ([]Pair, string, string, *log.Status) {
 	var records []Pair
 	var fileMap string
+	var languageISO string
 	ctx := context.Background()
 	user := ``
 	var testament = request.Testament{NT: true}
@@ -52,7 +56,7 @@ func runCompareTest(tst compareTest) ([]Pair, string, *log.Status) {
 	_ = os.Setenv("FCBH_DATASET_DB", filepath.Join(os.Getenv("GOPROJ"), "match"))
 	conn, status := db.NewerDBAdapter(ctx, false, user, tst.baseDB)
 	if status != nil {
-		return records, fileMap, status
+		return records, fileMap, languageISO, status
 	}
 	compare := NewCompare(ctx, user, tst.project, conn, "eng", testament, cfg)
 	return compare.Process()
