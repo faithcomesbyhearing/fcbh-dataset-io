@@ -68,6 +68,7 @@ func ChopOneSegment(ctx context.Context, tempDir string, inputFile string, begin
 }
 
 func ConvertMp3ToWav(ctx context.Context, tempDir string, inputFile string) (string, *log.Status) {
+	// ffmpeg -i input.mp3 -acodec pcm_s16le -ar 16000 -ac 1 output.wav
 	var outputPath string
 	filename := filepath.Base(inputFile)
 	outputFilename := strings.TrimSuffix(filename, filepath.Ext(filename))
