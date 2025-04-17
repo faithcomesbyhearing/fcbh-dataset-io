@@ -16,19 +16,21 @@ class FCBHDataset(Dataset):
         self.database = SqliteUtility(databasePath)
         maxDuration = self.database.selectOne("SELECT MAX(script_end_ts-script_begin_ts) FROM scripts", ())[0]
         self.maxLen = int(maxDuration * 16000)
-
-
-    def close(self):
+        query = """SELECT audio_file, script_text, script_begin_ts, script_end_ts
+                FROM scripts WHERE verse_str != '0'
+                AND fa_score > 0.4
+                AND script_id NOT IN
+                (SELECT distinct script_id FROM words WHERE ttype='W' AND fa_score < 0.01)"""
+        self.data = self.database.select(query,())
         self.database.close()
 
 
     def __len__(self):
-        return self.database.selectOne("SELECT count(*) FROM scripts", ())[0]
+        return len(self.data)
 
 
     def __getitem__(self, idx):
-        query = 'select audio_file, script_text, script_begin_ts, script_end_ts from scripts where script_id = ?'
-        (audioFile, text, beginTS, endTS) = self.database.selectOne(query, (idx+1,))
+        (audioFile, text, beginTS, endTS) = self.data[idx]
         audioFile = audioFile.replace(".mp3", ".wav")
         audioPath = os.path.join(self.audioDir, audioFile)
         print("select result", audioPath, text)
@@ -71,4 +73,3 @@ if __name__ == "__main__":
     (audioTensor, labelTensor) = data.__getitem__(0)
     print("audio", audioTensor)
     print("labels", labelTensor)
-    data.close()

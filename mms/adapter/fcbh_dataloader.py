@@ -2,28 +2,40 @@ import os
 from torch.utils.data import DataLoader, Subset
 
 
-def FCBHDataLoader(dataset, kFold, batchSize, numWorkers):
+def FCBHDataLoader(dataset, loadType, batchSize, numWorkers):
     datasetSize = len(dataset)
     # Create indices lists
-    testIndices = [i for i in range(datasetSize) if i % kFold == 0]
-    trainIndices = [i for i in range(datasetSize) if i % kFold != 0]
-    # Create Subset datasets
-    trainDataset = Subset(dataset, trainIndices)
-    testDataset = Subset(dataset, testIndices)
-    # Create DataLoaders
-    trainLoader = DataLoader(
-        trainDataset,
+    if loadType == 'train':
+        indices = [i for i in range(datasetSize) if i % 5 != 0]
+        dataset = Subset(dataset, indices)
+        shuffle = True
+    elif loadType == 'test':
+        indices = [i for i in range(datasetSize) if i % 5 == 0]
+        dataset = Subset(dataset, indices)
+        shuffle = False
+    else: # loadType == 'full'
+        dataset = dataset
+        shuffle = True
+
+    loader = DataLoader(
+        dataset,
         batch_size=batchSize,
-        shuffle=True,
-        num_workers=numWorkers
+        shuffle=shuffle,
+        num_workers=numWorkers,
+        collate_fn=collate_batch
     )
-    testLoader = DataLoader(
-        testDataset,
-        batch_size=batchSize,
-        shuffle=False,
-        num_workers=numWorkers
-    )
-    return trainLoader, testLoader
+    return loader
+
+
+def collate_batch(batch):
+    # Separate audio and label tensors
+    audio_tensors, label_tensors = zip(*batch)
+
+    # Stack them into batches
+    audio_batch = torch.stack(audio_tensors)
+    label_batch = torch.stack(label_tensors)
+
+    return audio_batch, label_batch
 
 
 if __name__ == "__main__":
@@ -34,7 +46,5 @@ if __name__ == "__main__":
     model_name = "facebook/mms-1b-all"
     wav2Vec2Processor = Wav2Vec2Processor.from_pretrained(model_name)
     data = FCBHDataset(dbPath, audioPath, wav2Vec2Processor)
-    trainDS, testDS = FCBHDataLoader(data, 5, 1, 1)
-    print("train", trainDS)
-    print("test", testDS)
-    data.Close()
+    dataset = FCBHDataLoader(data, "full", 1, 1)
+    print("dataset", dataset)
