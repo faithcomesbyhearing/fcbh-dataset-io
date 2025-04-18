@@ -7,6 +7,7 @@
 #import pandas as pd
 #from transformers import Wav2Vec2ForCTC, Wav2Vec2Config, Wav2Vec2Processor
 #from transformers.adapters import AdapterConfig, PfeifferConfig
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 MMS_ADAPTERS_DIR = os.path(os.getenv("FCBH_DATASET_DB"), "mms_adapters")
 # batch size is recommended to be 4 to 8, try 8 to see if there is enough memory
@@ -18,14 +19,14 @@ MMS_ADAPTERS_DIR = os.path(os.getenv("FCBH_DATASET_DB"), "mms_adapters")
 
 
 if len(sys.argv) < 7:
-    print("Usage: fcbh_train_adapter.py {iso639-3} {vocabSize} {databasePath} {audioDirectory} {batchSize} {numWorkers}")
+    print("Usage: fcbh_train_adapter.py {iso639-3} {databasePath} {audioDirectory} {batchSize} {numWorkers} {numEpochs}")
     sys.exit(1)
 adapterName = sys.argv[1]
-vocabularySize = sys.argv[2]
-databasePath = sys.argv[3]
-audioDirectory = sys.argv[4]
-batchSize = sys.argv[5]
-numWorkers = sys.argv[6]
+databasePath = sys.argv[2]
+audioDirectory = sys.argv[3]
+batchSize = sys.argv[4]
+numWorkers = sys.argv[5]
+numEpochs = sys.argv[6]
 
 # Load MMS model and processor
 modelName = "facebook/mms-1b-all"
@@ -42,51 +43,104 @@ for param in model.base_model.parameters():
     param.requires_grad = False
 
 # Ensure output layer is correctly sized for target language
-model.resize_output_embeddings(vocabularySize)
+model.resize_output_embeddings(dataset.getVocabularySize())
 
 # Set up train and test datasets
 wav2Vec2Processor = Wav2Vec2Processor.from_pretrained(modelName)
-data = FCBHDataset(databasePath, audioDirectory, wav2Vec2Processor)
-kFold = 5
-trainDataset, testDataset = FCBHDataLoader(data, kFold, batchSize, numWorkers)
+dataset = FCBHDataset(databasePath, audioDirectory, wav2Vec2Processor)
+#kFold = 5
+dataLoader = FCBHDataLoader(dataset, "train", batchSize, numWorkers)
 
 # Setup device, optimizer
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
-optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
+#optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
 
 # Train the adapter
-trainMMSAdapter(model, trainDataset, optimizer, device)
+#trainMMSAdapter(model, trainDataset, optimizer, device)
 
-model.save_adapter(MMS_ADAPTERS_DIR)
+#model.save_adapter(MMS_ADAPTERS_DIR)
 
     # For evaluation
     # Implement an evaluation function as needed
+optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
+#num_epochs = 80  # More epochs for memorization
+scheduler = CosineAnnealingLR(optimizer, T_max=numEpochs, eta_min=1e-6)
 
-
-
-
-
-def trainMMSAdapter(model, dataloader, optimizer, device, epochs=5):
+# Training loop
+bestLoss = float('inf')
+for epoch in range(numEpochs):
     model.train()
+    train_loss = 0
 
-    for epoch in range(epochs):
-        total_loss = 0
-        for batch in dataloader:
-            # Move batch to device
-            input_values = batch["input_values"].to(device)
-            labels = batch["labels"].to(device)
+    for audioBatch, labelBatch, texts in dataLoader:
+        inputValues = audioBatch.to(device)
+        labels = labelBatch.to(device)
 
-            # Forward pass
-            outputs = model(input_values=input_values, labels=labels)
-            loss = outputs.loss
+        # Now you can use input_values and labels in your model
+        outputs = model(input_values=inputValues, labels=labels)
+        loss = outputs.loss
 
-            # Backward pass
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+        # And you have access to original texts if needed
+        print(texts[0])  # Print first text in batch
 
-            total_loss += loss.item()
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-        print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss/len(dataloader)}")
+        trainLoss += loss.item()
 
+    avgTrainLoss = trainLoss / len(dataloader)
+    scheduler.step()
+
+    print(f"Epoch {epoch+1}/{numEpochs}, Train Loss: {avgTrainLoss:.4f}, LR: {scheduler.get_last_lr()[0]:.2e}")
+
+    # Save best model
+    if avgTrainLoss < bestLoss:
+        bestLoss = avgTrainLoss
+        model.save_adapter(os.path.join(MMS_ADAPTERS_DIR, adapterName))
+
+    # Periodically check CER/WER on a few examples
+    if (epoch + 1) % 10 == 0:
+        model.eval()
+        with torch.no_grad():
+            for i in range(min(5, len(dataset))):
+                #sample = dataset[i]
+                inputValues, labelValues, text = dataset[i]
+                #input_values = sample["input_values"].unsqueeze(0).to(device)
+                inputValues = inputValues.unsqueeze(0).to(device)
+
+                outputs = model(input_values=inputValues)
+                predictedIds = torch.argmax(outputs.logits, dim=-1)
+
+                transcription = processor.batch_decode(predictedIds)[0]
+                #reference = sample["text"]
+
+                print(f"Example {i+1}:")
+                print(f"  Reference: {text}")
+                print(f"  Predicted: {transcription}")
+
+
+#def trainMMSAdapter(model, dataloader, optimizer, device, epochs=5):
+#    model.train()
+#
+#    for epoch in range(epochs):
+#        total_loss = 0
+#        for batch in dataloader:
+#            # Move batch to device
+#            input_values = batch["input_values"].to(device)
+#            labels = batch["labels"].to(device)
+#
+#            # Forward pass
+#            outputs = model(input_values=input_values, labels=labels)
+#            loss = outputs.loss
+#
+#            # Backward pass
+#            optimizer.zero_grad()
+#            loss.backward()
+#            optimizer.step()
+#
+#            total_loss += loss.item()
+#
+#        print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss/len(dataloader)}")
+#

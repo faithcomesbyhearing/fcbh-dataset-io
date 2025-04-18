@@ -29,13 +29,12 @@ def FCBHDataLoader(dataset, loadType, batchSize, numWorkers):
 
 def collate_batch(batch):
     # Separate audio and label tensors
-    audio_tensors, label_tensors = zip(*batch)
+    audio_tensors, label_tensors, texts = zip(*batch)
 
     # Stack them into batches
     audio_batch = torch.stack(audio_tensors)
     label_batch = torch.stack(label_tensors)
-
-    return audio_batch, label_batch
+    return audio_batch, label_batch, texts
 
 
 if __name__ == "__main__":
