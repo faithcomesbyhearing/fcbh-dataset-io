@@ -11,13 +11,21 @@ import psutil
 ## https://huggingface.co/docs/transformers/main/en/model_doc/mms
 ## This program is NOT reentrant because of torch.cuda.empty_cache()
 
+#***# This is a second solution for Peft
+modelName = "facebook/mms-1b-fl102"
+base_model = Wav2Vec2ForCTC.from_pretrained(modelName)
+# Then load the adapter
+from peft import PeftModel, PeftConfig
+config = PeftConfig.from_pretrained("path/to/adapter_directory")
+model = PeftModel.from_pretrained(base_model, "path/to/adapter_directory")
+
 ### Warning not yet tested
 
 if len(sys.argv) < 3:
-    print("Usage: mms_asr.py {adapter_path}")
+    print("Usage: mms_asr.py {adapterName}")
     sys.exit(1)
 
-adapter_path = sys.argv[1]
+adapterName = sys.argv[1]
 
 if torch.cuda.is_available():
     device = 'cuda'
@@ -28,12 +36,13 @@ modelId = "facebook/mms-1b-all"
 
 # We don't need to specify target_lang when using adapters
 processor = AutoProcessor.from_pretrained(modelId)
-model = Wav2Vec2ForCTC.from_pretrained(modelId, ignore_mismatched_sizes=True)
+#model = Wav2Vec2ForCTC.from_pretrained(modelId, ignore_mismatched_sizes=True)
+model = Wav2Vec2ForCTC.from_pretrained("path/to/adapter_directory", adapterName=adapterName)
 
 # Load the adapter
-adapter_name = os.path.basename(adapter_path)
-model.load_adapter(adapter_path)
-model.set_active_adapters(adapter_name)
+#adapter_name = os.path.basename(adapter_path)
+#model.load_adapter(adapter_path)
+#model.set_active_adapters(adapter_name)
 
 model = model.to(device)
 

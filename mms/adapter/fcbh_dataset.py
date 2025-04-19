@@ -47,7 +47,6 @@ class FCBHDataset(Dataset):
         (audioFile, text, beginTS, endTS) = self.data[idx]
         audioFile = audioFile.replace(".mp3", ".wav")
         audioPath = os.path.join(self.audioDir, audioFile)
-        print("select result", audioPath, text)
 
         # Load audio portion for script line
         info = torchaudio.info(audioPath, format="wav")

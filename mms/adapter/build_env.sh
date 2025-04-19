@@ -10,12 +10,15 @@ conda remove --name mms_adapter --all
 conda create --name mms_adapter python=3.11 -y
 conda activate mms_adapter
 pip install --upgrade pip
+pip install numpy
 pip install torch
 pip install torchaudio
-pip install sox ## not sure this is needed
 pip install soundfile
-pip install numpy
-pip install transformers
+#pip install transformers
+#pip install adapter-transformers ## not sure this is needed
+pip install adapters
+pip install peft
+pip install jiwer
 #pip install datasets\[audio\]==2.6.1
 #pip install evaluate==0.4.0
 #pip install git+https://github.com/huggingface/transformers.git
