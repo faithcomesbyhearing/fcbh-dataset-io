@@ -22,21 +22,7 @@ class FCBHDataset(Dataset):
                 AND script_id NOT IN
                 (SELECT distinct script_id FROM words WHERE ttype='W' AND fa_score < 0.01)"""
         self.data = self.database.select(query,())
-        # Get vocabularySize
-        chars = set()
-        chars.add(' ')
-        words = self.database.select("SELECT word FROM words WHERE ttype='W'", ())
-        for wd in words:
-            for ch in wd[0].lower():
-                chars.add(ch)
-        chars.discard('\u2014') # another hyphen
-        chars.discard('\u002d') # hyphen
-        self.vocabularySize = len(chars)
         self.database.close()
-
-
-    def getVocabularySize(self):
-        return self.vocabularySize
 
 
     def __len__(self):
@@ -66,8 +52,8 @@ class FCBHDataset(Dataset):
             speech = speech[:self.maxLen]
 
         # Prepare audio
+        #audioTensor = self.wav2Vec2Processor(speech, sampling_rate=16000, return_tensors="pt").input_values.squeeze()
         audioTensor = self.wav2Vec2Processor(speech, sampling_rate=16000, return_tensors="pt").input_values.squeeze()
-
         # Prepare text
         processed = self.wav2Vec2Processor(text=text)
         labelTensor = torch.tensor(processed.input_ids).squeeze()
@@ -87,4 +73,3 @@ if __name__ == "__main__":
     print("audio:", audioTensor)
     print("labels:", labelTensor)
     print("text:", text)
-    print("vocabSize", data.getVocabularySize())

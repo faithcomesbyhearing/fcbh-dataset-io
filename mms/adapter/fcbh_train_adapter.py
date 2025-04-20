@@ -2,12 +2,14 @@ import os
 import sys
 import torch
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Config, Wav2Vec2Processor
+from transformers import Wav2Vec2CTCTokenizer, Wav2Vec2FeatureExtractor
 from adapters import AdapterConfig, SeqBnConfig
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from peft import PeftConfig, LoraConfig, get_peft_model
 import jiwer
 from fcbh_dataset import *
 from fcbh_dataloader import *
+from fcbh_vocabulary import *
 
 MMS_ADAPTERS_DIR = os.path.join(os.getenv("FCBH_DATASET_DB"), "mms_adapters")
 # batch size is recommended to be 4 to 8, try 8 to see if there is enough memory
@@ -32,19 +34,21 @@ numEpochs = int(sys.argv[6])
 
 # Load MMS model and processor
 #modelName = "facebook/mms-1b-all"
-#modelName = "facebook/wav2vec2-base-960h"
-#modelName = "facebook/wav2vec2-base"
 modelName = "facebook/mms-1b-fl102"
-processor = Wav2Vec2Processor.from_pretrained(modelName)
+
+vocabFile, vocabulary = getFCBHVocabulary(databasePath)
+tokenizer = Wav2Vec2CTCTokenizer(vocab_file=vocabFile)
+
+# Feature extractor (same as MMS)
+feature_extractor = Wav2Vec2FeatureExtractor(
+    feature_size=1, sampling_rate=16000, padding_value=0.0,
+    do_normalize=True, return_attention_mask=True
+)
+processor = Wav2Vec2Processor(feature_extractor=feature_extractor, tokenizer=tokenizer)
 model = Wav2Vec2ForCTC.from_pretrained(modelName)
 
-wav2Vec2Processor = Wav2Vec2Processor.from_pretrained(modelName)
-dataset = FCBHDataset(databasePath, audioDirectory, wav2Vec2Processor)
-
-vocabSize = dataset.getVocabularySize() + 100
-print("vocabSize", vocabSize)
-model.lm_head = torch.nn.Linear(model.config.hidden_size, vocabSize)
-model.config.vocab_size = vocabSize
+model.lm_head = torch.nn.Linear(model.config.hidden_size, len(vocabulary))
+model.config.vocab_size = len(vocabulary)
 
 adapter_config = LoraConfig(
     r=16,  # reduction_factor
@@ -62,6 +66,7 @@ model.to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
 scheduler = CosineAnnealingLR(optimizer, T_max=numEpochs, eta_min=1e-6)
 
+dataset = FCBHDataset(databasePath, audioDirectory, processor)
 dataLoader = FCBHDataLoader(dataset, "train", batchSize, numWorkers)
 
 # Training loop
@@ -77,6 +82,11 @@ for epoch in range(numEpochs):
 
         # process inputs in model
         outputs = model(input_values=inputValues, labels=labels)
+        #outputs = model(input_values=inputValues)
+        print(f"Logits shape: {outputs.logits.shape}")
+        predicted_ids = torch.argmax(outputs.logits, dim=-1)
+        print(f"Predicted IDs: {predicted_ids}")
+        print(f"Unique IDs: {torch.unique(predicted_ids).tolist()}")
         loss = outputs.loss
 
         optimizer.zero_grad()
@@ -99,7 +109,6 @@ for epoch in range(numEpochs):
             save_embedding_layers=False
         )
 
-    # Periodically check CER/WER on a few examples
     #if (epoch + 1) % 10 == 0:
     if True:
         model.eval()
