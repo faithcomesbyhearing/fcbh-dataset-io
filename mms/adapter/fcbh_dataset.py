@@ -9,10 +9,11 @@ from sqlite_utility import *
 
 
 class FCBHDataset(Dataset):
-    def __init__(self, databasePath, audioDir, wav2Vec2Processor):
+    def __init__(self, databasePath, audioDir, processor):
+        super(FCBHDataset).__init__()
         self.databasePath = databasePath
         self.audioDir = audioDir
-        self.wav2Vec2Processor = wav2Vec2Processor
+        self.processor = processor
         self.database = SqliteUtility(databasePath)
         maxDuration = self.database.selectOne("SELECT MAX(script_end_ts-script_begin_ts) FROM scripts", ())[0]
         self.maxLen = int(maxDuration * 16000)
@@ -42,23 +43,43 @@ class FCBHDataset(Dataset):
             num_frames = int((endTS - beginTS) * info.sample_rate)
         )
         speech = speech.squeeze().numpy()
+        # Normalize
+        #speech = speech / (np.max(np.abs(speech)) + 1e-5)  # Normalize to [-1, 1]
+
+         # Store original length for creating attention mask
+        originalLength = len(speech)
 
         # Pad or trim audio
-        if len(speech) < self.maxLen:
-            padded_speech = np.zeros(self.maxLen)
-            padded_speech[:len(speech)] = speech
-            speech = padded_speech
+        if originalLength < self.maxLen:
+            paddedSpeech = np.zeros(self.maxLen)
+            paddedSpeech[:len(speech)] = speech
+            speech = paddedSpeech
         else:
             speech = speech[:self.maxLen]
 
-        # Prepare audio
-        #audioTensor = self.wav2Vec2Processor(speech, sampling_rate=16000, return_tensors="pt").input_values.squeeze()
-        audioTensor = self.wav2Vec2Processor(speech, sampling_rate=16000, return_tensors="pt").input_values.squeeze()
-        # Prepare text
-        processed = self.wav2Vec2Processor(text=text)
-        labelTensor = torch.tensor(processed.input_ids).squeeze()
+        attentionMask = np.ones(self.maxLen)
+        if originalLength < self.maxLen:
+            attentionMask[originalLength:] = 0
 
-        return audioTensor, labelTensor, text
+        # Prepare audio
+        inputValues = self.processor(
+                speech,
+                sampling_rate=16000,
+                return_tensors=None,
+                padding=False
+            ).input_values
+        print("input", type(inputValues))
+
+        # Prepare text
+        #with self.processor.as_target_processor():
+        labels = self.processor(text=text).input_ids
+
+        # Now convert to tensors - this is fine for fixed-length data
+        inputValuesTensor = torch.tensor(inputValues, dtype=torch.float).squeeze(0)
+        attentionMaskTensor = torch.tensor(attentionMask, dtype=torch.long)
+        labelsTensor = torch.tensor(labels, dtype=torch.long)
+
+        return inputValuesTensor, attentionMaskTensor, labelsTensor, text
 
 
 if __name__ == "__main__":
@@ -69,7 +90,8 @@ if __name__ == "__main__":
     data = FCBHDataset(dbPath, audioPath, wav2Vec2Processor)
     length = data.__len__()
     print("length", length)
-    (audioTensor, labelTensor, text) = data.__getitem__(0)
-    print("audio:", audioTensor)
-    print("labels:", labelTensor)
-    print("text:", text)
+    (audioTensor, maskTensor, labelsTensor, text) = data.__getitem__(0)
+    print("audio", audioTensor, audioTensor.shape, type(audioTensor))
+    print("mask:", maskTensor, maskTensor.shape, type(maskTensor))
+    print("labels", labelsTensor, labelsTensor.shape, type(labelsTensor))
+    print("text", text)

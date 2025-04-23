@@ -22,15 +22,15 @@ MMS_ADAPTERS_DIR = os.path.join(os.getenv("FCBH_DATASET_DB"), "mms_adapters")
 # https://docs.adapterhub.ml/training.html
 #
 
-if len(sys.argv) < 7:
-    print("Usage: fcbh_train_adapter.py {iso639-3} {databasePath} {audioDirectory} {numWorkers} {batchSize} {numEpochs}")
+if len(sys.argv) < 6:
+    print("Usage: fcbh_train_adapter.py {iso639-3} {databasePath} {audioDirectory} {batchSize} {numEpochs}")
     sys.exit(1)
 adapterName = sys.argv[1]
 databasePath = sys.argv[2]
 audioDirectory = sys.argv[3]
-numWorkers = int(sys.argv[4])
-batchSize = int(sys.argv[5])
-numEpochs = int(sys.argv[6])
+batchSize = int(sys.argv[4])
+numEpochs = int(sys.argv[5])
+numWorkers = 0
 
 # Load MMS model and processor
 #modelName = "facebook/mms-1b-all"
@@ -67,7 +67,7 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
 scheduler = CosineAnnealingLR(optimizer, T_max=numEpochs, eta_min=1e-6)
 
 dataset = FCBHDataset(databasePath, audioDirectory, processor)
-dataLoader = FCBHDataLoader(dataset, "train", batchSize, numWorkers)
+dataLoader = FCBHDataLoader(dataset, "full", batchSize, numWorkers)
 
 # Training loop
 bestLoss = float('inf')
@@ -75,23 +75,32 @@ for epoch in range(numEpochs):
     model.train()
     trainLoss = 0
 
-    for audioBatch, labelBatch, texts in dataLoader:
+    #for audioBatch, labelBatch, texts in dataLoader:
+    for batch_idx, (inputValues, attentionMask, labels, texts) in enumerate(dataLoader):
         print(texts)
-        inputValues = audioBatch.to(device)
-        labels = labelBatch.to(device)
+        inputValues = inputValues.to(device)
+        attentionMask = attentionMask.to(device)
+        labels = labels.to(device)
 
         # process inputs in model
-        outputs = model(input_values=inputValues, labels=labels)
+        #outputs = model(input_values=inputValues, labels=labels)
+        outputs = model(
+            input_values=inputValues,
+            attention_mask=attentionMask,
+            labels=labels
+        )
+
         #outputs = model(input_values=inputValues)
-        print(f"Logits shape: {outputs.logits.shape}")
-        predicted_ids = torch.argmax(outputs.logits, dim=-1)
-        print(f"Predicted IDs: {predicted_ids}")
-        print(f"Unique IDs: {torch.unique(predicted_ids).tolist()}")
+        #print(f"Logits shape: {outputs.logits.shape}")
+        #predicted_ids = torch.argmax(outputs.logits, dim=-1)
+        #print(f"Predicted IDs: {predicted_ids}")
+        #print(f"Unique IDs: {torch.unique(predicted_ids).tolist()}")
         loss = outputs.loss
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        scheduler.step()
 
         trainLoss += loss.item()
 
@@ -118,7 +127,7 @@ for epoch in range(numEpochs):
 
         with torch.no_grad():
             for i in range(numSamples):
-                inputValues, labelValues, text = dataset[i]
+                inputValues, maskValues, labelValues, text = dataset[i]
                 inputValues = inputValues.unsqueeze(0).to(device)
 
                 outputs = model(input_values=inputValues)

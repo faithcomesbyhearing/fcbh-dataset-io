@@ -23,8 +23,8 @@ def FCBHDataLoader(dataset, loadType, batchSize, numWorkers):
         dataset,
         batch_size=batchSize,
         shuffle=shuffle,
-        num_workers=numWorkers,
-        collate_fn=collate_batch
+        num_workers=numWorkers
+        #collate_fn=collate_batch
     )
     return loader
 
@@ -46,6 +46,7 @@ if __name__ == "__main__":
     audioPath = os.getenv("FCBH_DATASET_FILES") + "/ENGWEB/ENGWEBN2DA"
     model_name = "facebook/mms-1b-all"
     wav2Vec2Processor = Wav2Vec2Processor.from_pretrained(model_name)
-    data = FCBHDataset(dbPath, audioPath, wav2Vec2Processor)
-    dataset = FCBHDataLoader(data, "full", 1, 1)
-    print("dataset", dataset)
+    dataset = FCBHDataset(dbPath, audioPath, wav2Vec2Processor)
+    dataLoader = FCBHDataLoader(dataset, "full", 10, 1)
+    print(dataLoader, type(dataLoader))
+    print(dir(dataLoader))
