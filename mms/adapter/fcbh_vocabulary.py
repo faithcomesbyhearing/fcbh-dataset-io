@@ -20,7 +20,8 @@ def getFCBHVocabulary(databasePath):
     result["<s>"] = 1
     result["</s>"] = 2
     result["<unk>"] = 3
-    index = 4
+    result["|"] = 4
+    index = 5
     for ch in chars:
         result[ch] = index
         index += 1
