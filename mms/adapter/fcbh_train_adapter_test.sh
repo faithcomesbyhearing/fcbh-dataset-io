@@ -2,7 +2,6 @@
 
 conda activate mms_adapter
 
-#fcbh_train_adapter.py {iso639-3} {vocabSize} {databasePath} {audioDirectory} {batchSize}
 iso639=cul
 #database=/Users/gary/FCBH2024/GaryNTest/N2CUL_MNT.db
 database=/Users/gary/FCBH2024/GaryNTest/N2CUL_MNT_3vs.db
