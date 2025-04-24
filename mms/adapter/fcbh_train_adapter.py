@@ -30,7 +30,6 @@ databasePath = sys.argv[2]
 audioDirectory = sys.argv[3]
 batchSize = int(sys.argv[4])
 numEpochs = int(sys.argv[5])
-numWorkers = 0
 
 # Load MMS model and processor
 #modelName = "facebook/mms-1b-all"
@@ -67,7 +66,7 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
 scheduler = CosineAnnealingLR(optimizer, T_max=numEpochs, eta_min=1e-6)
 
 dataset = FCBHDataset(databasePath, audioDirectory, processor)
-dataLoader = FCBHDataLoader(dataset, "full", batchSize, numWorkers)
+dataLoader = FCBHDataLoader(dataset, "full", batchSize)
 
 # Training loop
 bestLoss = float('inf')

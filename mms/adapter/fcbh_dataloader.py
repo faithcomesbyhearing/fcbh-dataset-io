@@ -4,7 +4,7 @@ import soundfile
 from torch.utils.data import DataLoader, Subset
 
 
-def FCBHDataLoader(dataset, loadType, batchSize, numWorkers):
+def FCBHDataLoader(dataset, loadType, batchSize):
     datasetSize = len(dataset)
     # Create indices lists
     if loadType == 'train':
@@ -23,20 +23,23 @@ def FCBHDataLoader(dataset, loadType, batchSize, numWorkers):
         dataset,
         batch_size=batchSize,
         shuffle=shuffle,
-        num_workers=numWorkers
-        #collate_fn=collate_batch
+        num_workers=0,
+        collate_fn=collate_batch
     )
     return loader
 
 
 def collate_batch(batch):
-    # Separate audio and label tensors
-    audio_tensors, label_tensors, texts = zip(*batch)
+    inputValues, attentionMasks, labels, texts = zip(*batch)
+    inputValuesBatch = torch.stack(inputValues)
+    attentionMasksBatch = torch.stack(attentionMasks)
 
-    # Stack them into batches
-    audio_batch = torch.stack(audio_tensors)
-    label_batch = torch.stack(label_tensors)
-    return audio_batch, label_batch, texts
+    labelsBatch = torch.nn.utils.rnn.pad_sequence(
+        labels,
+        batch_first=True,
+        padding_value=0
+    )
+    return inputValuesBatch, attentionMasksBatch, labelsBatch, texts
 
 
 if __name__ == "__main__":
