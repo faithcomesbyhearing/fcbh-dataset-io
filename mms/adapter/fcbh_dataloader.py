@@ -36,8 +36,7 @@ def collate_batch(batch):
 
     labelsBatch = torch.nn.utils.rnn.pad_sequence(
         labels,
-        batch_first=True,
-        padding_value=0
+        batch_first=True
     )
     return inputValuesBatch, attentionMasksBatch, labelsBatch, texts
 
@@ -50,6 +49,6 @@ if __name__ == "__main__":
     model_name = "facebook/mms-1b-all"
     wav2Vec2Processor = Wav2Vec2Processor.from_pretrained(model_name)
     dataset = FCBHDataset(dbPath, audioPath, wav2Vec2Processor)
-    dataLoader = FCBHDataLoader(dataset, "full", 10, 1)
+    dataLoader = FCBHDataLoader(dataset, "full", 10)
     print(dataLoader, type(dataLoader))
     print(dir(dataLoader))
