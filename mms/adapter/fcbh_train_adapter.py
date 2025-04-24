@@ -75,17 +75,17 @@ for epoch in range(numEpochs):
     trainLoss = 0
 
     #for audioBatch, labelBatch, texts in dataLoader:
-    for batch_idx, (inputValues, attentionMask, labels, texts) in enumerate(dataLoader):
+    for batch_idx, (inputValues, labels, texts) in enumerate(dataLoader):
         print(texts)
         inputValues = inputValues.to(device)
-        attentionMask = attentionMask.to(device)
+        #attentionMask = attentionMask.to(device)
         labels = labels.to(device)
 
         # process inputs in model
         #outputs = model(input_values=inputValues, labels=labels)
         outputs = model(
             input_values=inputValues,
-            attention_mask=attentionMask,
+            #attention_mask=attentionMask,
             labels=labels
         )
 
@@ -126,7 +126,7 @@ for epoch in range(numEpochs):
 
         with torch.no_grad():
             for i in range(numSamples):
-                inputValues, maskValues, labelValues, text = dataset[i]
+                inputValues, labelValues, text = dataset[i]
                 inputValues = inputValues.unsqueeze(0).to(device)
 
                 outputs = model(input_values=inputValues)

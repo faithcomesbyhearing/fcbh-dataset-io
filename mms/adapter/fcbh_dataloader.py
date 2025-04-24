@@ -1,6 +1,5 @@
 import os
 import torch
-import soundfile
 from torch.utils.data import DataLoader, Subset
 
 
@@ -19,20 +18,47 @@ def FCBHDataLoader(dataset, loadType, batchSize):
         dataset = dataset
         shuffle = True
 
-    loader = DataLoader(
-        dataset,
-        batch_size=batchSize,
-        shuffle=shuffle,
-        num_workers=0,
-        collate_fn=collate_batch
-    )
+    if batchSize == 1:
+        loader = DataLoader(
+            dataset,
+            batch_size=1,
+            shuffle=shuffle,
+            num_workers=0
+        )
+    else:
+        loader = DataLoader(
+            dataset,
+            batch_size=batchSize,
+            shuffle=shuffle,
+            num_workers=0,
+            collate_fn=collate_batch
+        )
     return loader
 
 
+## This has NOT been tested
 def collate_batch(batch):
-    inputValues, attentionMasks, labels, texts = zip(*batch)
-    inputValuesBatch = torch.stack(inputValues)
+    inputValues, labels, texts = zip(*batch)
+
+    # Get the original lengths before padding
+    inputLengths = [len(x) for x in inputValues]
+    maxInputLen = max(inputLengths)
+
+    # Now create attention masks with the correct size
+    attentionMasks = []
+    for length in inputLengths:
+        mask = torch.zeros(maxInputLen, dtype=torch.long)
+        mask[:length] = 1
+        attentionMasks.append(mask)
     attentionMasksBatch = torch.stack(attentionMasks)
+
+    # Pad input values
+    inputValuesBatch = torch.nn.utils.rnn.pad_sequence(
+        inputValues,
+        batch_first=True
+    )
+    inputValuesBatch = torch.stack(inputValues)
+
 
     labelsBatch = torch.nn.utils.rnn.pad_sequence(
         labels,
@@ -49,6 +75,6 @@ if __name__ == "__main__":
     model_name = "facebook/mms-1b-all"
     wav2Vec2Processor = Wav2Vec2Processor.from_pretrained(model_name)
     dataset = FCBHDataset(dbPath, audioPath, wav2Vec2Processor)
-    dataLoader = FCBHDataLoader(dataset, "full", 10)
+    dataLoader = FCBHDataLoader(dataset, "full", 1)
     print(dataLoader, type(dataLoader))
-    print(dir(dataLoader))
+    #print(dir(dataLoader))
