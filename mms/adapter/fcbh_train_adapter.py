@@ -74,12 +74,10 @@ bestLoss = float('inf')
 for epoch in range(numEpochs):
     model.train()
     trainLoss = 0
-    batchCount = 0
 
     #for audioBatch, labelBatch, texts in dataLoader:
     for batch_idx, (inputValues, labels, texts) in enumerate(dataLoader):
-        batchCount += 1
-        print("Progress epoch:", epoch+1, "of", numEpochs, "batch:", batchCount, "of", numBatches)
+        print("Progress epoch:", epoch, "of", numEpochs, "batch:", batch_idx, "of", numBatches)
         print(texts)
         inputValues = inputValues.to(device)
         #attentionMask = attentionMask.to(device)

@@ -13,8 +13,10 @@ def getFCBHVocabulary(databasePath):
         for ch in word:
             chars.add(ch)
     # Possibly excluding or including hyphens should be a language option.
-    chars.discard('\u2014') # another hyphen
     chars.discard('\u002d') # hyphen
+    chars.discard('\u2014') # another hyphen
+    chars.discard('\u2019') # right single quote
+    chars = sorted(chars)
     result = {}
     result["<pad>"] = 0
     result["<s>"] = 1

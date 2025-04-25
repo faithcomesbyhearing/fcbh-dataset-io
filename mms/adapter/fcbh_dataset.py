@@ -7,6 +7,7 @@ import soundfile
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Config, Wav2Vec2Processor
 import numpy as np
 from sqlite_utility import *
+from fcbh_vocabulary import getFCBHVocabulary
 
 class FCBHDataset(Dataset):
     def __init__(self, databasePath, audioDir, processor):
@@ -45,8 +46,6 @@ class FCBHDataset(Dataset):
             num_frames = int((endTS - beginTS) * 16000)
         )
         speech = speech.squeeze().numpy()
-        # Normalize
-        #speech = speech / (np.max(np.abs(speech)) + 1e-5)  # Normalize to [-1, 1]
 
         # Prepare audio
         inputValues = self.processor(
@@ -61,16 +60,27 @@ class FCBHDataset(Dataset):
         # Prepare text
         labels = self.processor(text=text).input_ids
         labelsTensor = torch.tensor(labels, dtype=torch.long)
+        print("text", text)
+        print("labels", labels)
+        print("labTensor", labelsTensor)
 
         return inputValuesTensor, labelsTensor, text
 
 
 if __name__ == "__main__":
+    from transformers import Wav2Vec2Processor, Wav2Vec2FeatureExtractor, Wav2Vec2CTCTokenizer
     dbPath = os.getenv("FCBH_DATASET_DB") + "/GaryNTest/N2ENGWEB.db"
     audioPath = os.getenv("FCBH_DATASET_FILES") + "/ENGWEB/ENGWEBN2DA"
     model_name = "facebook/mms-1b-all"
-    wav2Vec2Processor = Wav2Vec2Processor.from_pretrained(model_name)
-    data = FCBHDataset(dbPath, audioPath, wav2Vec2Processor)
+    vocabFile, vocabulary = getFCBHVocabulary(dbPath)
+    tokenizer = Wav2Vec2CTCTokenizer(vocab_file=vocabFile)
+    feature_extractor = Wav2Vec2FeatureExtractor(
+        feature_size=1, sampling_rate=16000, padding_value=0.0,
+        do_normalize=True, return_attention_mask=True
+    )
+    processor = Wav2Vec2Processor(feature_extractor=feature_extractor, tokenizer=tokenizer)
+    #wav2Vec2Processor = Wav2Vec2Processor.from_pretrained(model_name)
+    data = FCBHDataset(dbPath, audioPath, processor)
     length = data.__len__()
     print("length", length)
     (audioTensor, labelsTensor, text) = data.__getitem__(0)
