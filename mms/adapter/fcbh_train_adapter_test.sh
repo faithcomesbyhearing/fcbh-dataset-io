@@ -9,7 +9,7 @@ audio_dir=/Users/gary/FCBH2024/download/CULMNT/CULMNTN2DA
 batch_size=1
 num_epochs=1
 
-python fcbh_train_adapter.py $iso639 $database $audio_dir $batch_size $num_epochs
+time python fcbh_train_adapter.py $iso639 $database $audio_dir $batch_size $num_epochs
 
 
 

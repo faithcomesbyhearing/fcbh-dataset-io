@@ -69,13 +69,17 @@ dataset = FCBHDataset(databasePath, audioDirectory, processor)
 dataLoader = FCBHDataLoader(dataset, "full", batchSize)
 
 # Training loop
+numBatches = int(dataset.__len__() / batchSize)
 bestLoss = float('inf')
 for epoch in range(numEpochs):
     model.train()
     trainLoss = 0
+    batchCount = 0
 
     #for audioBatch, labelBatch, texts in dataLoader:
     for batch_idx, (inputValues, labels, texts) in enumerate(dataLoader):
+        batchCount += 1
+        print("Progress epoch:", epoch+1, "of", numEpochs, "batch:", batchCount, "of", numBatches)
         print(texts)
         inputValues = inputValues.to(device)
         #attentionMask = attentionMask.to(device)
