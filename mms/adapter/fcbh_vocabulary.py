@@ -10,7 +10,7 @@ def getFCBHVocabulary(databasePath):
     #words = database.select("SELECT word FROM words WHERE ttype='W'", ())
     texts = database.select("SELECT script_text FROM scripts", ())
     for vs in texts:
-        line = unicodedata.normalize("NFC", vs[0])
+        line = unicodedata.normalize("NFC", vs[0].lower())
         for ch in line:
             chars.add(ch)
     # Possibly excluding or including hyphens should be a language option.
