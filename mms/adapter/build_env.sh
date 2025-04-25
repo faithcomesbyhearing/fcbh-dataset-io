@@ -18,6 +18,6 @@ pip install soundfile
 pip install adapters
 pip install peft
 pip install jiwer
-pip install unicodedata
+#pip install unicodedata
 #pip install accelerate
 

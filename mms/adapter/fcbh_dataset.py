@@ -60,9 +60,6 @@ class FCBHDataset(Dataset):
         # Prepare text
         labels = self.processor(text=text).input_ids
         labelsTensor = torch.tensor(labels, dtype=torch.long)
-        print("text", text)
-        print("labels", labels)
-        print("labTensor", labelsTensor)
 
         return inputValuesTensor, labelsTensor, text
 

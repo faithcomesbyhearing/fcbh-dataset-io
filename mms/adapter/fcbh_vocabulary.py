@@ -7,15 +7,16 @@ from sqlite_utility import *
 def getFCBHVocabulary(databasePath):
     database = SqliteUtility(databasePath)
     chars = set()
-    words = database.select("SELECT word FROM words WHERE ttype='W'", ())
-    for wd in words:
-        word = unicodedata.normalize("NFC", wd[0].lower())
-        for ch in word:
+    #words = database.select("SELECT word FROM words WHERE ttype='W'", ())
+    texts = database.select("SELECT script_text FROM scripts", ())
+    for vs in texts:
+        line = unicodedata.normalize("NFC", vs[0])
+        for ch in line:
             chars.add(ch)
     # Possibly excluding or including hyphens should be a language option.
-    chars.discard('\u002d') # hyphen
-    chars.discard('\u2014') # another hyphen
-    chars.discard('\u2019') # right single quote
+    #chars.discard('\u002d') # hyphen
+    #chars.discard('\u2014') # another hyphen
+    #chars.discard('\u2019') # right single quote
     chars = sorted(chars)
     result = {}
     result["<pad>"] = 0
@@ -23,11 +24,11 @@ def getFCBHVocabulary(databasePath):
     result["</s>"] = 2
     result["<unk>"] = 3
     result["|"] = 4
+    #result[" "] = 5
     index = 5
     for ch in chars:
         result[ch] = index
         index += 1
-    result[" "] = index
     filePath = "vocab.json"
     with open(filePath, 'w', encoding='utf-8') as vocabFile:
         json.dump(result, vocabFile)
