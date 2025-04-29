@@ -3,26 +3,27 @@ import sys
 import torch
 import torchaudio
 from torch.utils.data import Dataset, DataLoader
-import soundfile
-from transformers import Wav2Vec2ForCTC, Wav2Vec2Config, Wav2Vec2Processor
 import numpy as np
 from sqlite_utility import *
-from fcbh_vocabulary import getFCBHVocabulary
+from data_pruner import dataPruner
 
-class FCBHDataset(Dataset):
-    def __init__(self, databasePath, audioDir, processor):
-        super(FCBHDataset).__init__()
-        self.databasePath = databasePath
+
+class MyDataset(Dataset):
+    def __init__(self, database, audioDir, processor):
+        super(MyDataset).__init__()
+        self.database = database
         self.audioDir = audioDir
         self.processor = processor
-        self.database = SqliteUtility(databasePath)
-        query = """SELECT audio_file, script_text, script_begin_ts, script_end_ts
-                FROM scripts WHERE verse_str != '0'
-                AND fa_score > 0.4
-                AND script_id NOT IN
-                (SELECT distinct script_id FROM words WHERE ttype='W' AND fa_score < 0.01)"""
+        query = """
+            SELECT s.book_id || ' ' || s.chapter_num || ':' || s.verse_str as ref,
+                s.audio_file, s.script_begin_ts, s.script_end_ts, GROUP_CONCAT(w.word, ' ') AS text
+            FROM scripts s
+            JOIN words w ON w.script_id = s.script_id
+            WHERE w.ttype = 'W' AND s.script_id IN (SELECT script_id FROM pruned_data)
+            GROUP BY s.script_id, s.book_id, s.chapter_num, s.verse_str, s.audio_file, s.script_begin_ts, s.script_end_ts
+            """
         self.data = self.database.select(query,())
-        self.database.close()
+        print("num lines", len(self.data))
 
 
     def __len__(self):
@@ -30,7 +31,7 @@ class FCBHDataset(Dataset):
 
 
     def __getitem__(self, idx):
-        (audioFile, text, beginTS, endTS) = self.data[idx]
+        (reference, audioFile, beginTS, endTS, text) = self.data[idx]
         audioFile = audioFile.replace(".mp3", ".wav")
         audioPath = os.path.join(self.audioDir, audioFile)
 
@@ -61,26 +62,37 @@ class FCBHDataset(Dataset):
         labels = self.processor(text=text).input_ids
         labelsTensor = torch.tensor(labels, dtype=torch.long)
 
-        return inputValuesTensor, labelsTensor, text
+        return {
+            "input_values": inputValuesTensor,
+            "labels": labelsTensor,
+            "text": text,
+            "reference": reference
+        }
 
 
 if __name__ == "__main__":
+    from tokenizer import createTokenizer
     from transformers import Wav2Vec2Processor, Wav2Vec2FeatureExtractor, Wav2Vec2CTCTokenizer
     dbPath = os.getenv("FCBH_DATASET_DB") + "/GaryNTest/N2ENGWEB.db"
+    database = SqliteUtility(dbPath)
     audioPath = os.getenv("FCBH_DATASET_FILES") + "/ENGWEB/ENGWEBN2DA"
-    model_name = "facebook/mms-1b-all"
-    vocabFile, vocabulary = getFCBHVocabulary(dbPath)
-    tokenizer = Wav2Vec2CTCTokenizer(vocab_file=vocabFile)
-    feature_extractor = Wav2Vec2FeatureExtractor(
+    #model_name = "facebook/mms-1b-all"
+    tokenizer = createTokenizer(database, "eng")
+    featureExtractor = Wav2Vec2FeatureExtractor(
         feature_size=1, sampling_rate=16000, padding_value=0.0,
         do_normalize=True, return_attention_mask=True
     )
-    processor = Wav2Vec2Processor(feature_extractor=feature_extractor, tokenizer=tokenizer)
+    processor = Wav2Vec2Processor(feature_extractor=featureExtractor, tokenizer=tokenizer)
     #wav2Vec2Processor = Wav2Vec2Processor.from_pretrained(model_name)
-    data = FCBHDataset(dbPath, audioPath, processor)
-    length = data.__len__()
+    dataset = MyDataset(database, audioPath, processor)
+    length = dataset.__len__()
     print("length", length)
-    (audioTensor, labelsTensor, text) = data.__getitem__(0)
+    data = dataset.__getitem__(0)
+    #(audioTensor, labelsTensor, text) = data.__getitem__(0)
+    audioTensor = data["input_ids"]
     print("audio", audioTensor.shape, type(audioTensor), audioTensor)
+    labelsTensor = data["labels"]
     print("labels", labelsTensor.shape, type(labelsTensor), labelsTensor)
-    print("text", text)
+    print("text", data["text"])
+    print("reference", data["reference"])
+    database.close()

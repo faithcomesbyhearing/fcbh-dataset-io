@@ -11,6 +11,10 @@ from fcbh_dataset import *
 from fcbh_dataloader import *
 from fcbh_vocabulary import *
 
+#
+# No longer used
+#
+
 MMS_ADAPTERS_DIR = os.path.join(os.getenv("FCBH_DATASET_DB"), "mms_adapters")
 # batch size is recommended to be 4 to 8, try 8 to see if there is enough memory
 # num workers is recommended to be 2 to 4, start with 2
@@ -32,8 +36,10 @@ batchSize = int(sys.argv[4])
 numEpochs = int(sys.argv[5])
 
 # Load MMS model and processor
-#modelName = "facebook/mms-1b-all"
-modelName = "facebook/mms-1b-fl102"
+modelName = "facebook/mms-1b-all"
+#modelName = "facebook/mms-1b"
+#modelName = "facebook/mms-300m"
+#modelName = "facebook/mms-1b-fl102"
 
 vocabFile, vocabulary = getFCBHVocabulary(databasePath)
 tokenizer = Wav2Vec2CTCTokenizer(vocab_file=vocabFile)
