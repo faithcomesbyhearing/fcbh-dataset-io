@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import DataLoader, Subset
 
 
-def FCBHDataLoader(dataset, loadType, batchSize):
+def MyDataLoader(dataset, loadType, batchSize):
     datasetSize = len(dataset)
     # Create indices lists
     if loadType == 'train':
@@ -69,12 +69,15 @@ def collate_batch(batch):
 
 if __name__ == "__main__":
     from transformers import Wav2Vec2ForCTC, Wav2Vec2Config, Wav2Vec2Processor
-    from fcbh_dataset import *
+    from dataset import *
+    from sqlite_utility import *
     dbPath = os.getenv("FCBH_DATASET_DB") + "/GaryNTest/N2ENGWEB.db"
     audioPath = os.getenv("FCBH_DATASET_FILES") + "/ENGWEB/ENGWEBN2DA"
     model_name = "facebook/mms-1b-all"
     wav2Vec2Processor = Wav2Vec2Processor.from_pretrained(model_name)
-    dataset = FCBHDataset(dbPath, audioPath, wav2Vec2Processor)
-    dataLoader = FCBHDataLoader(dataset, "full", 1)
+    database = SqliteUtility(dbPath)
+    dataPruner(database)
+    dataset = MyDataset(database, audioPath, wav2Vec2Processor)
+    dataLoader = MyDataLoader(dataset, "full", 1)
     print(dataLoader, type(dataLoader))
     #print(dir(dataLoader))

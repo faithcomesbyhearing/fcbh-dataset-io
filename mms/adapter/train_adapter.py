@@ -10,30 +10,25 @@ from tokenizer import createTokenizer
 from sqlite_utility import *
 from data_pruner import dataPruner
 from dataset import *
-from dataloader import *
 from data_collator import *
+from evaluate import load
 
 #
 # https://huggingface.co/blog/mms_adapters
 #
-
-from evaluate import load
 
 wer_metric = load("wer")
 
 def compute_metrics(pred):
     pred_logits = pred.predictions
     pred_ids = np.argmax(pred_logits, axis=-1)
-
     pred.label_ids[pred.label_ids == -100] = processor.tokenizer.pad_token_id
-
     pred_str = processor.batch_decode(pred_ids)
     # we do not want to group tokens when computing the metrics
     label_str = processor.batch_decode(pred.label_ids, group_tokens=False)
-
     wer = wer_metric.compute(predictions=pred_str, references=label_str)
-
     return {"wer": wer}
+
 
 if len(sys.argv) < 6:
     print("Usage: python train_adapter.py {iso639-3} {databasePath} {audioDirectory} {batchSize} {numEpochs}")
@@ -62,8 +57,6 @@ processor = Wav2Vec2Processor(
 
 dataPruner(database) # remove lines with likely errors
 dataset = MyDataset(database, audioDirectory, processor)
-#trainDataset = MyDataLoader(dataset, "train", 1)
-#testDataset = MyDataLoader(dataset, "test", 1)
 database.close()
 
 data_collator = DataCollatorCTCWithPadding(processor=processor, padding=True)
