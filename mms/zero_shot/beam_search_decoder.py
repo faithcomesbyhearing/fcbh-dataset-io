@@ -27,6 +27,7 @@ https://pytorch.org/audio/main/tutorials/asr_inference_with_ctc_decoder_tutorial
 # is only the case if punctuation was included in testing.  And based upon
 # MMS ASR results, that does not appear to be the case.
 
+"""
 def create_tokens(words):
     char_set = set()
     for word in words:
@@ -76,31 +77,7 @@ def create_text(words):
         _ = file.write('\n')
         file.flush()
     return file.name
-
-dbPath = os.getenv('FCBH_DATASET_DB')+ '/GaryNTest/N2CUL_MNT.db'
-database = SqliteUtility(dbPath)
-words = database.select("SELECT script_id, word FROM words WHERE ttype = 'W' ORDER BY script_id, word_id",())
-database.close()
-
-token_dict = Dictionary(create_tokens(words))
-
-lexicon = load_words(create_lexicon(words))
-word_dict = create_word_dict(lexicon)
-
-text_file = create_text(words)
-
-nltk.download('punkt')
-nltk.download('punkt_tab')
-
-os.system("kenlm/build/bin/lmplz -o 5 < data/text.txt > data/model.arpa")
-os.system("kenlm/build/bin/build_binary data/model.arpa data/model.bin")
-
-lm = KenLM("data/model.bin", word_dict)
-
-sil_idx = token_dict.get_index("|")
-
-trie = Trie(token_dict.index_size(), sil_idx)
-start_state = lm.start(False)
+"""
 
 def tkn_to_idx(spelling: list, token_dict : Dictionary, maxReps : int = 0):
     result = []
@@ -108,46 +85,76 @@ def tkn_to_idx(spelling: list, token_dict : Dictionary, maxReps : int = 0):
         result.append(token_dict.get_index(token))
     return pack_replabels(result, token_dict, maxReps)
 
-for word, spellings in lexicon.items():
-    usr_idx = word_dict.get_index(word)
-    _, score = lm.score(start_state, usr_idx)
-    for spelling in spellings:
-        # convert spelling string into vector of indices
-        spelling_idxs = tkn_to_idx(spelling, token_dict, 1)
-        trie.insert(spelling_idxs, usr_idx, score)
-    trie.smear(SmearingMode.MAX) # propagate word score to each spelling node to have some lm proxy score in each node.
+def create_decoder():
+    #dbPath = os.getenv('FCBH_DATASET_DB')+ '/GaryNTest/N2CUL_MNT.db'
+    #database = SqliteUtility(dbPath)
+    #words = database.select("SELECT script_id, word FROM words WHERE ttype = 'W' ORDER BY script_id, word_id",())
+    #database.close()
 
-options = LexiconDecoderOptions(
-    beam_size=500,         # range 25-500, default 50-100, 200-500 high accuracy
-    beam_size_token=50,    # default 25-50, large token sets 50-100, restrict num tokens at each step
-    beam_threshold=25.0,     # default 15-25, aggressive pruning 5-10, 25 common
-    lm_weight=2.69,        # LLM influence, default 1-2, typical 0.5-3, 2.69 common
-    word_score=2.8,        # Pos encourages word insertion, default 0 to -1, typical -3 to 3, 2.8 common
-    unk_score=-5.0,        # -Inf(no unknown words) to -5, less restrictive -2 to -3
-    sil_score=0.0,         # Silence tokens, default 0, typical -0.5 to 0.5
-    log_add=False,         # default false, Use max instead of log-add
-    criterion_type=CriterionType.CTC  # For CTC-based models
-)
+    #token_dict = Dictionary(create_tokens(words))
+    token_dict = Dictionary("tokens.txt")
 
+    #lexicon = load_words(create_lexicon(words))
+    lexicon = load_words("lexicon.txt")
+    word_dict = create_word_dict(lexicon)
 
-blank_idx = token_dict.get_index("#") # for CTC
-unk_idx = word_dict.get_index("<unk>")
-#transitions = numpy.zeros((token_dict.index_size(), token_dict.index_size()),) # for ASG fill up with correct values
-transitions = [0.0] * (token_dict.index_size() * token_dict.index_size())
-is_token_lm = False # we use word-level LM
+    #text_file = create_text(words)
+    #text_file = "text.txt"
 
-decoder = LexiconDecoder(
-    options,
-    trie,
-    lm,
-    sil_idx,
-    blank_idx,
-    unk_idx,
-    transitions,
-    is_token_lm
-)
-# emissions is numpy.array of emitting model predictions with shape [T, N], where T is time, N is number of tokens
-results = decoder.decode(emissions.ctypes.data, T, N)
-# results[i].tokens contains tokens sequence (with length T)
-# results[i].score contains score of the hypothesis
-# results is sorted array with the best hypothesis stored with index=0.
+    os.system("kenlm/build/bin/lmplz -o 5 < data/text.txt > data/model.arpa")
+    os.system("kenlm/build/bin/build_binary data/model.arpa data/model.bin")
+
+    lm = KenLM("data/model.bin", word_dict)
+
+    sil_idx = token_dict.get_index("|")
+
+    trie = Trie(token_dict.index_size(), sil_idx)
+    start_state = lm.start(False)
+
+    for word, spellings in lexicon.items():
+        usr_idx = word_dict.get_index(word)
+        _, score = lm.score(start_state, usr_idx)
+        for spelling in spellings:
+            # convert spelling string into vector of indices
+            spelling_idxs = tkn_to_idx(spelling, token_dict, 1)
+            trie.insert(spelling_idxs, usr_idx, score)
+        trie.smear(SmearingMode.MAX) # propagate word score to each spelling node to have some lm proxy score in each node.
+
+    options = LexiconDecoderOptions(
+        beam_size=500,         # range 25-500, default 50-100, 200-500 high accuracy
+        beam_size_token=50,    # default 25-50, large token sets 50-100, restrict num tokens at each step
+        beam_threshold=25.0,     # default 15-25, aggressive pruning 5-10, 25 common
+        lm_weight=2.69,        # LLM influence, default 1-2, typical 0.5-3, 2.69 common
+        word_score=2.8,        # Pos encourages word insertion, default 0 to -1, typical -3 to 3, 2.8 common
+        unk_score=-5.0,        # -Inf(no unknown words) to -5, less restrictive -2 to -3
+        sil_score=0.0,         # Silence tokens, default 0, typical -0.5 to 0.5
+        log_add=False,         # default false, Use max instead of log-add
+        criterion_type=CriterionType.CTC  # For CTC-based models
+    )
+
+    blank_idx = token_dict.get_index("#") # for CTC
+    unk_idx = word_dict.get_index("<unk>")
+    #transitions = numpy.zeros((token_dict.index_size(), token_dict.index_size()),) # for ASG fill up with correct values
+    transitions = [0.0] * (token_dict.index_size() * token_dict.index_size())
+    is_token_lm = False # we use word-level LM
+
+    decoder = LexiconDecoder(
+        options,
+        trie,
+        lm,
+        sil_idx,
+        blank_idx,
+        unk_idx,
+        transitions,
+        is_token_lm
+    )
+    return decoder
+    # emissions is numpy.array of emitting model predictions with shape [T, N], where T is time, N is number of tokens
+    #results = decoder.decode(emissions.ctypes.data, T, N)
+    # results[i].tokens contains tokens sequence (with length T)
+    # results[i].score contains score of the hypothesis
+    # results is sorted array with the best hypothesis stored with index=0.
+
+if __name__ == "__main__":
+    decoder = create_decoder()
+    print(decoder)

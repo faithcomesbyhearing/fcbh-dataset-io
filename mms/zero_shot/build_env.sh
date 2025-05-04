@@ -13,6 +13,9 @@ pip install git+https://github.com/kpu/kenlm.git
 pip install cmake
 pip install nltk
 
+python -c "nltk.download('punkt')"
+python -c "nltk.download('punkt_tab')"
+
 conda install -y boost -c conda-forge
 conda install -y cmake -c conda-forge
 
