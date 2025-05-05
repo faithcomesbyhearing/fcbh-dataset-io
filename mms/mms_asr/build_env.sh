@@ -1,5 +1,9 @@
 #!/bin/bash
 
+conda create -y -n mms_asr python=3.11
+
+conda activate mms_asr
+
 conda install -y pytorch torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
 
 # On Mac
