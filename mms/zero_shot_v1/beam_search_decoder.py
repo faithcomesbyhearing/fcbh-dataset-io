@@ -79,32 +79,32 @@ def create_text(words):
     return file.name
 """
 
+TOKEN_FILE = "tokens.txt"
+LEXICON_FILE = "lexicon.txt"
+SCRIPT_FILE = "script.txt"
+MODEL_FILE = "model.arpa"
+MODEL_BIN = "model.bin"
+
 def tkn_to_idx(spelling: list, token_dict : Dictionary, maxReps : int = 0):
     result = []
     for token in spelling:
         result.append(token_dict.get_index(token))
     return pack_replabels(result, token_dict, maxReps)
 
-def create_decoder():
-    #dbPath = os.getenv('FCBH_DATASET_DB')+ '/GaryNTest/N2CUL_MNT.db'
-    #database = SqliteUtility(dbPath)
-    #words = database.select("SELECT script_id, word FROM words WHERE ttype = 'W' ORDER BY script_id, word_id",())
-    #database.close()
+def create_decoder(directory):
+    token_dict = Dictionary(os.path.join(directory, TOKEN_FILE))
 
-    #token_dict = Dictionary(create_tokens(words))
-    token_dict = Dictionary("tokens.txt")
-
-    #lexicon = load_words(create_lexicon(words))
-    lexicon = load_words("lexicon.txt")
+    lexicon = load_words(os.path.join(directory, LEXICON_FILE))
     word_dict = create_word_dict(lexicon)
 
-    #text_file = create_text(words)
-    #text_file = "text.txt"
+    scriptFile = os.path.join(directory, SCRIPT_FILE)
+    modelFile = os.path.join(directory, MODEL_FILE)
+    modelBin = os.path.join(directory, MODEL_BIN)
 
-    os.system("kenlm/build/bin/lmplz -o 5 < data/text.txt > data/model.arpa")
-    os.system("kenlm/build/bin/build_binary data/model.arpa data/model.bin")
+    os.system("kenlm/build/bin/lmplz -o 5 < " + scriptFile + " > " + modelFile)
+    os.system("kenlm/build/bin/build_binary " + modelFile + " " + modelBin )
 
-    lm = KenLM("data/model.bin", word_dict)
+    lm = KenLM(modelBin, word_dict)
 
     sil_idx = token_dict.get_index("|")
 
@@ -119,11 +119,12 @@ def create_decoder():
             spelling_idxs = tkn_to_idx(spelling, token_dict, 1)
             trie.insert(spelling_idxs, usr_idx, score)
         trie.smear(SmearingMode.MAX) # propagate word score to each spelling node to have some lm proxy score in each node.
+    print("Finished building Trie")
 
     options = LexiconDecoderOptions(
         beam_size=500,         # range 25-500, default 50-100, 200-500 high accuracy
         beam_size_token=50,    # default 25-50, large token sets 50-100, restrict num tokens at each step
-        beam_threshold=25.0,     # default 15-25, aggressive pruning 5-10, 25 common
+        beam_threshold=25.0,   # default 15-25, aggressive pruning 5-10, 25 common
         lm_weight=2.69,        # LLM influence, default 1-2, typical 0.5-3, 2.69 common
         word_score=2.8,        # Pos encourages word insertion, default 0 to -1, typical -3 to 3, 2.8 common
         unk_score=-5.0,        # -Inf(no unknown words) to -5, less restrictive -2 to -3
@@ -156,5 +157,5 @@ def create_decoder():
     # results is sorted array with the best hypothesis stored with index=0.
 
 if __name__ == "__main__":
-    decoder = create_decoder()
+    decoder = create_decoder("data")
     print(decoder)

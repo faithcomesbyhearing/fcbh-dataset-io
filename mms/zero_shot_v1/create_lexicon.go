@@ -13,7 +13,7 @@ import (
 )
 
 const TokenFile = "tokens.txt"
-const LexiconFile = "lexicons.txt"
+const LexiconFile = "lexicon.txt"
 const ScriptFile = "script.txt"
 
 type text struct {

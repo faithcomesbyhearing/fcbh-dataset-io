@@ -5,6 +5,7 @@ from transformers import Wav2Vec2ForCTC
 from transformers import AutoProcessor
 import torch
 import psutil
+from beam_search_decoder import create_decoder
 
 
 ## Documentation used to write this program
@@ -20,10 +21,12 @@ def isSupportedLanguage(modelId:str, lang:str):
     return False
 
 
-if len(sys.argv) < 2:
-    print("Usage: mms_asr.py  {iso639-3}")
+if len(sys.argv) < 3:
+    print("Usage: mms_asr.py  {iso639-3}  {lexicon_directory}")
     sys.exit(1)
 lang = sys.argv[1]
+lex_directory = sys.argv[2]
+decoder = create_decoder(lex_directory)
 if torch.cuda.is_available():
     device = 'cuda'
 else:
@@ -46,19 +49,50 @@ for line in sys.stdin:
     inputs = {name: tensor.to(device) for name, tensor in inputs.items()}
     with torch.no_grad():
         outputs = model(**inputs).logits
-    ids = torch.argmax(outputs, dim=-1)[0]
-    transcription = processor.decode(ids)
+    #ids = torch.argmax(outputs, dim=-1)[0]
+    #log_probs = torch.log_softmax(outputs, dim=-1)
+
+    log_probs = torch.log_softmax(outputs, dim=-1).cpu().numpy()
+    emission_length = log_probs.shape[0]
+    beam_size = 500  # Adjust based on your needs
+    token_beam_size = 50  # Adjust based on your needs
+    beam_threshold = 25.0  # Adjust based on your needs
+
+    # Flashlight decoder typically returns multiple hypotheses
+    # You might need to convert your emissions to the format expected by Flashlight
+    # This often means transposing to have time as the first dimension
+    emissions = log_probs.transpose()  # Make sure dimensions match what Flashlight expects
+
+    # Call the Flashlight decoder
+    results = decoder.decode(
+        emissions,
+        emission_length,  # Length of valid emissions (no padding)
+        beam_size,
+        token_beam_size,
+        beam_threshold
+    )
+    best_result = results[0]
+    # The result might be a complex object with properties like 'tokens', 'score', etc.
+    best_tokens = best_result.tokens  # This might be different based on your Flashlight version
+
+    # Convert tokens to a string using your processor or tokenizer
+    transcription = processor.decode(best_tokens)
+
+    #ids = torch.argmax(outputs, dim=-1)[0]
+    #transcription = processor.decode(ids)
     sys.stdout.write(transcription)
     sys.stdout.write("\n")
     sys.stdout.flush()
 
 
-
 ## Testing
 ## cd Documents/go2/dataset/mms
 ## conda activate mms_asr
-## python mms_asr.py eng
+## python mms_asr.py eng data
 ## /Users/gary/FCBH2024/download/ENGWEB/ENGWEBN2DA-mp3-64/B02___01_Mark________ENGWEBN2DA.wav
+
+## python mms_asr.py cul data
+## /Users/gary/FCBH2024/download/CULMNT/CULMNTN2DA/B01___01_S_Mateus____CULMNTN2DA.wav
 
 
 
