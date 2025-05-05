@@ -11,7 +11,7 @@ import (
 )
 
 // Check that language is supported by mms_asr, and return alternate if it is not
-func checkLanguage(ctx context.Context, lang string, sttLang string, aiTool string) (string, *log.Status) {
+func CheckLanguage(ctx context.Context, lang string, sttLang string, aiTool string) (string, *log.Status) {
 	var result string
 	if sttLang != `` {
 		result = sttLang
@@ -37,7 +37,7 @@ func checkLanguage(ctx context.Context, lang string, sttLang string, aiTool stri
 
 // deprecated - use utility.StdioExec
 // callStdIOScript will exec the python script, and setup pipes on stdin and stdout
-func callStdIOScript(ctx context.Context, command string, arg ...string) (*bufio.Writer, *bufio.Reader, *log.Status) {
+func CallStdIOScript(ctx context.Context, command string, arg ...string) (*bufio.Writer, *bufio.Reader, *log.Status) {
 	var writer *bufio.Writer
 	var reader *bufio.Reader
 	var status *log.Status

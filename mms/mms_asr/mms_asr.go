@@ -35,12 +35,12 @@ func NewMMSASR(ctx context.Context, conn db.DBAdapter, lang string, sttLang stri
 
 // ProcessFiles will perform Auto Speech Recognition on these files
 func (a *MMSASR) ProcessFiles(files []input.InputFile) *log.Status {
-	lang, status := mms.checkLanguage(a.ctx, a.lang, a.sttLang, "mms_asr")
+	lang, status := mms.CheckLanguage(a.ctx, a.lang, a.sttLang, "mms_asr")
 	if status != nil {
 		return status
 	}
 	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/mms_asr.py")
-	writer, reader, status := mms.callStdIOScript(a.ctx, os.Getenv(`FCBH_MMS_ASR_PYTHON`), pythonScript, lang)
+	writer, reader, status := mms.CallStdIOScript(a.ctx, os.Getenv(`FCBH_MMS_ASR_PYTHON`), pythonScript, lang)
 	if status != nil {
 		return status
 	}

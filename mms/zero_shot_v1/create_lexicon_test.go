@@ -13,9 +13,9 @@ func TestCreateLexicon(t *testing.T) {
 		t.Fatal(status)
 	}
 	defer database.Close()
-	tokenFile, lexiconFile, scriptFile, status := createLexiconFile(ctx, database.DB)
+	directory, status := createLexiconFile(ctx, database.DB)
 	if status != nil {
 		t.Fatal(status)
 	}
-	print(tokenFile, lexiconFile, scriptFile)
+	print(directory)
 }

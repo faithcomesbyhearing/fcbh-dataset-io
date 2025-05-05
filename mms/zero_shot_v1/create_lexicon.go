@@ -9,23 +9,47 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"testing"
 )
+
+const TokenFile = "tokens.txt"
+const LexiconFile = "lexicons.txt"
+const ScriptFile = "script.txt"
 
 type text struct {
 	scriptID int64
 	word     string
 }
 
-func createLexiconFile(ctx context.Context, database *sql.DB) (string, string, string, *log.Status) {
+func createLexiconFile(ctx context.Context, database *sql.DB) (string, *log.Status) {
+	var directory string
+	var err error
+	if testing.Testing() {
+		directory = "data"
+	} else {
+		directory, err = os.MkdirTemp("", "kenlm_*")
+		if err != nil {
+			return directory, log.Error(ctx, 500, err, "Error creating temporary directory")
+		}
+	}
 	var tokenFile, lexiconFile, scriptFile string
 	words, status := selectWords(ctx, database)
 	if status != nil {
-		return tokenFile, lexiconFile, scriptFile, status
+		return directory, status
 	}
-	tokenFile = createTokens(words)
-	lexiconFile = createLexicon(words)
-	scriptFile = createScript(words)
-	return tokenFile, lexiconFile, scriptFile, status
+	tokenFile, status = createTokens(ctx, words, directory)
+	if status != nil {
+		return directory, status
+	}
+	fmt.Println("created ", tokenFile)
+	lexiconFile, status = createLexicon(ctx, words, directory)
+	if status != nil {
+		return directory, status
+	}
+	fmt.Println("created ", lexiconFile)
+	scriptFile, status = createScript(ctx, words, directory)
+	fmt.Println("created ", scriptFile)
+	return directory, status
 }
 
 func selectWords(ctx context.Context, db *sql.DB) ([]text, *log.Status) {
@@ -52,7 +76,7 @@ func selectWords(ctx context.Context, db *sql.DB) ([]text, *log.Status) {
 }
 
 // createTokens extracts unique characters from the words and writes them to tokens.txt
-func createTokens(words []text) string {
+func createTokens(ctx context.Context, words []text, directory string) (string, *log.Status) {
 	// Extract unique characters
 	charSet := make(map[rune]bool)
 	for _, wd := range words {
@@ -66,14 +90,11 @@ func createTokens(words []text) string {
 		chars = append(chars, string(ch))
 	}
 	sort.Strings(chars)
-	// Ensure data directory exists
-	_ = os.MkdirAll("data", os.ModePerm)
 	// Write to file
-	filename := filepath.Join("data", "tokens.txt")
+	filename := filepath.Join(directory, TokenFile)
 	file, err := os.Create(filename)
 	if err != nil {
-		fmt.Println("Error creating file:", err)
-		return ""
+		return "", log.Error(ctx, 500, err, "Error during CreateTokens.")
 	}
 	defer file.Close()
 	// Write tokens
@@ -83,11 +104,11 @@ func createTokens(words []text) string {
 	}
 	_, _ = file.WriteString("<1>\n")
 	_, _ = file.WriteString("#\n")
-	return filename
+	return filename, nil
 }
 
 // createLexicon generates a lexicon file from word list
-func createLexicon(words []text) string {
+func createLexicon(ctx context.Context, words []text, directory string) (string, *log.Status) {
 	// Extract unique words
 	wordSet := make(map[string]bool)
 	for _, wd := range words {
@@ -99,14 +120,11 @@ func createLexicon(words []text) string {
 		uniqueWords = append(uniqueWords, word)
 	}
 	sort.Strings(uniqueWords)
-	// Ensure data directory exists
-	_ = os.MkdirAll("data", os.ModePerm)
 	// Write to file
-	filename := filepath.Join("data", "lexicon.txt")
+	filename := filepath.Join(directory, LexiconFile)
 	file, err := os.Create(filename)
 	if err != nil {
-		fmt.Println("Error creating file:", err)
-		return ""
+		return "", log.Error(ctx, 500, err, "Error during Create Lexicon.")
 	}
 	defer file.Close()
 	// Write lexicon entries
@@ -121,22 +139,19 @@ func createLexicon(words []text) string {
 		}
 		_, _ = file.WriteString("|\n")
 	}
-	return filename
+	return filename, nil
 }
 
 // createText writes all words to text.txt, grouped by script_id
-func createScript(words []text) string {
+func createScript(ctx context.Context, words []text, directory string) (string, *log.Status) {
 	if len(words) == 0 {
-		return ""
+		return "", log.ErrorNoErr(ctx, 500, "No data to process in create script")
 	}
-	// Ensure data directory exists
-	_ = os.MkdirAll("data", os.ModePerm)
 	// Write to file
-	filename := filepath.Join("data", "text.txt")
+	filename := filepath.Join(directory, ScriptFile)
 	file, err := os.Create(filename)
 	if err != nil {
-		fmt.Println("Error creating file:", err)
-		return ""
+		return "", log.Error(ctx, 500, err, "Error creating script file")
 	}
 	defer file.Close()
 	first := true
@@ -152,5 +167,5 @@ func createScript(words []text) string {
 		first = false
 	}
 	_, _ = file.WriteString("\n")
-	return filename
+	return filename, nil
 }
