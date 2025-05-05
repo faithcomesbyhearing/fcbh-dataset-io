@@ -1,4 +1,4 @@
-package zero_shot
+package zero_shot_v1
 
 import (
 	"context"
