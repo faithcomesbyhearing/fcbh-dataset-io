@@ -1,4 +1,4 @@
-package mms
+package mms_asr
 
 import (
 	"bufio"
@@ -7,6 +7,7 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/ffmpeg"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
@@ -34,12 +35,12 @@ func NewMMSASR(ctx context.Context, conn db.DBAdapter, lang string, sttLang stri
 
 // ProcessFiles will perform Auto Speech Recognition on these files
 func (a *MMSASR) ProcessFiles(files []input.InputFile) *log.Status {
-	lang, status := checkLanguage(a.ctx, a.lang, a.sttLang, "mms_asr")
+	lang, status := mms.checkLanguage(a.ctx, a.lang, a.sttLang, "mms_asr")
 	if status != nil {
 		return status
 	}
 	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/mms_asr.py")
-	writer, reader, status := callStdIOScript(a.ctx, os.Getenv(`FCBH_MMS_ASR_PYTHON`), pythonScript, lang)
+	writer, reader, status := mms.callStdIOScript(a.ctx, os.Getenv(`FCBH_MMS_ASR_PYTHON`), pythonScript, lang)
 	if status != nil {
 		return status
 	}

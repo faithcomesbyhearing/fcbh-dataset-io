@@ -14,6 +14,8 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/match/align"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/match/diff"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms/mms_align"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms/mms_asr"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/output"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/read"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/speech_to_text"
@@ -393,8 +395,8 @@ func (c *Controller) timestamps(audioFiles []input.InputFile) *log.Status {
 		ts = mms.NewForcedAlign(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage)
 		status = ts.ProcessFiles(audioFiles)
 	} else if c.req.Timestamps.MMSAlign {
-		var ts mms.MMSAlign
-		ts = mms.NewMMSAlign(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage)
+		var ts mms_align.MMSAlign
+		ts = mms_align.NewMMSAlign(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage)
 		status = ts.ProcessFiles(audioFiles)
 		if status != nil {
 			return status
@@ -407,8 +409,8 @@ func (c *Controller) speechToText(audioFiles []input.InputFile) *log.Status {
 	var status *log.Status
 	bibleId := c.req.BibleId
 	if c.req.SpeechToText.MMS {
-		var asr mms.MMSASR
-		asr = mms.NewMMSASR(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage)
+		var asr mms_asr.MMSASR
+		asr = mms_asr.NewMMSASR(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage)
 		status = asr.ProcessFiles(audioFiles)
 	} else {
 		var whisperModel = c.req.SpeechToText.Whisper.Model.String()

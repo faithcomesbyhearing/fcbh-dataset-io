@@ -1,4 +1,4 @@
-package mms
+package mms_align
 
 import (
 	"context"
