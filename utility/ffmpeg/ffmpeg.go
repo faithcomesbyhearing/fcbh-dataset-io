@@ -16,6 +16,7 @@ import (
 
 // ChopByTimestamp uses timestamps to chop timestamps into files, and puts the filenames in timestamp record.
 func ChopByTimestamp(ctx context.Context, tempDir string, inputFile string, timestamps []db.Audio) ([]db.Audio, *log.Status) {
+	// ffmpeg -i input.wav -ss 00:00:03 -to 00:00:04 -c copy output.wav
 	var results []db.Audio
 	var fileExt = filepath.Ext(inputFile)
 	var command []string
