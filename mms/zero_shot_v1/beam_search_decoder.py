@@ -18,37 +18,47 @@ https://github.com/flashlight/text/tree/main/bindings/python
 Flashlight python data preparation instructions
 https://github.com/flashlight/flashlight/tree/main/flashlight/app/asr#data-preparation
 
+Flashlight - readthedocs.io
+https://fl.readthedocs.io/en/latest/
+
 beam search decoder tutorial
-https://pytorch.org/audio/main/tutorials/asr_inference_with_ctc_decoder_tutorial.html
+https://docs.pytorch.org/audio/main/tutorials/asr_inference_with_ctc_decoder_tutorial.html
 """
 
-# The current code does not include punctuation, except apostrophe and hyphen
-# claude thinks that punctuation should be included here, but I think that
-# is only the case if punctuation was included in testing.  And based upon
-# MMS ASR results, that does not appear to be the case.
+TOKEN_FILE = "tokens.txt"
+LEXICON_FILE = "lexicon.txt"
+SCRIPT_FILE = "script.txt"
+MODEL_FILE = "model.arpa"
+MODEL_BIN = "model.bin"
 
-"""
-def create_tokens(words):
-    char_set = set()
+def get_mms_vocab(lang):
+    model_id = "facebook/mms-1b-all"
+    AutoProcessor.from_pretrained(model_id)
+    processor.tokenizer.set_target_lang(lang)
+    vocab = processor.tokenizer.get_vocab()
+    return vocab
+
+def create_tokens(words, vocab, directory):
     for word in words:
-        for ch in word[1]:
-            char_set.add(ch.lower())
-    char_set = sorted(char_set)
-    with open("data/tokens.txt", mode='w', encoding='utf-8') as file:
-        _ = file.write("|\n")
-        for ch in char_set:
+        for ch in word[1].lower():
+            if ch not in vocab:
+                vocab[ch] = len(vocab)
+                print("added", ch, len(vocab) -1)
+    sorted_vocab = dict(sorted(vocab.items(), key=lambda item: item[1]))
+    with open(os.path.join(directory, "tokens.txt"), mode='w', encoding='utf-8') as file:
+        for ch in sorted_vocab.keys():
             _ = file.write(ch + "\n")
         _ = file.write("<1>\n")
         _ = file.write("#\n")
         file.flush()
     return file.name
 
-def create_lexicon(words):
+def create_lexicon(words, directory):
     word_set = set()
     for word in words:
         word_set.add(word[1].lower())
     word_set = sorted(word_set)
-    with open("data/lexicon.txt", mode='w', encoding='utf-8') as file:
+    with open(os.path.join(directory, "lexicon.txt"), mode='w', encoding='utf-8') as file:
         for word in word_set:
             _ = file.write(word + ' ')
             for ch in word:
@@ -61,11 +71,11 @@ def create_lexicon(words):
         print(file.name)
     return file.name
 
-def create_text(words):
+def create_script(words, directory):
     first = True
     curr_script_id = words[0][0]
     print("curr", curr_script_id)
-    with open("data/text.txt", mode='w', encoding='utf-8') as file:
+    with open(os.path.join(directory, "script.txt"), mode='w', encoding='utf-8') as file:
         for (script_id, word) in words:
             if script_id != curr_script_id:
                 _ = file.write('\n')
@@ -77,13 +87,6 @@ def create_text(words):
         _ = file.write('\n')
         file.flush()
     return file.name
-"""
-
-TOKEN_FILE = "tokens.txt"
-LEXICON_FILE = "lexicon.txt"
-SCRIPT_FILE = "script.txt"
-MODEL_FILE = "model.arpa"
-MODEL_BIN = "model.bin"
 
 def tkn_to_idx(spelling: list, token_dict : Dictionary, maxReps : int = 0):
     result = []
@@ -157,5 +160,11 @@ def create_decoder(directory):
     # results is sorted array with the best hypothesis stored with index=0.
 
 if __name__ == "__main__":
-    decoder = create_decoder("data")
+    database = SqliteUtility(os.path.join(os.getenv('FCBH_DATASET_DB'), 'GaryNTest', 'N2CUL_MNT.db'))
+    words = database.select("SELECT script_id, word FROM words WHERE ttype='W'", ())
+    vocab = get_mms_vocab('cul')
+    directory = 'data'
+    tokensFile = create_tokens(words, vocab, directory)
+    lexiconFile = create_lexicon(word, directory)
+    decoder = create_decoder(directory)
     print(decoder)
