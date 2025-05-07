@@ -51,16 +51,17 @@ for line in sys.stdin:
         outputs = model(**inputs).logits
     log_probs = torch.log_softmax(outputs, dim=-1).cpu().numpy()
     emissions = log_probs.squeeze(0) # remove batch dimension
+    # emissions is numpy.array of emitting model predictions with shape [T, N], where T is time, N is number of tokens
     time_dim = emissions.shape[0]
     num_tokens = emissions.shape[1]
     results = decoder.decode(emissions.ctypes.data, time_dim, num_tokens)
-    best_result = results[0]
-    # emissions is numpy.array of emitting model predictions with shape [T, N], where T is time, N is number of tokens
+    #best_result = results[0]
+
     # The result might be a complex object with properties like 'tokens', 'score', etc.
-    best_tokens = best_result.tokens  # This might be different based on your Flashlight version
+    #best_tokens = best_result.tokens  # This might be different based on your Flashlight version
 
     # Convert tokens to a string using your processor or tokenizer
-    transcription = processor.decode(best_tokens)
+    transcription = processor.decode(results[0].tokens)
 
     ids = torch.argmax(outputs, dim=-1)[0]
     orig_transcription = processor.decode(ids)
@@ -79,7 +80,7 @@ for line in sys.stdin:
 ## /Users/gary/FCBH2024/download/ENGWEB/ENGWEBN2DA-mp3-64/B02___01_Mark________ENGWEBN2DA.wav
 
 ## python mms_asr.py cul data
-## /Users/gary/FCBH2024/download/CULMNT/CULMNTN2DA/MAT_28_20sec.wav
+## /Users/gary/FCBH2024/download/CULMNT/CULMNTN2DA/MAT_28_24sec.wav
 
 
 
