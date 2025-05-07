@@ -1,6 +1,8 @@
 import os
 import numpy
 import nltk
+import uroman as ur
+from transformers import AutoProcessor
 from flashlight.lib.text.dictionary import Dictionary, load_words, create_word_dict
 from flashlight.lib.text.dictionary import pack_replabels
 from flashlight.lib.text.decoder import LexiconDecoderOptions, LexiconDecoder, CriterionType
@@ -33,10 +35,37 @@ MODEL_BIN = "model.bin"
 
 def get_mms_vocab(lang):
     model_id = "facebook/mms-1b-all"
-    AutoProcessor.from_pretrained(model_id)
+    processor = AutoProcessor.from_pretrained(model_id)
     processor.tokenizer.set_target_lang(lang)
     vocab = processor.tokenizer.get_vocab()
     return vocab
+
+def clean_words(words, vocab):
+    results = []
+    urom = ur.Uroman()
+    for word in words:
+        result_wd = []
+        for ch in word[1]:
+            if ch.lower() not in vocab:
+                ans = urom.romanize_string(ch)
+                if ans in vocab:
+                    use = ans
+                elif ch == '.':
+                    use = ''
+                elif ch == '\u2212':
+                    use = '-'
+                elif ch == 'x':
+                    use = 'z'
+                else:
+                    use = 'n'
+                    print("no sub found for", ch)
+                if use != '':
+                    result_wd.append((word[0], use))
+                    print("found", ch, "change to", use)
+            else:
+                result_wd.append((word[0], ch))
+        results.append(result_wd)
+    return results
 
 def create_tokens(words, vocab, directory):
     for word in words:
@@ -163,6 +192,7 @@ if __name__ == "__main__":
     database = SqliteUtility(os.path.join(os.getenv('FCBH_DATASET_DB'), 'GaryNTest', 'N2CUL_MNT.db'))
     words = database.select("SELECT script_id, word FROM words WHERE ttype='W'", ())
     vocab = get_mms_vocab('cul')
+    words2 = clean_words(words, vocab)
     directory = 'data'
     tokensFile = create_tokens(words, vocab, directory)
     lexiconFile = create_lexicon(word, directory)
