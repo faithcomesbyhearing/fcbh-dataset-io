@@ -2,7 +2,6 @@ import os
 import numpy
 import nltk
 import uroman as ur
-from transformers import AutoProcessor
 from flashlight.lib.text.dictionary import Dictionary, load_words, create_word_dict
 from flashlight.lib.text.dictionary import pack_replabels
 from flashlight.lib.text.decoder import LexiconDecoderOptions, LexiconDecoder, CriterionType
@@ -33,13 +32,6 @@ SCRIPT_FILE = "script.txt"
 MODEL_FILE = "model.arpa"
 MODEL_BIN = "model.bin"
 
-def get_mms_vocab(lang):
-    model_id = "facebook/mms-1b-all"
-    processor = AutoProcessor.from_pretrained(model_id)
-    processor.tokenizer.set_target_lang(lang)
-    vocab = processor.tokenizer.get_vocab()
-    return vocab
-
 def clean_words(words, vocab):
     results = []
     urom = ur.Uroman()
@@ -60,21 +52,16 @@ def clean_words(words, vocab):
                     use = 'n'
                     print("no sub found for", ch)
                 if use != '':
-                    result_wd.append((word[0], use))
+                    result_wd.append(use)
                     print("found", ch, "change to", use)
             else:
-                result_wd.append((word[0], ch))
-        results.append(result_wd)
+                result_wd.append(ch)
+        results.append((word[0], "".join(result_wd)))
     return results
 
-def create_tokens(words, vocab, directory):
-    for word in words:
-        for ch in word[1].lower():
-            if ch not in vocab:
-                vocab[ch] = len(vocab)
-                print("added", ch, len(vocab) -1)
+def create_tokens(vocab, directory):
     sorted_vocab = dict(sorted(vocab.items(), key=lambda item: item[1]))
-    with open(os.path.join(directory, "tokens.txt"), mode='w', encoding='utf-8') as file:
+    with open(os.path.join(directory, TOKEN_FILE), mode='w', encoding='utf-8') as file:
         for ch in sorted_vocab.keys():
             _ = file.write(ch + "\n")
         _ = file.write("<1>\n")
@@ -87,7 +74,7 @@ def create_lexicon(words, directory):
     for word in words:
         word_set.add(word[1].lower())
     word_set = sorted(word_set)
-    with open(os.path.join(directory, "lexicon.txt"), mode='w', encoding='utf-8') as file:
+    with open(os.path.join(directory, LEXICON_FILE), mode='w', encoding='utf-8') as file:
         for word in word_set:
             _ = file.write(word + ' ')
             for ch in word:
@@ -103,8 +90,7 @@ def create_lexicon(words, directory):
 def create_script(words, directory):
     first = True
     curr_script_id = words[0][0]
-    print("curr", curr_script_id)
-    with open(os.path.join(directory, "script.txt"), mode='w', encoding='utf-8') as file:
+    with open(os.path.join(directory, SCRIPT_FILE), mode='w', encoding='utf-8') as file:
         for (script_id, word) in words:
             if script_id != curr_script_id:
                 _ = file.write('\n')
@@ -123,20 +109,27 @@ def tkn_to_idx(spelling: list, token_dict : Dictionary, maxReps : int = 0):
         result.append(token_dict.get_index(token))
     return pack_replabels(result, token_dict, maxReps)
 
-def create_decoder(directory):
-    token_dict = Dictionary(os.path.join(directory, TOKEN_FILE))
+def create_decoder(dbPath, vocab, dictionary):
+    database = SqliteUtility(dbPath)
+    words = database.select("SELECT script_id, word FROM words WHERE ttype='W'", ())
+    database.close()
 
-    lexicon = load_words(os.path.join(directory, LEXICON_FILE))
+    words2 = clean_words(words, vocab)
+    tokenFile = create_tokens(vocab, directory)
+    lexiconFile = create_lexicon(words2, directory)
+    scriptFile = create_script(words2, directory)
+
+    token_dict = Dictionary(tokenFile)
+    lexicon = load_words(lexiconFile)
     word_dict = create_word_dict(lexicon)
 
-    scriptFile = os.path.join(directory, SCRIPT_FILE)
     modelFile = os.path.join(directory, MODEL_FILE)
     modelBin = os.path.join(directory, MODEL_BIN)
-
     os.system("kenlm/build/bin/lmplz -o 5 < " + scriptFile + " > " + modelFile)
-    os.system("kenlm/build/bin/build_binary " + modelFile + " " + modelBin )
+    os.system("kenlm/build/bin/build_binary " + modelFile + " " + modelBin)
 
-    lm = KenLM(modelBin, word_dict)
+    #lm = KenLM(modelBin, word_dict)
+    lm = KenLM(modelFile, word_dict)
 
     sil_idx = token_dict.get_index("|")
 
@@ -189,12 +182,13 @@ def create_decoder(directory):
     # results is sorted array with the best hypothesis stored with index=0.
 
 if __name__ == "__main__":
-    database = SqliteUtility(os.path.join(os.getenv('FCBH_DATASET_DB'), 'GaryNTest', 'N2CUL_MNT.db'))
-    words = database.select("SELECT script_id, word FROM words WHERE ttype='W'", ())
-    vocab = get_mms_vocab('cul')
-    words2 = clean_words(words, vocab)
+    from transformers import AutoProcessor
+    dbPath = os.path.join(os.getenv('FCBH_DATASET_DB'), 'GaryNTest', 'N2CUL_MNT.db')
+    model_id = "facebook/mms-1b-all"
+    processor = AutoProcessor.from_pretrained(model_id)
+    lang = 'cul'
+    processor.tokenizer.set_target_lang(lang)
+    vocab = processor.tokenizer.get_vocab()
     directory = 'data'
-    tokensFile = create_tokens(words, vocab, directory)
-    lexiconFile = create_lexicon(word, directory)
-    decoder = create_decoder(directory)
+    decoder = create_decoder(dbPath, vocab, directory)
     print(decoder)
