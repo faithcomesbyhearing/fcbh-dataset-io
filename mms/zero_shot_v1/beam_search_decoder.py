@@ -97,7 +97,7 @@ def create_script(words, directory):
                 curr_script_id = script_id
             elif not first:
                 _ = file.write(' ')
-            _ = file.write(word)
+            _ = file.write(word.lower())
             first = False
         _ = file.write('\n')
         file.flush()
