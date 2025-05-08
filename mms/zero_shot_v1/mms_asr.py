@@ -21,12 +21,12 @@ def isSupportedLanguage(modelId:str, lang:str):
     return False
 
 
-if len(sys.argv) < 3:
-    print("Usage: mms_asr.py  {iso639-3}  {lexicon_directory}")
+if len(sys.argv) < 4:
+    print("Usage: mms_asr.py  {iso639-3}  {database_path} {lexicon_directory}")
     sys.exit(1)
 lang = sys.argv[1]
-lex_directory = sys.argv[2]
-decoder = create_decoder(lex_directory)
+db_path = sys.argv[2]
+lex_directory = sys.argv[3]
 if torch.cuda.is_available():
     device = 'cuda'
 else:
@@ -35,6 +35,8 @@ modelId = "facebook/mms-1b-all"
 if not isSupportedLanguage(modelId, lang):
     print(lang, "is not supported by", modelId)
 processor = AutoProcessor.from_pretrained(modelId, target_lang=lang)
+vocab = processor.tokenizer.get_vocab()
+decoder = create_decoder(db_path, vocab, lex_directory)
 model = Wav2Vec2ForCTC.from_pretrained(modelId, target_lang=lang, ignore_mismatched_sizes=True)
 model = model.to(device)
 
@@ -65,10 +67,11 @@ for line in sys.stdin:
 
     ids = torch.argmax(outputs, dim=-1)[0]
     orig_transcription = processor.decode(ids)
-    print(transcription)
+    #print(transcription)
     print(orig_transcription)
     print()
     sys.stdout.write(transcription)
+    print()
     sys.stdout.write("\n")
     sys.stdout.flush()
 
@@ -79,7 +82,7 @@ for line in sys.stdin:
 ## python mms_asr.py eng data
 ## /Users/gary/FCBH2024/download/ENGWEB/ENGWEBN2DA-mp3-64/B02___01_Mark________ENGWEBN2DA.wav
 
-## python mms_asr.py cul data
+## python mms_asr.py cul /Users/gary/FCBH2024/GaryNTest/N2CUL_MNT.db data
 ## /Users/gary/FCBH2024/download/CULMNT/CULMNTN2DA/MAT_28_24sec.wav
 
 

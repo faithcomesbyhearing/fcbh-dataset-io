@@ -109,8 +109,8 @@ def tkn_to_idx(spelling: list, token_dict : Dictionary, maxReps : int = 0):
         result.append(token_dict.get_index(token))
     return pack_replabels(result, token_dict, maxReps)
 
-def create_decoder(dbPath, vocab, dictionary):
-    database = SqliteUtility(dbPath)
+def create_decoder(db_path, vocab, directory):
+    database = SqliteUtility(db_path)
     words = database.select("SELECT script_id, word FROM words WHERE ttype='W'", ())
     database.close()
 
