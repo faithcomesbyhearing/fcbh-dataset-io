@@ -12,13 +12,13 @@ from beam_search_decoder import create_decoder
 ## https://huggingface.co/docs/transformers/main/en/model_doc/mms
 ## This program is NOT reentrant because of torch.cuda.empty_cache()
 
-def isSupportedLanguage(modelId:str, lang:str):
-    processor = AutoProcessor.from_pretrained(modelId)
-    dict = processor.tokenizer.vocab.keys()
-    for l in dict:
-        if l == lang:
-            return True
-    return False
+#def isSupportedLanguage(modelId:str, lang:str):
+#    processor = AutoProcessor.from_pretrained(modelId)
+#    dict = processor.tokenizer.vocab.keys()
+#    for l in dict:
+#        if l == lang:
+#            return True
+#    return False
 
 
 if len(sys.argv) < 4:
@@ -31,13 +31,15 @@ if torch.cuda.is_available():
     device = 'cuda'
 else:
     device = 'cpu'
-modelId = "facebook/mms-1b-all"
-if not isSupportedLanguage(modelId, lang):
-    print(lang, "is not supported by", modelId)
-processor = AutoProcessor.from_pretrained(modelId, target_lang=lang)
+#modelId = "facebook/mms-1b-all"
+modelId = "mms-meta/mms-zeroshot-300m"
+#if not isSupportedLanguage(modelId, lang):
+#    print(lang, "is not supported by", modelId)
+processor = AutoProcessor.from_pretrained(modelId)#, target_lang=lang)
 vocab = processor.tokenizer.get_vocab()
 decoder = create_decoder(db_path, vocab, lex_directory)
-model = Wav2Vec2ForCTC.from_pretrained(modelId, target_lang=lang, ignore_mismatched_sizes=True)
+#model = Wav2Vec2ForCTC.from_pretrained(modelId, target_lang=lang, ignore_mismatched_sizes=True)
+model = Wav2Vec2ForCTC.from_pretrained(modelId, ignore_mismatched_sizes=True)
 model = model.to(device)
 
 for line in sys.stdin:
@@ -57,19 +59,14 @@ for line in sys.stdin:
     time_dim = emissions.shape[0]
     num_tokens = emissions.shape[1]
     results = decoder.decode(emissions.ctypes.data, time_dim, num_tokens)
-    #best_result = results[0]
-
-    # The result might be a complex object with properties like 'tokens', 'score', etc.
-    #best_tokens = best_result.tokens  # This might be different based on your Flashlight version
-
-    # Convert tokens to a string using your processor or tokenizer
     transcription = processor.decode(results[0].tokens)
 
     ids = torch.argmax(outputs, dim=-1)[0]
     orig_transcription = processor.decode(ids)
-    #print(transcription)
+    sys.stdout.write("\nGreedy Decoding\n")
     print(orig_transcription)
     print()
+    sys.stdout.write("Beam Search Decoding\n")
     sys.stdout.write(transcription)
     print()
     sys.stdout.write("\n")

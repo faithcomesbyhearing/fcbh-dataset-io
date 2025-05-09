@@ -35,6 +35,7 @@ SCRIPT_FILE = "script.txt"
 MODEL_FILE = "model.arpa"
 MODEL_BIN = "model.bin"
 
+"""
 def clean_words(words, vocab):
     results = []
     urom = ur.Uroman()
@@ -61,6 +62,7 @@ def clean_words(words, vocab):
                 result_wd.append(ch)
         results.append((word[0], "".join(result_wd)))
     return results
+"""
 
 def create_tokens(vocab, directory):
     sorted_vocab = dict(sorted(vocab.items(), key=lambda item: item[1]))
@@ -72,6 +74,7 @@ def create_tokens(vocab, directory):
         file.flush()
     return file.name
 
+"""
 def create_lexicon(words, directory):
     word_set = set()
     for word in words:
@@ -85,6 +88,31 @@ def create_lexicon(words, directory):
                     _ = file.write('| ')
                 else:
                     _ = file.write(ch + ' ')
+            _ = file.write('|\n')
+        file.flush()
+        print(file.name)
+    return file.name
+"""
+
+def create_lexicon(words, vocab, directory):
+    word_set = set()
+    for word in words:
+        word_set.add(word[1].lower())
+    word_set = sorted(word_set)
+    urom = ur.Uroman()
+    with open(os.path.join(directory, LEXICON_FILE), mode='w', encoding='utf-8') as file:
+        for word in word_set:
+            _ = file.write(word + ' ')
+            uroman_word = urom.romanize_string(word)
+            for ch in uroman_word:
+                if ch == '-' or ch == '\u2212' or ch == '\u2014':
+                    _ = file.write('| ')
+                else:
+                    if ch in vocab:
+                        _ = file.write(ch + ' ')
+                    else:
+                        _ = file.write('n ')
+                        print("ch not in vocab", ch, hex(ord(ch)))
             _ = file.write('|\n')
         file.flush()
         print(file.name)
@@ -117,10 +145,10 @@ def create_decoder(db_path, vocab, directory):
     words = database.select("SELECT script_id, word FROM words WHERE ttype='W'", ())
     database.close()
 
-    words2 = clean_words(words, vocab)
+    #words2 = clean_words(words, vocab)
     tokenFile = create_tokens(vocab, directory)
-    lexiconFile = create_lexicon(words2, directory)
-    scriptFile = create_script(words2, directory)
+    lexiconFile = create_lexicon(words, vocab, directory)
+    scriptFile = create_script(words, directory)
 
     token_dict = Dictionary(tokenFile)
     lexicon = load_words(lexiconFile)
@@ -187,10 +215,11 @@ def create_decoder(db_path, vocab, directory):
 if __name__ == "__main__":
     from transformers import AutoProcessor
     dbPath = os.path.join(os.getenv('FCBH_DATASET_DB'), 'GaryNTest', 'N2CUL_MNT.db')
-    model_id = "facebook/mms-1b-all"
+    #model_id = "facebook/mms-1b-all"
+    model_id = "mms-meta/mms-zeroshot-300m"
     processor = AutoProcessor.from_pretrained(model_id)
-    lang = 'cul'
-    processor.tokenizer.set_target_lang(lang)
+    #lang = 'cul'
+    #processor.tokenizer.set_target_lang(lang)
     vocab = processor.tokenizer.get_vocab()
     directory = 'data'
     decoder = create_decoder(dbPath, vocab, directory)
