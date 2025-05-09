@@ -22,6 +22,9 @@ https://github.com/flashlight/flashlight/tree/main/flashlight/app/asr#data-prepa
 Flashlight - readthedocs.io
 https://fl.readthedocs.io/en/latest/
 
+Fairseq MMS zero shot
+https://github.com/facebookresearch/fairseq/tree/main/examples/mms/zero_shot
+
 beam search decoder tutorial
 https://docs.pytorch.org/audio/main/tutorials/asr_inference_with_ctc_decoder_tutorial.html
 """
