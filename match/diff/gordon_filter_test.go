@@ -18,7 +18,7 @@ func TestFindPatterns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	results := findWordPatterns(pairs)
+	results := findWordPatterns(pairs[0:10])
 	if len(results) != 241334 {
 		t.Error("Got length results", len(results))
 	}

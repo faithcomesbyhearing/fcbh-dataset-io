@@ -1,42 +1,54 @@
 package diff
 
 import (
+	"fmt"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"unicode"
 )
 
-// This class reads a pair slice and outputs a filtered pair slice
-// It searches words for common patterns,
-// And then assumes those that occur more than some threshold are false positives
-// So it alters the diffs to make those differences disappear
+/**
+This class reads a pair slice and outputs a filtered pair slice
+It searches words for common patterns,
+And then assumes those that occur more than some threshold are false positives
+So it alters the diffs to make those differences disappear
+*/
 
-type position struct {
-}
-
-func findWordPatterns(pairs []Pair) []diffPattern {
-	var results = make([]diffPattern, 0)
-	for _, pair := range pairs {
-		//fmt.Println(pair.Diffs)
+func findWordPatterns(pairs []Pair) map[string][]position {
+	var results = make(map[string][]position)
+	for pairIndex, pair := range pairs {
+		fmt.Println(pair.Diffs)
 		var pattern diffPattern
-		for _, diff := range pair.Diffs {
-			for _, char := range diff.Text {
+		var startDiffIndex = 0
+		for diffIndex, diff := range pair.Diffs {
+			for charIndex, char := range diff.Text {
 				if diff.Type != diffmatchpatch.DiffInsert &&
 					unicode.IsSpace(char) &&
 					!pattern.isEmpty() {
-					//fmt.Println(pattern.String() + "|")
-					results = append(results, pattern)
+					key := pattern.String()
+					pos := position{pairIndex, startDiffIndex, charIndex}
+					fmt.Println(key+"| -> ", pos)
+					results[key] = append(results[key], pos)
 					pattern = diffPattern{}
+					startDiffIndex = diffIndex // +1 is correct when we are at the end of the diffitem
 				} else {
 					pattern.appendDiff(diff.Type, char)
 				}
 			}
 		}
 		if !pattern.isEmpty() {
-			//fmt.Println(pattern.String() + "|e")
-			results = append(results, pattern)
+			key := pattern.String()
+			pos := position{pairIndex, startDiffIndex, -1}
+			fmt.Println(key+"|e -> ", pos)
+			results[key] = append(results[key], pos)
 		}
 	}
 	return results
+}
+
+type position struct {
+	pairIndex int
+	diffIndex int
+	charIndex int
 }
 
 type diffPattern struct {
