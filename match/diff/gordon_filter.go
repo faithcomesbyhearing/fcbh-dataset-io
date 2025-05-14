@@ -46,9 +46,23 @@ Single char solution
 	e) else append entire type, start new type, append char
 */
 
+type tmpPair struct {
+	charDiffs []charDiff
+}
+type charDiff struct {
+	dType  diffmatchpatch.Operation
+	char   rune
+	remove bool
+}
+type position struct {
+	verseIndex int
+	charIndex  int
+}
+
 func filter(pairs []Pair) []Pair {
 	var results []Pair
-	matches := findWordPatterns(pairs)
+	tmpPairs := convertDiffToCharDiff(pairs)
+	matches := findWordPatterns(tmpPairs)
 	fmt.Println("matches", len(matches))
 	// find matches that exceed some limit
 	// Edit matches by erasing inserts and changing delete to equal
@@ -56,42 +70,76 @@ func filter(pairs []Pair) []Pair {
 	return results
 }
 
-func findWordPatterns(pairs []Pair) map[string][]position {
-	var results = make(map[string][]position)
-	for pairIndex, pair := range pairs {
-		fmt.Println(pair.Diffs)
-		var pattern diffPattern
-		var startDiffIndex = 0
-		for diffIndex, diff := range pair.Diffs {
-			for charIndex, char := range diff.Text {
-				if diff.Type != diffmatchpatch.DiffInsert &&
-					unicode.IsSpace(char) &&
-					!pattern.isEmpty() {
-					key := pattern.String()
-					pos := position{pairIndex, startDiffIndex, charIndex}
-					fmt.Println(key+"| -> ", pos)
-					results[key] = append(results[key], pos)
-					pattern = diffPattern{}
-					startDiffIndex = diffIndex // +1 is correct when we are at the end of the diffItem
-				} else {
-					pattern.appendDiff(diff.Type, char)
-				}
+func convertDiffToCharDiff(pairs []Pair) []tmpPair {
+	var results []tmpPair
+	for _, pair := range pairs {
+		var verse []charDiff
+		for _, diff := range pair.Diffs {
+			for _, char := range diff.Text {
+				chrDiff := charDiff{dType: diff.Type, char: char, remove: false}
+				verse = append(verse, chrDiff)
 			}
 		}
-		if !pattern.isEmpty() {
-			key := pattern.String()
-			pos := position{pairIndex, startDiffIndex, -1}
-			fmt.Println(key+"|e -> ", pos)
-			results[key] = append(results[key], pos)
-		}
+		tPair := tmpPair{charDiffs: verse}
+		results = append(results, tPair)
 	}
 	return results
 }
 
-type position struct {
-	pairIndex int
-	diffIndex int
-	charIndex int
+func convertCharDiffToDiff(tmpPairs []tmpPair, pairs []Pair) []Pair {
+	if len(tmpPairs) != len(pairs) {
+		fmt.Println("convertCharDiffToDiff: number of tmpPairs", len(tmpPairs), "and pairs", len(pairs))
+		panic("convertCharDiffToDiff")
+	}
+	for i, cDiff := range tmpPairs {
+		var diffs []diffmatchpatch.Diff
+		var diff diffmatchpatch.Diff
+		var str []rune
+		var currType = cDiff.charDiffs[0].dType
+		for _, vs := range cDiff.charDiffs {
+			if vs.dType != currType {
+				currType = vs.dType
+				diff.Text = string(str)
+				diffs = append(diffs, diff)
+				diff = diffmatchpatch.Diff{}
+				str = str[:0] // erase str
+			}
+			diff.Type = vs.dType
+			str = append(str, vs.char)
+		}
+		pairs[i].Diffs = diffs
+	}
+	return pairs
+}
+
+func findWordPatterns(tmpPairs []tmpPair) map[string][]position {
+	var results = make(map[string][]position)
+	for pairIndex, tPair := range tmpPairs {
+		//fmt.Println(verse.verses)
+		var pattern diffPattern
+		var startDiffIndex = 0
+		for diffIndex, diff := range tPair.charDiffs {
+			if diff.dType != diffmatchpatch.DiffInsert &&
+				unicode.IsSpace(diff.char) &&
+				!pattern.isEmpty() {
+				key := pattern.String()
+				pos := position{pairIndex, startDiffIndex}
+				//fmt.Println(key+"| -> ", pos)
+				results[key] = append(results[key], pos)
+				pattern = diffPattern{}
+				startDiffIndex = diffIndex + 1
+			} else {
+				pattern.appendDiff(diff.dType, diff.char)
+			}
+		}
+		if !pattern.isEmpty() {
+			key := pattern.String()
+			pos := position{pairIndex, startDiffIndex}
+			//fmt.Println(key+"|e -> ", pos)
+			results[key] = append(results[key], pos)
+		}
+	}
+	return results
 }
 
 type diffPattern struct {
