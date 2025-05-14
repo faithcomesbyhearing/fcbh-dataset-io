@@ -47,7 +47,7 @@ Single char solution
 	e) else append entire type, start new type, append char
 */
 
-const MatchThreshold = 50
+const MatchThreshold = 0
 
 type tmpPair struct {
 	charDiffs []charDiff
@@ -96,23 +96,31 @@ func convertCharDiffToDiff(tmpPairs []tmpPair, pairs []Pair) []Pair {
 		panic("convertCharDiffToDiff")
 	}
 	for i, cDiff := range tmpPairs {
-		var diffs []diffmatchpatch.Diff
-		var diff diffmatchpatch.Diff
-		var str []rune
-		var currType = cDiff.charDiffs[0].dType
-		for _, vs := range cDiff.charDiffs {
-			if vs.dType != currType && len(str) > 0 {
-				currType = vs.dType
-				diff.Text = string(str)
-				diffs = append(diffs, diff)
-				diff = diffmatchpatch.Diff{}
-				str = str[:0] // erase str
-			}
-			if !vs.remove {
-				diff.Type = vs.dType
-				str = append(str, vs.char)
+		var cleanDiff = make([]charDiff, 0, len(cDiff.charDiffs))
+		for _, diff := range cDiff.charDiffs {
+			if !diff.remove {
+				cleanDiff = append(cleanDiff, diff)
 			}
 		}
+		var diffs []diffmatchpatch.Diff
+		//var diff diffmatchpatch.Diff
+		var str []rune
+		var currType = cleanDiff[0].dType
+		for _, vs := range cleanDiff {
+			if currType != vs.dType {
+				var diff diffmatchpatch.Diff
+				diff.Type = currType
+				diff.Text = string(str)
+				diffs = append(diffs, diff)
+				str = str[:0] // erase str
+				currType = vs.dType
+			}
+			str = append(str, vs.char)
+		}
+		var diff diffmatchpatch.Diff
+		diff.Type = currType
+		diff.Text = string(str)
+		diffs = append(diffs, diff)
 		pairs[i].Diffs = diffs
 	}
 	return pairs

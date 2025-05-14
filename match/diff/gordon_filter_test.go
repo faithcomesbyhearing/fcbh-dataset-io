@@ -8,6 +8,24 @@ import (
 	"testing"
 )
 
+func TestFilter(t *testing.T) {
+	pairs := loadPairs(t)
+	newPairs := filter(pairs)
+	pairsCopy := loadPairs(t)
+	for i := 0; i < 10; i++ {
+		fmt.Println("pairs")
+		for _, diff := range pairsCopy[i].Diffs {
+			fmt.Print(diff, "; ")
+		}
+		fmt.Println()
+		fmt.Println("new Pairs")
+		for _, diff := range newPairs[i].Diffs {
+			fmt.Print(diff, "; ")
+		}
+		fmt.Println("\n**************")
+	}
+}
+
 func TestConvertToCharDiff(t *testing.T) {
 	pairs := loadPairs(t)
 	tmpPairs := convertDiffToCharDiff(pairs[:10])
@@ -68,23 +86,6 @@ func TestPrunePatterns(t *testing.T) {
 	tmpPairs := convertDiffToCharDiff(pairs)
 	results := findWordPatterns(tmpPairs)
 	results = prunePatterns(results)
-}
-
-func TestFilter(t *testing.T) {
-	pairs := loadPairs(t)
-	newPairs := filter(pairs)
-	for i := 0; i < 10; i++ {
-		//fmt.Println("pairs")
-		for _, diff := range pairs[i].Diffs {
-			fmt.Print(diff, "; ")
-		}
-		//fmt.Println()
-		fmt.Println("new Pairs")
-		for _, diff := range newPairs[i].Diffs {
-			fmt.Print(diff, "; ")
-		}
-		//fmt.Println("\n**************")
-	}
 }
 
 func loadPairs(t *testing.T) []Pair {
