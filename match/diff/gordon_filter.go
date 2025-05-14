@@ -47,7 +47,7 @@ Single char solution
 	e) else append entire type, start new type, append char
 */
 
-const MatchThreshold = 0
+const MatchThreshold = 40
 
 type tmpPair struct {
 	charDiffs []charDiff
@@ -74,6 +74,13 @@ func filter(pairs []Pair) []Pair {
 	return results
 }
 
+/*
+When the remove common patterns runs, it does not process word boundary items.
+
+	But, it needs to change deletes with a space to equal.
+	1) add 1 more to length when proceesing cleanup
+	2) conditionally do the same
+*/
 func convertDiffToCharDiff(pairs []Pair) []tmpPair {
 	var results []tmpPair
 	for _, pair := range pairs {
@@ -103,7 +110,6 @@ func convertCharDiffToDiff(tmpPairs []tmpPair, pairs []Pair) []Pair {
 			}
 		}
 		var diffs []diffmatchpatch.Diff
-		//var diff diffmatchpatch.Diff
 		var str []rune
 		var currType = cleanDiff[0].dType
 		for _, vs := range cleanDiff {
@@ -176,13 +182,23 @@ func removeCommonPatterns(matches map[string][]position, tmpPairs []tmpPair) []t
 		for _, pos := range poses {
 			verse := tmpPairs[pos.verseIndex]
 			numChars := utf8.RuneCountInString(pattern) / 2
+			lastChar := pos.charIndex + numChars
+			if lastChar < len(verse.charDiffs) {
+				lastChar++
+			}
 			//fmt.Println(pattern, "numChars", numChars, "charIndex", pos.charIndex, "len", len(verse.charDiffs))
-			for i := pos.charIndex; i < pos.charIndex+numChars; i++ {
+			for i := pos.charIndex; i < lastChar; i++ {
 				//fmt.Println("Fix", string(verse.charDiffs[i].char))
 				if verse.charDiffs[i].dType == diffmatchpatch.DiffDelete {
 					verse.charDiffs[i].dType = diffmatchpatch.DiffEqual
 				} else if verse.charDiffs[i].dType == diffmatchpatch.DiffInsert {
 					verse.charDiffs[i].remove = true
+				}
+			}
+			i := pos.charIndex + numChars
+			if i < len(verse.charDiffs) {
+				if verse.charDiffs[i].char != 32 {
+					fmt.Println("End Char Type", verse.charDiffs[i])
 				}
 			}
 			tmpPairs[pos.verseIndex] = verse
