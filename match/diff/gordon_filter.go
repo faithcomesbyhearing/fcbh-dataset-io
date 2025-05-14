@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"unicode"
+	"unicode/utf8"
 )
 
 /**
@@ -46,6 +47,8 @@ Single char solution
 	e) else append entire type, start new type, append char
 */
 
+const MatchThreshold = 50
+
 type tmpPair struct {
 	charDiffs []charDiff
 }
@@ -64,9 +67,10 @@ func filter(pairs []Pair) []Pair {
 	tmpPairs := convertDiffToCharDiff(pairs)
 	matches := findWordPatterns(tmpPairs)
 	fmt.Println("matches", len(matches))
-	// find matches that exceed some limit
-	// Edit matches by erasing inserts and changing delete to equal
-	// Note this process is destructive meaning the counts are going to be incorrect
+	matches = prunePatterns(matches)
+	fmt.Println("pruned matches", len(matches))
+	tmpPairs = removeCommonPatterns(matches, tmpPairs)
+	results = convertCharDiffToDiff(tmpPairs, pairs)
 	return results
 }
 
@@ -97,15 +101,17 @@ func convertCharDiffToDiff(tmpPairs []tmpPair, pairs []Pair) []Pair {
 		var str []rune
 		var currType = cDiff.charDiffs[0].dType
 		for _, vs := range cDiff.charDiffs {
-			if vs.dType != currType {
+			if vs.dType != currType && len(str) > 0 {
 				currType = vs.dType
 				diff.Text = string(str)
 				diffs = append(diffs, diff)
 				diff = diffmatchpatch.Diff{}
 				str = str[:0] // erase str
 			}
-			diff.Type = vs.dType
-			str = append(str, vs.char)
+			if !vs.remove {
+				diff.Type = vs.dType
+				str = append(str, vs.char)
+			}
 		}
 		pairs[i].Diffs = diffs
 	}
@@ -120,6 +126,7 @@ func findWordPatterns(tmpPairs []tmpPair) map[string][]position {
 		var startDiffIndex = 0
 		for diffIndex, diff := range tPair.charDiffs {
 			if diff.dType != diffmatchpatch.DiffInsert &&
+				//if diff.dType == diffmatchpatch.DiffEqual &&
 				unicode.IsSpace(diff.char) &&
 				!pattern.isEmpty() {
 				key := pattern.String()
@@ -142,6 +149,40 @@ func findWordPatterns(tmpPairs []tmpPair) map[string][]position {
 	return results
 }
 
+func prunePatterns(matches map[string][]position) map[string][]position {
+	var results = make(map[string][]position)
+	fmt.Println("before", len(matches), "matches")
+	for pattern, pos := range matches {
+		if len(pos) > MatchThreshold {
+			results[pattern] = pos
+		}
+	}
+	fmt.Printf("final counts: %d\n", len(results))
+	return results
+}
+
+func removeCommonPatterns(matches map[string][]position, tmpPairs []tmpPair) []tmpPair {
+	fmt.Println("remove", len(matches), "matches")
+	for pattern, poses := range matches {
+		fmt.Println("removing", pattern, "num", len(poses))
+		for _, pos := range poses {
+			verse := tmpPairs[pos.verseIndex]
+			numChars := utf8.RuneCountInString(pattern) / 2
+			//fmt.Println(pattern, "numChars", numChars, "charIndex", pos.charIndex, "len", len(verse.charDiffs))
+			for i := pos.charIndex; i < pos.charIndex+numChars; i++ {
+				//fmt.Println("Fix", string(verse.charDiffs[i].char))
+				if verse.charDiffs[i].dType == diffmatchpatch.DiffDelete {
+					verse.charDiffs[i].dType = diffmatchpatch.DiffEqual
+				} else if verse.charDiffs[i].dType == diffmatchpatch.DiffInsert {
+					verse.charDiffs[i].remove = true
+				}
+			}
+			tmpPairs[pos.verseIndex] = verse
+		}
+	}
+	return tmpPairs
+}
+
 type diffPattern struct {
 	currType diffmatchpatch.Operation
 	parts    []rune
@@ -156,15 +197,15 @@ func (d *diffPattern) isEmpty() bool {
 }
 
 func (d *diffPattern) appendDiff(diffType diffmatchpatch.Operation, char rune) {
-	if diffType != d.currType || len(d.parts) == 0 {
-		if diffType == diffmatchpatch.DiffInsert {
-			d.parts = append(d.parts, '+')
-		} else if diffType == diffmatchpatch.DiffDelete {
-			d.parts = append(d.parts, '-')
-		} else {
-			d.parts = append(d.parts, '=')
-		}
-		d.currType = diffType
+	//if diffType != d.currType || len(d.parts) == 0 {
+	if diffType == diffmatchpatch.DiffInsert {
+		d.parts = append(d.parts, '+')
+	} else if diffType == diffmatchpatch.DiffDelete {
+		d.parts = append(d.parts, '-')
+	} else {
+		d.parts = append(d.parts, '=')
 	}
+	//d.currType = diffType
+	//}
 	d.parts = append(d.parts, char)
 }

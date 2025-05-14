@@ -63,6 +63,30 @@ func TestFindPatterns(t *testing.T) {
 	}
 }
 
+func TestPrunePatterns(t *testing.T) {
+	pairs := loadPairs(t)
+	tmpPairs := convertDiffToCharDiff(pairs)
+	results := findWordPatterns(tmpPairs)
+	results = prunePatterns(results)
+}
+
+func TestFilter(t *testing.T) {
+	pairs := loadPairs(t)
+	newPairs := filter(pairs)
+	for i := 0; i < 10; i++ {
+		//fmt.Println("pairs")
+		for _, diff := range pairs[i].Diffs {
+			fmt.Print(diff, "; ")
+		}
+		//fmt.Println()
+		fmt.Println("new Pairs")
+		for _, diff := range newPairs[i].Diffs {
+			fmt.Print(diff, "; ")
+		}
+		//fmt.Println("\n**************")
+	}
+}
+
 func loadPairs(t *testing.T) []Pair {
 	filePath := filepath.Join(os.Getenv("HOME"), "Downloads", "N2ANLBSM_audio_compare.json")
 	bytes, err := os.ReadFile(filePath)
