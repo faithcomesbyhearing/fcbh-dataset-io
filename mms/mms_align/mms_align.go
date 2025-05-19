@@ -68,7 +68,7 @@ func (m *MMSAlign) ProcessFiles(files []input.InputFile) *log.Status {
 		return status
 	}
 	defer m.uroman.Close()
-	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/mms_align.py")
+	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/mms_align/mms_align.py")
 	m.mmsAlign, status = stdio_exec.NewStdioExec(m.ctx, os.Getenv(`FCBH_MMS_FA_PYTHON`), pythonScript)
 	if status != nil {
 		return status
