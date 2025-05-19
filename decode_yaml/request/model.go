@@ -245,6 +245,7 @@ type AudioProof struct {
 type Compare struct {
 	HTMLReport      bool            `yaml:"html_report,omitempty"`
 	BaseDataset     string          `yaml:"base_dataset,omitempty"`
+	GordonFilter    int             `yaml:"gordon_filter,omitempty"`
 	CompareSettings CompareSettings `yaml:"compare_settings,omitempty"`
 }
 

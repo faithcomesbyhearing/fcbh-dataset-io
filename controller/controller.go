@@ -490,6 +490,9 @@ func (c *Controller) matchText() (string, *log.Status) {
 	if status != nil {
 		return "", status
 	}
+	if c.req.Compare.GordonFilter > 0 {
+		records = diff.GordonFilter(records, c.req.Compare.GordonFilter)
+	}
 	tempFilePath := filepath.Join(os.TempDir(), c.database.Project+"_compare.json")
 	c.bucket.AddJson(records, tempFilePath)
 	writer := diff.NewHTMLWriter(c.ctx, c.database.Project)

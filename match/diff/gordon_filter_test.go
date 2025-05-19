@@ -8,9 +8,10 @@ import (
 	"testing"
 )
 
-func TestFilter(t *testing.T) {
+func TestGordonFilter(t *testing.T) {
 	pairs := loadPairs(t)
-	newPairs := filter(pairs)
+	matchThreshold := 40
+	newPairs := GordonFilter(pairs, matchThreshold)
 	pairsCopy := loadPairs(t)
 	for i := 0; i < 10; i++ {
 		fmt.Println("pairs")
@@ -85,7 +86,7 @@ func TestPrunePatterns(t *testing.T) {
 	pairs := loadPairs(t)
 	tmpPairs := convertDiffToCharDiff(pairs)
 	results := findWordPatterns(tmpPairs)
-	results = prunePatterns(results)
+	results = prunePatterns(results, 40)
 }
 
 func loadPairs(t *testing.T) []Pair {

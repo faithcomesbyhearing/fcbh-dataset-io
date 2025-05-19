@@ -47,8 +47,6 @@ Single char solution
 	e) else append entire type, start new type, append char
 */
 
-const MatchThreshold = 40
-
 type tmpPair struct {
 	charDiffs []charDiff
 }
@@ -62,12 +60,12 @@ type position struct {
 	charIndex  int
 }
 
-func filter(pairs []Pair) []Pair {
+func GordonFilter(pairs []Pair, matchThreshold int) []Pair {
 	var results []Pair
 	tmpPairs := convertDiffToCharDiff(pairs)
 	matches := findWordPatterns(tmpPairs)
 	fmt.Println("matches", len(matches))
-	matches = prunePatterns(matches)
+	matches = prunePatterns(matches, matchThreshold)
 	fmt.Println("pruned matches", len(matches))
 	tmpPairs = removeCommonPatterns(matches, tmpPairs)
 	results = convertCharDiffToDiff(tmpPairs, pairs)
@@ -163,11 +161,11 @@ func findWordPatterns(tmpPairs []tmpPair) map[string][]position {
 	return results
 }
 
-func prunePatterns(matches map[string][]position) map[string][]position {
+func prunePatterns(matches map[string][]position, matchThreshold int) map[string][]position {
 	var results = make(map[string][]position)
 	fmt.Println("before", len(matches), "matches")
 	for pattern, pos := range matches {
-		if len(pos) > MatchThreshold {
+		if len(pos) > matchThreshold {
 			results[pattern] = pos
 		}
 	}

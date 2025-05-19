@@ -94,6 +94,7 @@ audio_proof:
 compare: # To do a compare, put the names of the two projects here
   html_report: # Mark yes to receive compare report
   base_dataset:  # Name of dataset to compare to this one
+  gordon_filter: int # Optional Filter, int is the minimum frequency of error that will be ignored.
 ## compare entries go here
 ## edit check, the two projects must exist, and both must have a text source.
   compare_settings: # Mark yes, all settings that apply
