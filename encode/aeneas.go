@@ -147,7 +147,7 @@ func (a *Aeneas) executeAeneas(language string, audioFile string, textFile strin
 	cmd.Stderr = &stderrBuf
 	err = cmd.Run()
 	if err != nil {
-		return output.Name(), log.Error(a.ctx, 500, err, stdoutBuf.String())
+		return output.Name(), log.Error(a.ctx, 500, err, stderrBuf.String())
 	}
 	if stdoutBuf.Len() > 0 {
 		fmt.Println("STDOUT", stdoutBuf.String())
