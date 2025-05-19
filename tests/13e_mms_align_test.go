@@ -2,6 +2,7 @@ package tests
 
 import (
 	"fmt"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"testing"
 	"time"
 )
@@ -38,6 +39,7 @@ func TestMMSAlignDirect(t *testing.T) {
 	tests = append(tests, SqliteTest{"SELECT count(*) FROM words WHERE word_begin_ts != 0.0", 446})
 	tests = append(tests, SqliteTest{"SELECT count(*) FROM chars", 1785})
 	tests = append(tests, SqliteTest{"SELECT count(distinct(word_id)) FROM chars", 446})
+	log.SetOutput("stderr")
 	DirectSqlTest(mmsAlignTest, tests, t)
 	fmt.Println("Duration", time.Since(start))
 }

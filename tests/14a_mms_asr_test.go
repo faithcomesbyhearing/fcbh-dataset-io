@@ -1,6 +1,7 @@
 package tests
 
 import (
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"testing"
 )
 
@@ -29,5 +30,6 @@ func TestMMSASRDirect(t *testing.T) {
 	var tests []SqliteTest
 	tests = append(tests, SqliteTest{"SELECT count(*) FROM scripts", 26})
 	tests = append(tests, SqliteTest{"SELECT count(*) FROM scripts WHERE script_begin_ts != 0.0", 25})
+	log.SetOutput("stderr")
 	DirectSqlTest(mMSASRTest, tests, t)
 }
