@@ -69,6 +69,10 @@ func GordonFilter(pairs []Pair, matchThreshold int) []Pair {
 	fmt.Println("pruned matches", len(matches))
 	tmpPairs = removeCommonPatterns(matches, tmpPairs)
 	results = convertCharDiffToDiff(tmpPairs, pairs)
+	diffMatch := diffmatchpatch.New()
+	for i := range results {
+		results[i].HTML = diffMatch.DiffPrettyHtml(results[i].Diffs)
+	}
 	return results
 }
 
