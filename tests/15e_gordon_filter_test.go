@@ -33,7 +33,7 @@ func TestGordonFilter(t *testing.T) {
 	var yaml = gordonFilter
 	yaml = strings.Replace(yaml, "{dataset}", "N2CHF_TBL", 2)
 	yaml = strings.Replace(yaml, "{bibleId}", "CHFTBL", 1)
-	yaml = strings.Replace(yaml, "{threshold}", "10", 1)
+	yaml = strings.Replace(yaml, "{threshold}", "1", 1)
 	DirectSqlTest(yaml, []SqliteTest{}, t)
 	yaml = gordonFilter
 	yaml = strings.Replace(yaml, "{dataset}", "N2CUL_MNT", 2)

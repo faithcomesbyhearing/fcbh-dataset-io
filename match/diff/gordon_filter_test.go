@@ -60,7 +60,7 @@ func TestCharDiffSymetricTest(t *testing.T) {
 	}
 }
 
-func TestFindPatterns(t *testing.T) {
+func TestFindWordPatterns(t *testing.T) {
 	pairs := loadPairs(t)
 	tmpPairs := convertDiffToCharDiff(pairs)
 	results := findWordPatterns(tmpPairs[:1])
@@ -70,6 +70,28 @@ func TestFindPatterns(t *testing.T) {
 		chr := tmpPairs[i].charDiffs
 		for _, vrs := range chr {
 			fmt.Print(vrs.dType, string(vrs.char), "; ")
+		}
+		fmt.Println()
+		for pattern, item := range results {
+			fmt.Println(pattern, item)
+		}
+		fmt.Println("**************")
+	}
+	if len(results) != 241334 {
+		t.Error("Got length results", len(results))
+	}
+}
+
+func TestFindDiscrepancyPatterns(t *testing.T) {
+	pairs := loadPairs(t)
+	tmpPairs := convertDiffToCharDiff(pairs)
+	results := findDiscrepancyPatterns(tmpPairs[:10])
+	for i := 0; i < 1; i++ {
+		fmt.Println(pairs[i].Diffs)
+		fmt.Println()
+		chr := tmpPairs[i].charDiffs
+		for _, vrs := range chr {
+			fmt.Print(vrs.dType, " ", string(vrs.char), "; ")
 		}
 		fmt.Println()
 		for pattern, item := range results {
