@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,8 +11,12 @@ import (
 
 func TestGordonFilter(t *testing.T) {
 	pairs := loadPairs(t)
+	ctx := context.Background()
 	matchThreshold := 40
-	newPairs := GordonFilter(pairs, matchThreshold)
+	newPairs, status := GordonFilter(ctx, pairs, "GaryNTest", "N2ANLBSM", matchThreshold)
+	if status != nil {
+		t.Fatal(status)
+	}
 	pairsCopy := loadPairs(t)
 	for i := 0; i < 10; i++ {
 		fmt.Println("pairs")
@@ -69,7 +74,7 @@ func TestFindWordPatterns(t *testing.T) {
 		fmt.Println()
 		chr := tmpPairs[i].charDiffs
 		for _, vrs := range chr {
-			fmt.Print(vrs.dType, string(vrs.char), "; ")
+			fmt.Print(vrs.dType, " ", string(vrs.char), "; ")
 		}
 		fmt.Println()
 		for pattern, item := range results {
@@ -85,7 +90,14 @@ func TestFindWordPatterns(t *testing.T) {
 func TestFindDiscrepancyPatterns(t *testing.T) {
 	pairs := loadPairs(t)
 	tmpPairs := convertDiffToCharDiff(pairs)
-	results := findDiscrepancyPatterns(tmpPairs[:10])
+	ctx := context.Background()
+	user := "GaryNTest"
+	database := "N2ANLBSM"
+	wordMap, status := selectWords(ctx, user, database)
+	if status != nil {
+		t.Fatal(status)
+	}
+	results := findDiscrepancyPatterns(tmpPairs[:10], wordMap)
 	for i := 0; i < 1; i++ {
 		fmt.Println(pairs[i].Diffs)
 		fmt.Println()
@@ -112,7 +124,7 @@ func TestPrunePatterns(t *testing.T) {
 }
 
 func loadPairs(t *testing.T) []Pair {
-	filePath := filepath.Join(os.Getenv("HOME"), "Downloads", "N2ANLBSM_audio_compare.json")
+	filePath := filepath.Join(os.Getenv("FCBH_DATASET_DB"), "GaryNTest", "N2ANLBSM_audio_compare.json")
 	bytes, err := os.ReadFile(filePath)
 	if err != nil {
 		t.Fatal(err)

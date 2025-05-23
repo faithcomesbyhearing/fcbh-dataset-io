@@ -1,8 +1,12 @@
 package diff
 
 import (
+	"context"
 	"fmt"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"github.com/sergi/go-diff/diffmatchpatch"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -27,11 +31,15 @@ type position struct {
 	charIndex  int
 }
 
-func GordonFilter(pairs []Pair, matchThreshold int) []Pair {
+func GordonFilter(ctx context.Context, pairs []Pair, user string, dbPath string, matchThreshold int) ([]Pair, *log.Status) {
 	var results []Pair
 	tmpPairs := convertDiffToCharDiff(pairs)
+	wordMap, status := selectWords(ctx, user, dbPath)
+	if status != nil {
+		return results, status
+	}
 	//matches := findWordPatterns(tmpPairs)
-	matches := findDiscrepancyPatterns(tmpPairs)
+	matches := findDiscrepancyPatterns(tmpPairs, wordMap)
 	fmt.Println("matches", len(matches))
 	matches = prunePatterns(matches, matchThreshold)
 	fmt.Println("pruned matches", len(matches))
@@ -41,7 +49,39 @@ func GordonFilter(pairs []Pair, matchThreshold int) []Pair {
 	for i := range results {
 		results[i].HTML = diffMatch.DiffPrettyHtml(results[i].Diffs)
 	}
-	return results
+	return results, nil
+}
+
+func selectWords(ctx context.Context, user string, dbPath string) (map[string]bool, *log.Status) {
+	var results = make(map[string]bool)
+	conn, status := db.NewerDBAdapter(ctx, false, user, dbPath)
+	if status != nil {
+		return results, status
+	}
+	var query = `SELECT distinct word FROM words WHERE ttype = 'W'`
+	rows, err := conn.DB.Query(query)
+	if err != nil {
+		return results, log.Error(ctx, 500, err, "Error during gordon filter Select Words.")
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var word string
+		err = rows.Scan(&word)
+		if err != nil {
+			return results, log.Error(ctx, 500, err, "Error during gordon filter Select Words.")
+		}
+		word = strings.ToLower(word)
+		minusWord := "-" + strings.Join(strings.Split(word, ""), "-")
+		results[minusWord] = true
+		plusWord := "+" + strings.Join(strings.Split(word, ""), "+")
+		results[plusWord] = true
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Warn(ctx, err, query)
+	}
+	conn.Close()
+	return results, nil
 }
 
 func convertDiffToCharDiff(pairs []Pair) []tmpPair {
@@ -126,7 +166,7 @@ func findWordPatterns(tmpPairs []tmpPair) map[string][]position {
 	return results
 }
 
-func findDiscrepancyPatterns(tmpPairs []tmpPair) map[string][]position {
+func findDiscrepancyPatterns(tmpPairs []tmpPair, wordMap map[string]bool) map[string][]position {
 	var results = make(map[string][]position)
 	for pairIndex, tPair := range tmpPairs {
 		var pattern diffPattern
@@ -135,8 +175,11 @@ func findDiscrepancyPatterns(tmpPairs []tmpPair) map[string][]position {
 			if diff.dType == diffmatchpatch.DiffEqual {
 				if !pattern.isEmpty() {
 					key := pattern.String()
-					pos := position{pairIndex, startDiffIndex}
-					results[key] = append(results[key], pos)
+					_, isWord := wordMap[key]
+					if !isWord {
+						pos := position{pairIndex, startDiffIndex}
+						results[key] = append(results[key], pos)
+					}
 					pattern = diffPattern{}
 				}
 			} else {
@@ -148,8 +191,11 @@ func findDiscrepancyPatterns(tmpPairs []tmpPair) map[string][]position {
 		}
 		if !pattern.isEmpty() {
 			key := pattern.String()
-			pos := position{pairIndex, startDiffIndex}
-			results[key] = append(results[key], pos)
+			_, isWord := wordMap[key]
+			if !isWord {
+				pos := position{pairIndex, startDiffIndex}
+				results[key] = append(results[key], pos)
+			}
 		}
 	}
 	return results
