@@ -63,12 +63,12 @@ for line in sys.stdin:
 
     ids = torch.argmax(outputs, dim=-1)[0]
     orig_transcription = processor.decode(ids)
-    sys.stdout.write("\nGreedy Decoding\n")
-    print(orig_transcription)
-    print()
-    sys.stdout.write("Beam Search Decoding\n")
+    #sys.stdout.write("\nGreedy Decoding\n")
+    #print(orig_transcription)
+    #print()
+    #sys.stdout.write("Beam Search Decoding\n")
     sys.stdout.write(transcription)
-    print()
+    #print()
     sys.stdout.write("\n")
     sys.stdout.flush()
 

@@ -1,7 +1,6 @@
 package mms_asr
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
@@ -13,15 +12,15 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type MMSASR struct {
-	ctx     context.Context
-	conn    db.DBAdapter
-	lang    string
-	sttLang string
-	uroman  stdio_exec.StdioExec
+	ctx      context.Context
+	conn     db.DBAdapter
+	lang     string
+	sttLang  string
+	mmsAsrPy stdio_exec.StdioExec
+	uroman   stdio_exec.StdioExec
 }
 
 func NewMMSASR(ctx context.Context, conn db.DBAdapter, lang string, sttLang string) MMSASR {
@@ -40,10 +39,11 @@ func (a *MMSASR) ProcessFiles(files []input.InputFile) *log.Status {
 		return status
 	}
 	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/mms_asr/mms_asr.py")
-	writer, reader, status := mms.CallStdIOScript(a.ctx, os.Getenv(`FCBH_MMS_ASR_PYTHON`), pythonScript, lang)
+	a.mmsAsrPy, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_ASR_PYTHON`), pythonScript, lang)
 	if status != nil {
 		return status
 	}
+	defer a.mmsAsrPy.Close()
 	a.uroman, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_FA_PYTHON`), uroman.ScriptPath(), "-l", a.lang)
 	if status != nil {
 		return status
@@ -51,7 +51,7 @@ func (a *MMSASR) ProcessFiles(files []input.InputFile) *log.Status {
 	defer a.uroman.Close()
 	for _, file := range files {
 		log.Info(a.ctx, "MMS ASR", file.BookId, file.Chapter)
-		status = a.processFile(file, writer, reader)
+		status = a.processFile(file)
 		if status != nil {
 			return status
 		}
@@ -60,7 +60,7 @@ func (a *MMSASR) ProcessFiles(files []input.InputFile) *log.Status {
 }
 
 // processFile
-func (a *MMSASR) processFile(file input.InputFile, writer *bufio.Writer, reader *bufio.Reader) *log.Status {
+func (a *MMSASR) processFile(file input.InputFile) *log.Status {
 	var status *log.Status
 	tempDir, err := os.MkdirTemp(os.Getenv(`FCBH_DATASET_TMP`), "mms_asr_")
 	if err != nil {
@@ -80,19 +80,10 @@ func (a *MMSASR) processFile(file input.InputFile, writer *bufio.Writer, reader 
 	for i, ts := range timestamps {
 		timestamps[i].AudioFile = file.Filename
 		timestamps[i].AudioChapterWav = wavFile
-		_, err = writer.WriteString(ts.AudioVerseWav + "\n")
-		if err != nil {
-			return log.Error(a.ctx, 500, err, "Error writing to mms_asr.py")
+		response, status1 := a.mmsAsrPy.Process(ts.AudioVerseWav)
+		if status1 != nil {
+			return status1
 		}
-		err = writer.Flush()
-		if err != nil {
-			return log.Error(a.ctx, 500, err, "Error flush to mms_asr.py")
-		}
-		response, err2 := reader.ReadString('\n')
-		if err2 != nil {
-			return log.Error(a.ctx, 500, err2, `Error reading mms_asr.py response`)
-		}
-		response = strings.TrimRight(response, "\n")
 		fmt.Println(ts.BookId, ts.ChapterNum, ts.VerseStr, ts.ScriptId, response)
 		timestamps[i].Text = response
 		uRoman, status2 := a.uroman.Process(response)
