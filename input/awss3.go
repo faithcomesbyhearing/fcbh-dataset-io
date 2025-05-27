@@ -5,7 +5,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"io"
 	"os"
@@ -52,7 +51,7 @@ func DownloadFile(ctx context.Context, s3Path string, filePath string) *log.Stat
 
 // AWSS3Input is given a path prefix, that it uses to identify files.
 // Saves each file found to disk, and returns an array of input files
-func AWSS3Input(ctx context.Context, path string, testament request.Testament) ([]InputFile, *log.Status) {
+func AWSS3Input(ctx context.Context, path string) ([]InputFile, *log.Status) {
 	var files []InputFile
 	var status *log.Status
 	// Load the Shared AWS Configuration (~/.aws/config)
@@ -112,22 +111,7 @@ func AWSS3Input(ctx context.Context, path string, testament request.Testament) (
 			}
 		}
 	}
-	files, status = Unzip(ctx, files)
-	if status != nil {
-		return files, status
-	}
-	for i := range files {
-		status = SetMediaType(ctx, &files[i])
-		if status != nil {
-			return files, status
-		}
-		status = ParseFilenames(ctx, &files[i])
-		if status != nil {
-			return files, status
-		}
-	}
-	inputFiles := PruneBooksByRequest(files, testament)
-	return inputFiles, status
+	return files, nil
 }
 
 func EnsureDirectory(ctx context.Context, directory string) *log.Status {

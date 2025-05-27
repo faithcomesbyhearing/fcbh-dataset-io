@@ -20,7 +20,7 @@ func TestUtility_validateBookId(t *testing.T) {
 func TestUtility_parseFilenames(t *testing.T) {
 	ctx := context.Background()
 	test1 := InputFile{MediaType: request.TextUSXEdit, Directory: "/ABC/DEF", Filename: "001GEN.usx"}
-	status := ParseFilenames(ctx, &test1)
+	status := parseFilenames(ctx, &test1)
 	if status != nil {
 		t.Error(status)
 	}
@@ -34,7 +34,7 @@ func TestUtility_parseFilenames(t *testing.T) {
 		t.Error("Book Seq should be 001")
 	}
 	test2 := InputFile{MediaType: request.TextUSXEdit, Directory: "/ABC/DEF", Filename: "GEN.usx"}
-	status = ParseFilenames(ctx, &test2)
+	status = parseFilenames(ctx, &test2)
 	if status != nil {
 		t.Error(status)
 	}
@@ -45,7 +45,7 @@ func TestUtility_parseFilenames(t *testing.T) {
 		t.Error("Book Seq should be 1")
 	}
 	test3 := InputFile{MediaType: request.TextUSXEdit, Directory: "/ABC/DEF", Filename: "1GEN.usx"}
-	status = ParseFilenames(ctx, &test3)
+	status = parseFilenames(ctx, &test3)
 	if status == nil {
 		t.Error(status)
 	}

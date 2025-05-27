@@ -31,7 +31,29 @@ func Glob(ctx context.Context, search string) ([]InputFile, *log.Status) {
 	return results, nil
 }
 
-func Unzip(ctx context.Context, files []InputFile) ([]InputFile, *log.Status) {
+func FillInputFile(ctx context.Context, testament request.Testament, files []InputFile) ([]InputFile, *log.Status) {
+	var status *log.Status
+	files, status = unzip(ctx, files)
+	if status != nil {
+		return files, status
+	}
+	for i := range files {
+		if files[i].MediaType == "" {
+			status = setMediaType(ctx, &files[i])
+			if status != nil {
+				return files, status
+			}
+		}
+		status = parseFilenames(ctx, &files[i])
+		if status != nil {
+			return files, status
+		}
+	}
+	files = pruneBooksByRequest(files, testament)
+	return files, nil
+}
+
+func unzip(ctx context.Context, files []InputFile) ([]InputFile, *log.Status) {
 	var results []InputFile
 	if len(files) == 1 && filepath.Ext(files[0].Filename) == `.zip` {
 		r, err := zip.OpenReader(files[0].FilePath())
@@ -76,8 +98,8 @@ func Unzip(ctx context.Context, files []InputFile) ([]InputFile, *log.Status) {
 	return results, nil
 }
 
-// SetMediaType function looks at names and sets the Media Type
-func SetMediaType(ctx context.Context, file *InputFile) *log.Status {
+// setMediaType function looks at names and sets the Media Type
+func setMediaType(ctx context.Context, file *InputFile) *log.Status {
 	fN := file.Filename
 	if strings.HasSuffix(fN, `_ET`) || strings.HasSuffix(fN, `_ET.json`) {
 		file.MediaType = request.TextPlainEdit
@@ -93,6 +115,8 @@ func SetMediaType(ctx context.Context, file *InputFile) *log.Status {
 		file.MediaType = request.Audio
 	} else if (fN[0] == 'N' || fN[0] == 'O' || fN[0] == 'P') && fN[1] == '2' && fN[2] == '_' {
 		file.MediaType = request.AudioDrama
+	} else if strings.HasSuffix(fN, `.mp3`) || strings.HasSuffix(fN, `.wav`) {
+		file.MediaType = request.Audio
 	} else {
 		parts := strings.Split(fN, `_`)
 		if len(parts) > 2 {
@@ -103,12 +127,12 @@ func SetMediaType(ctx context.Context, file *InputFile) *log.Status {
 		}
 	}
 	if file.MediaType == `` {
-		return log.ErrorNoErr(ctx, 400, `Could not identify media type from filename`)
+		return log.ErrorNoErr(ctx, 400, `Could not identify media type from filename for:`, file.Filename)
 	}
 	return nil
 }
 
-func ParseFilenames(ctx context.Context, file *InputFile) *log.Status {
+func parseFilenames(ctx context.Context, file *InputFile) *log.Status {
 	var status *log.Status
 	if file.MediaType == request.TextPlain || file.MediaType == request.TextPlainEdit ||
 		file.MediaType == request.TextCSV {
@@ -152,11 +176,11 @@ func ParseFilenames(ctx context.Context, file *InputFile) *log.Status {
 	} else if file.MediaType == request.Audio || file.MediaType == request.AudioDrama {
 		fN := file.Filename
 		if strings.HasSuffix(fN, `VOX.mp3`) || strings.HasSuffix(fN, `VOX.wav`) {
-			status = ParseVOXAudioFilename(ctx, file)
+			status = parseVOXAudioFilename(ctx, file)
 		} else if (fN[0] == 'A' || fN[0] == 'B') && (fN[1] >= '0' && fN[1] <= '9') {
-			status = ParseV2AudioFilename(ctx, file)
+			status = parseV2AudioFilename(ctx, file)
 		} else {
-			status = ParseV4AudioFilename(ctx, file)
+			status = parseV4AudioFilename(ctx, file)
 		}
 		if status != nil {
 			return status
@@ -167,7 +191,7 @@ func ParseFilenames(ctx context.Context, file *InputFile) *log.Status {
 	return status
 }
 
-func ParseV2AudioFilename(ctx context.Context, file *InputFile) *log.Status {
+func parseV2AudioFilename(ctx context.Context, file *InputFile) *log.Status {
 	var status *log.Status
 	var err error
 	file.FileExt = filepath.Ext(file.Filename)
@@ -191,7 +215,7 @@ func ParseV2AudioFilename(ctx context.Context, file *InputFile) *log.Status {
 	return status
 }
 
-func ParseV4AudioFilename(ctx context.Context, file *InputFile) *log.Status {
+func parseV4AudioFilename(ctx context.Context, file *InputFile) *log.Status {
 	var status *log.Status
 	var err error
 	file.FileExt = filepath.Ext(file.Filename)
@@ -235,7 +259,7 @@ func ParseV4AudioFilename(ctx context.Context, file *InputFile) *log.Status {
 	return status
 }
 
-func ParseVOXAudioFilename(ctx context.Context, file *InputFile) *log.Status {
+func parseVOXAudioFilename(ctx context.Context, file *InputFile) *log.Status {
 	var status *log.Status
 	var err error
 	parts := strings.Split(file.Filename, `_`)
@@ -267,7 +291,7 @@ func ParseVOXAudioFilename(ctx context.Context, file *InputFile) *log.Status {
 	return status
 }
 
-func PruneBooksByRequest(files []InputFile, testament request.Testament) []InputFile {
+func pruneBooksByRequest(files []InputFile, testament request.Testament) []InputFile {
 	var results []InputFile
 	for _, f := range files {
 		if testament.Has(f.Testament, f.BookId) || f.BookId == `` {

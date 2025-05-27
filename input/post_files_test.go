@@ -3,7 +3,6 @@ package input
 import (
 	"context"
 	"fmt"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	"os"
 	"path/filepath"
 	"testing"
@@ -23,7 +22,7 @@ func TestPostFiles(t *testing.T) {
 		}
 		post.ReadFile("text", file, filepath.Base(filename))
 	}
-	input, status := post.PostInput("text", request.Testament{NT: true})
+	input, status := post.PostInput("text")
 	if status != nil {
 		t.Fatal(status)
 	}

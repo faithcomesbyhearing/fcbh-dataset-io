@@ -10,7 +10,7 @@ import (
 
 // DBPDirectory 1. Assign pattern for OT, NT.  2. Glob files.  3. Assign book/chapter & Prune
 func DBPDirectory(ctx context.Context, bibleId string, fsType request.MediaType, otFileset string,
-	ntFileset string, testament request.Testament) ([]InputFile, *log.Status) {
+	ntFileset string) ([]InputFile, *log.Status) {
 	var results []InputFile
 	var files []InputFile
 	var status *log.Status
@@ -26,7 +26,7 @@ func DBPDirectory(ctx context.Context, bibleId string, fsType request.MediaType,
 		runs = append(runs, run{filesetId: ntFileset, tType: `NT`})
 	}
 	for _, r := range runs {
-		files, status = Directory(ctx, bibleId, fsType, r.filesetId, r.tType, testament)
+		files, status = Directory(ctx, bibleId, fsType, r.filesetId, r.tType)
 		if status != nil {
 			return results, status
 		}
@@ -35,8 +35,7 @@ func DBPDirectory(ctx context.Context, bibleId string, fsType request.MediaType,
 	return results, status
 }
 
-func Directory(ctx context.Context, bibleId string, fsType request.MediaType, filesetId string, tType string,
-	testament request.Testament) ([]InputFile, *log.Status) {
+func Directory(ctx context.Context, bibleId string, fsType request.MediaType, filesetId string, tType string) ([]InputFile, *log.Status) {
 	var status *log.Status
 	var directory string
 	var search string
@@ -57,16 +56,8 @@ func Directory(ctx context.Context, bibleId string, fsType request.MediaType, fi
 	//fmt.Println("search:", tType, search)
 	var files []InputFile
 	files, status = Glob(ctx, search)
-	if status != nil {
-		return files, status
-	}
-	for i, _ := range files {
+	for i := range files {
 		files[i].MediaType = fsType
-		status = ParseFilenames(ctx, &files[i])
-		if status != nil {
-			return files, status
-		}
 	}
-	inputFiles := PruneBooksByRequest(files, testament)
-	return inputFiles, status
+	return files, status
 }

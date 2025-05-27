@@ -141,6 +141,14 @@ func (c *Controller) processSteps() *log.Status {
 			return status
 		}
 	}
+	// Read Text Data
+	if !c.req.TextData.NoText {
+		log.Info(c.ctx, "Read and parse text files.")
+		status = c.readText(textFiles)
+		if status != nil {
+			return status
+		}
+	}
 	// Collect Audio Input
 	var audioFiles []input.InputFile
 	if !c.req.AudioData.NoAudio {
@@ -154,14 +162,6 @@ func (c *Controller) processSteps() *log.Status {
 	status = input.UpdateIdent(c.database, &c.ident, textFiles, audioFiles)
 	if status != nil {
 		return status
-	}
-	// Read Text Data
-	if !c.req.TextData.NoText {
-		log.Info(c.ctx, "Read and parse text files.")
-		status = c.readText(textFiles)
-		if status != nil {
-			return status
-		}
 	}
 	// Timestamps
 	if !c.req.Timestamps.NoTimestamps {
@@ -275,16 +275,20 @@ func (c *Controller) collectTextInput() ([]input.InputFile, *log.Status) {
 	bb := c.req.TextData.BibleBrain
 	if bb.TextPlain || bb.TextPlainEdit || bb.TextUSXEdit {
 		files, status = input.DBPDirectory(c.ctx, c.req.BibleId, c.ident.TextSource, c.ident.TextOTId,
-			c.ident.TextNTId, c.req.Testament)
+			c.ident.TextNTId)
 	} else if c.req.TextData.File != `` {
-		files, status = input.FileInput(c.ctx, c.req.TextData.File, c.req.Testament)
+		files, status = input.FileInput(c.ctx, c.req.TextData.File)
 	} else if c.req.TextData.AWSS3 != `` {
-		files, status = input.AWSS3Input(c.ctx, c.req.TextData.AWSS3, c.req.Testament)
+		files, status = input.AWSS3Input(c.ctx, c.req.TextData.AWSS3)
 	} else if c.req.TextData.POST != `` && c.postFiles != nil {
-		files, status = c.postFiles.PostInput("text", c.req.Testament)
+		files, status = c.postFiles.PostInput("text")
 	} else {
 		expectFiles = false
 	}
+	if status != nil {
+		return files, status
+	}
+	files, status = input.FillInputFile(c.ctx, c.req.Testament, files)
 	if status != nil {
 		return files, status
 	}
@@ -302,15 +306,19 @@ func (c *Controller) collectAudioInput() ([]input.InputFile, *log.Status) {
 	if bb.MP3_64 || bb.MP3_16 || bb.OPUS {
 		bibleId := c.req.BibleId
 		files, status = input.DBPDirectory(c.ctx, bibleId, request.Audio, c.ident.AudioOTId,
-			c.ident.AudioNTId, c.req.Testament)
+			c.ident.AudioNTId)
 	} else if c.req.AudioData.File != `` {
-		files, status = input.FileInput(c.ctx, c.req.AudioData.File, c.req.Testament)
+		files, status = input.FileInput(c.ctx, c.req.AudioData.File)
 	} else if c.req.AudioData.AWSS3 != `` {
-		files, status = input.AWSS3Input(c.ctx, c.req.AudioData.AWSS3, c.req.Testament)
+		files, status = input.AWSS3Input(c.ctx, c.req.AudioData.AWSS3)
 	} else if c.req.AudioData.POST != `` && c.postFiles != nil {
-		files, status = c.postFiles.PostInput("audio", c.req.Testament)
+		files, status = c.postFiles.PostInput("audio")
 	} else {
 		expectFiles = false
+	}
+	files, status = input.FillInputFile(c.ctx, c.req.Testament, files)
+	if status != nil {
+		return files, status
 	}
 	if expectFiles && len(files) == 0 {
 		status = log.ErrorNoErr(c.ctx, 400, `No audio files found for`, c.ident.AudioNTId)

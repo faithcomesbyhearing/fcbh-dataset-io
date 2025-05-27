@@ -11,10 +11,11 @@ type InputFile struct {
 	Testament  string
 	BookId     string // not used for text_plain
 	BookSeq    string
-	Chapter    int    // only used for audio
-	Verse      string // used by OBT and Vessel
+	Chapter    int // only used for audio
 	ChapterEnd int
+	Verse      string // not sure how this is used but parseV4AudioFilename parses it.
 	VerseEnd   string
+	ScriptLine string
 	Filename   string
 	FileExt    string
 	Directory  string

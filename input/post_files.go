@@ -2,7 +2,6 @@ package input
 
 import (
 	"context"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"io"
 	"os"
@@ -56,30 +55,14 @@ func (p *PostFiles) ReadFile(ftype string, source io.Reader, filename string) *l
 	return status
 }
 
-func (p *PostFiles) PostInput(ftype string, testament request.Testament) ([]InputFile, *log.Status) {
-	var status *log.Status
+func (p *PostFiles) PostInput(ftype string) ([]InputFile, *log.Status) {
 	var files []InputFile
 	if ftype == "text" {
 		files = p.text
 	} else if ftype == "audio" {
 		files = p.audio
 	}
-	files, status = Unzip(p.ctx, files)
-	if status != nil {
-		return files, status
-	}
-	for i, _ := range files {
-		status = SetMediaType(p.ctx, &files[i])
-		if status != nil {
-			return files, status
-		}
-		status = ParseFilenames(p.ctx, &files[i])
-		if status != nil {
-			return files, status
-		}
-	}
-	inputFiles := PruneBooksByRequest(files, testament)
-	return inputFiles, status
+	return files, nil
 }
 
 func (p *PostFiles) RemoveDir() {

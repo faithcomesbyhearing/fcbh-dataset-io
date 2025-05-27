@@ -73,7 +73,7 @@ func (d *DBPTextEditReader) createDBPText(testament request.Testament) (db.DBAda
 		ntMediaId = d.bibleId + `N_ET`
 	}
 	files, status := input.DBPDirectory(d.ctx, d.bibleId, request.TextPlainEdit, otMediaId,
-		ntMediaId, testament)
+		ntMediaId)
 	if status != nil {
 		return database, status
 	}
@@ -87,7 +87,7 @@ func (d *DBPTextEditReader) createUSXEDITText(testament request.Testament) (db.D
 	var database db.DBAdapter
 	var status *log.Status
 	files, status := input.DBPDirectory(d.ctx, d.bibleId, request.TextUSXEdit, d.bibleId+`O_ET-usx`,
-		d.bibleId+`N_ET-usx`, testament)
+		d.bibleId+`N_ET-usx`)
 	if status != nil {
 		return database, status
 	}

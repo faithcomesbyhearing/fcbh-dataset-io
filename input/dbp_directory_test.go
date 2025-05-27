@@ -14,8 +14,8 @@ func TestPlainText1(t *testing.T) {
 	fsType := request.TextPlain
 	otFileset := `ENGWEBO_ET`
 	ntFileset := `ENGWEBN_ET`
-	testament := request.Testament{NT: true, OTBooks: []string{`JOB`, `PSA`, `PRO`, `SNG`}}
-	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset, testament)
+	//testament := request.Testament{NT: true, OTBooks: []string{`JOB`, `PSA`, `PRO`, `SNG`}}
+	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset)
 	if status != nil {
 		t.Error(status)
 	}
@@ -37,8 +37,8 @@ func TestPlainText2(t *testing.T) {
 	fsType := request.TextPlain
 	otFileset := ``
 	ntFileset := `ENGWEBN_ET`
-	testament := request.Testament{NT: true}
-	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset, testament)
+	//testament := request.Testament{NT: true}
+	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset)
 	if status != nil {
 		t.Error(status)
 	}
@@ -62,7 +62,7 @@ func TestUSXText1(t *testing.T) {
 	ntFileset := `ENGWEBN_ET-usx`
 	testament := request.Testament{NT: true, OTBooks: []string{`JOB`, `PSA`, `PRO`, `SNG`}}
 	testament.BuildBookMaps()
-	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset, testament)
+	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset)
 	if status != nil {
 		t.Error(status)
 	}
@@ -92,7 +92,7 @@ func TestUSXText2(t *testing.T) {
 	ntFileset := ``
 	testament := request.Testament{OTBooks: []string{`JOB`, `PSA`, `PRO`, `SNG`}}
 	testament.BuildBookMaps()
-	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset, testament)
+	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset)
 	if status != nil {
 		t.Error(status)
 	}
@@ -122,7 +122,7 @@ func TestAudio1(t *testing.T) {
 	ntFileset := `ENGWEBN2DA-mp3-64`
 	testament := request.Testament{NTBooks: []string{`ROM`, `EPH`, `COL`, `HEB`}}
 	testament.BuildBookMaps()
-	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset, testament)
+	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset)
 	if status != nil {
 		t.Error(status)
 	}
@@ -152,7 +152,7 @@ func TestAudio2(t *testing.T) {
 	ntFileset := `ENGWEBN2DA-opus16`
 	testament := request.Testament{NT: true, NTBooks: []string{`ROM`, `EPH`, `COL`, `HEB`}}
 	testament.BuildBookMaps()
-	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset, testament)
+	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset)
 	if status != nil {
 		t.Error(status)
 	}
@@ -192,7 +192,7 @@ func TestIncorrectFileset(t *testing.T) {
 	ntFileset := `ENGWEBN2DA-opus99`
 	testament := request.Testament{NT: true, NTBooks: []string{`ROM`, `EPH`, `COL`, `HEB`}}
 	testament.BuildBookMaps()
-	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset, testament)
+	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset)
 	if status != nil {
 		t.Error(status)
 	}
@@ -210,7 +210,7 @@ func TestIncorrectBibleId(t *testing.T) {
 	ntFileset := `ENGWEBN2DA-mp3-64`
 	testament := request.Testament{NT: true, NTBooks: []string{`ROM`, `EPH`, `COL`, `HEB`}}
 	testament.BuildBookMaps()
-	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset, testament)
+	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset)
 	if status != nil {
 		t.Error(status)
 	}
@@ -228,7 +228,7 @@ func TestIncorrectBooks(t *testing.T) {
 	ntFileset := `ENGWEBN2DA-mp3-64`
 	testament := request.Testament{NTBooks: []string{`RO1`, `EP1`, `CO1`, `HE1`}}
 	testament.BuildBookMaps()
-	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset, testament)
+	files, status := DBPDirectory(ctx, bibleId, fsType, otFileset, ntFileset)
 	if status != nil {
 		t.Error(status)
 	}
@@ -243,7 +243,7 @@ func TestParseV4AudioFilename(t *testing.T) {
 	var status *log.Status
 	var file InputFile
 	file.Filename = `ENGESVN2DA_B001_MAT_001.mp3`
-	status = ParseV4AudioFilename(ctx, &file)
+	status = parseV4AudioFilename(ctx, &file)
 	if status != nil {
 		t.Error(status)
 	}
@@ -268,7 +268,7 @@ func TestParseV4AudioFilename(t *testing.T) {
 	//fmt.Println("File", file)
 	var file2 InputFile
 	file2.Filename = `IRUNLCP1DA_B013_1TH_001_001-001_010.mp3`
-	status = ParseV4AudioFilename(ctx, &file2)
+	status = parseV4AudioFilename(ctx, &file2)
 	if status != nil {
 		t.Error(status)
 	}

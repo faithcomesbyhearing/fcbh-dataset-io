@@ -28,7 +28,7 @@ func AWSS3USX(key string, t *testing.T) {
 	_ = os.Remove(filepath.Join(directory, `041MRK.usx`))
 	_ = os.Remove(filepath.Join(directory, `042LUK.usx`))
 	_ = os.Remove(filepath.Join(directory, `043JHN.usx`))
-	files, status := AWSS3Input(ctx, key, testament)
+	files, status := AWSS3Input(ctx, key)
 	if status != nil {
 		t.Error(status)
 	}
@@ -64,7 +64,7 @@ func AWSS3Audio(key string, expect int, t *testing.T) {
 	_ = os.Remove(filepath.Join(directory, `B27___18_Revelation__ENGWEBN2DA.mp3`))
 	_ = os.Remove(filepath.Join(directory, `B27___19_Revelation__ENGWEBN2DA.mp3`))
 	_ = os.Remove(filepath.Join(directory, `B27___20_Revelation__ENGWEBN2DA.mp3`))
-	files, status := AWSS3Input(ctx, key, testament)
+	files, status := AWSS3Input(ctx, key)
 	if status != nil {
 		t.Error(status)
 	}
@@ -89,7 +89,7 @@ func NotYetTestAWSS3Zip(t *testing.T) {
 	//os.Remove(filepath.Join(directory, `041MRK.usx`))
 	//os.Remove(filepath.Join(directory, `042LUK.usx`))
 	//os.Remove(filepath.Join(directory, `043JHN.usx`))
-	files, status := AWSS3Input(ctx, key, testament)
+	files, status := AWSS3Input(ctx, key)
 	if status != nil {
 		t.Error(status)
 	}

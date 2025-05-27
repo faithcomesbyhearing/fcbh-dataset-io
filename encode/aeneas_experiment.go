@@ -74,8 +74,8 @@ func (a *AeneasExperiment) Process() {
 
 func (a *AeneasExperiment) FindAudioFiles() map[string]string {
 	filePath := filepath.Join(os.Getenv(`FCBH_DATASET_FILES`), a.bibleId, a.audioMediaId, `*.mp3`)
-	testament := request.Testament{NT: true}
-	files, status := input.FileInput(a.ctx, filePath, testament)
+	//testament := request.Testament{NT: true}
+	files, status := input.FileInput(a.ctx, filePath)
 	if status != nil {
 		panic(status)
 	}

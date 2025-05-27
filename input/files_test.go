@@ -14,7 +14,7 @@ func TestPlainTextFileInput(t *testing.T) {
 	testament := request.Testament{OTBooks: []string{`MAL`, `JON`}, NTBooks: []string{`TIT`, `REV`}}
 	testament.BuildBookMaps()
 	search := filepath.Join(os.Getenv(`FCBH_DATASET_FILES`), bibleId, `*_ET.json`)
-	files, status := FileInput(ctx, search, testament)
+	files, status := FileInput(ctx, search)
 	if status != nil {
 		t.Error(status)
 	}
@@ -30,7 +30,7 @@ func TestUSXTextFileInput(t *testing.T) {
 	testament := request.Testament{OTBooks: []string{`MAL`, `JON`, `GEN`}, NTBooks: []string{`TIT`, `REV`}}
 	testament.BuildBookMaps()
 	search := filepath.Join(os.Getenv(`FCBH_DATASET_FILES`), bibleId, filesetId, `*.usx`)
-	files, status := FileInput(ctx, search, testament)
+	files, status := FileInput(ctx, search)
 	if status != nil {
 		t.Error(status)
 	}
@@ -46,7 +46,7 @@ func TestAudioFileInput(t *testing.T) {
 	testament := request.Testament{OTBooks: []string{`MAL`, `JON`, `GEN`}, NTBooks: []string{`TIT`, `REV`}}
 	testament.BuildBookMaps()
 	search := filepath.Join(os.Getenv(`FCBH_DATASET_FILES`), bibleId, filesetId, `*.mp3`)
-	files, status := FileInput(ctx, search, testament)
+	files, status := FileInput(ctx, search)
 	if status != nil {
 		t.Error(status)
 	}
