@@ -31,10 +31,10 @@ func (r *RequestDecoder) Process(yamlRequest []byte) (request.Request, *log.Stat
 	r.Prereq(&request)
 	r.Depend(request)
 	if len(r.errors) > 0 {
-		var status1 log.Status
+		status = &log.Status{}
 		status.Status = 400
 		status.Message = strings.Join(r.errors, "\n")
-		return request, &status1
+		return request, status
 	}
 	return request, nil
 }
