@@ -70,6 +70,15 @@ func (c *Compare) Process() ([]Pair, string, string, *log.Status) {
 	var fileMap string
 	var languageISO string
 	var status *log.Status
+	var ident db.Ident
+	ident, status = c.database.SelectIdent() // TextSource should be a parameter?
+	if status != nil {
+		return records, fileMap, languageISO, status
+	}
+	languageISO = ident.ASRLanguageISO
+	if languageISO == "" {
+		languageISO = ident.LanguageISO
+	}
 	c.baseDb, status = db.NewerDBAdapter(c.ctx, false, c.user, c.baseDataset)
 	if status != nil {
 		return records, fileMap, languageISO, status
@@ -78,46 +87,35 @@ func (c *Compare) Process() ([]Pair, string, string, *log.Status) {
 	if status != nil {
 		return records, fileMap, languageISO, status
 	}
-	records, fileMap, languageISO, status = c.CompareVerses()
+	records, status = c.compareVerses(ident.TextSource)
 	if status != nil {
 		return records, fileMap, languageISO, status
 	}
-	return records, fileMap, languageISO, nil
+	fileMap, status = c.generateBookChapterFilenameMap()
+	c.baseDb.Close()
+	return records, fileMap, languageISO, status
 }
 
-func (c *Compare) CompareVerses() ([]Pair, string, string, *log.Status) {
-	var filenameMap string
-	var languageISO string
+func (c *Compare) compareVerses(textSource request.MediaType) ([]Pair, *log.Status) {
 	var status *log.Status
-	var ident db.Ident
-	ident, status = c.database.SelectIdent() // TextSource should be a parameter
-	if status != nil {
-		return c.results, languageISO, filenameMap, status
-	}
-	languageISO = ident.ASRLanguageISO
-	if languageISO == "" {
-		languageISO = ident.LanguageISO
-	}
 	for _, bookId := range db.RequestedBooks(c.testament) {
 		var chapInBook, _ = db.BookChapterMap[bookId]
 		var chapter = 1
 		for chapter <= chapInBook {
 			var baseLines, compLines []Verse
-			baseLines, status = c.process(c.baseDb, bookId, chapter, ident.TextSource)
+			baseLines, status = c.process(c.baseDb, bookId, chapter, textSource)
 			if status != nil {
-				return c.results, "", languageISO, status
+				return c.results, status
 			}
-			compLines, status = c.process(c.database, bookId, chapter, ident.TextSource)
+			compLines, status = c.process(c.database, bookId, chapter, textSource)
 			if status != nil {
-				return c.results, "", languageISO, status
+				return c.results, status
 			}
 			c.diff(baseLines, compLines)
 			chapter++
 		}
 	}
-	filenameMap, status = c.generateBookChapterFilenameMap()
-	c.baseDb.Close()
-	return c.results, filenameMap, languageISO, status
+	return c.results, status
 }
 
 func (c *Compare) process(conn db.DBAdapter, bookId string, chapterNum int, mediaType request.MediaType) ([]Verse, *log.Status) {
