@@ -176,7 +176,12 @@ func parseFilenames(ctx context.Context, file *InputFile) *log.Status {
 	} else if file.MediaType == request.Audio || file.MediaType == request.AudioDrama {
 		fN := file.Filename
 		if strings.HasSuffix(fN, `VOX.mp3`) || strings.HasSuffix(fN, `VOX.wav`) {
-			status = parseVOXAudioFilename(ctx, file)
+			parts := strings.Split(fN, `_`)
+			if len(parts[len(parts)-2]) >= 5 {
+				file.ScriptLine = parts[len(parts)-2] // Filled later using db.conn
+			} else {
+				status = parseVOXAudioFilename(ctx, file)
+			}
 		} else if (fN[0] == 'A' || fN[0] == 'B') && (fN[1] >= '0' && fN[1] <= '9') {
 			status = parseV2AudioFilename(ctx, file)
 		} else {
