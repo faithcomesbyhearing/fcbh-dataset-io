@@ -162,6 +162,8 @@ func createDatabase(db *sql.DB) {
 	query = `CREATE UNIQUE INDEX IF NOT EXISTS scripts_idx
 		ON scripts (book_id, chapter_num, verse_str)`
 	execDDL(db, query)
+	query = `CREATE INDEX IF NOT EXISTS script_num_idx ON scripts (script_num)`
+	execDDL(db, query)
 	query = `CREATE INDEX IF NOT EXISTS scripts_file_idx ON scripts (audio_file)`
 	execDDL(db, query)
 	query = `CREATE TABLE IF NOT EXISTS words (

@@ -87,7 +87,11 @@ func (c *Compare) Process() ([]Pair, string, string, *log.Status) {
 	if status != nil {
 		return records, fileMap, languageISO, status
 	}
-	records, status = c.compareVerses(ident.TextSource)
+	if ident.TextSource == request.TextScript {
+		records, status = c.compareScriptLines(ident.TextSource)
+	} else {
+		records, status = c.compareVerses(ident.TextSource)
+	}
 	if status != nil {
 		return records, fileMap, languageISO, status
 	}

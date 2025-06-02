@@ -6,15 +6,14 @@ import (
 
 const vesselTest = `is_new: yes
 dataset_name: 16e_vessel_test
-bible_id: tittit # incorrect
+bible_id: spatit # incorrect
 username: GaryNTest
 testament:
   nt: yes
 text_data:
   file: /Users/gary/FCBH2024/GaryNTest/16e_vessel_test.xlsx
 audio_data:
-  #file: /Users/gary/FCBH2024/GaryNTest/16e_vessel_201_TTS_001_00001_VOX.wav
-  file: /Users/gary/FCBH2024/GaryNTest/16e_vessel_*_VOX.wav
+  file: /Users/gary/FCBH2024/GaryNTest/16e_vessel_test/*_VOX.wav
 speech_to_text:
   mms_asr: y
 compare:

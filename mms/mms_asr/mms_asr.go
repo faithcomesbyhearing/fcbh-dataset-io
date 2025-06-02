@@ -34,6 +34,11 @@ func NewMMSASR(ctx context.Context, conn db.DBAdapter, lang string, sttLang stri
 
 // ProcessFiles will perform Auto Speech Recognition on these files
 func (a *MMSASR) ProcessFiles(files []input.InputFile) *log.Status {
+	tempDir, err := os.MkdirTemp(os.Getenv(`FCBH_DATASET_TMP`), "mms_asr_")
+	if err != nil {
+		return log.Error(a.ctx, 500, err, `Error creating temp dir`)
+	}
+	defer os.RemoveAll(tempDir)
 	lang, status := mms.CheckLanguage(a.ctx, a.lang, a.sttLang, "mms_asr")
 	if status != nil {
 		return status
@@ -51,7 +56,7 @@ func (a *MMSASR) ProcessFiles(files []input.InputFile) *log.Status {
 	defer a.uroman.Close()
 	for _, file := range files {
 		log.Info(a.ctx, "MMS ASR", file.BookId, file.Chapter)
-		status = a.processFile(file)
+		status = a.processFile(file, tempDir)
 		if status != nil {
 			return status
 		}
@@ -60,43 +65,59 @@ func (a *MMSASR) ProcessFiles(files []input.InputFile) *log.Status {
 }
 
 // processFile
-func (a *MMSASR) processFile(file input.InputFile) *log.Status {
+func (a *MMSASR) processFile(file input.InputFile, tempDir string) *log.Status {
 	var status *log.Status
-	tempDir, err := os.MkdirTemp(os.Getenv(`FCBH_DATASET_TMP`), "mms_asr_")
-	if err != nil {
-		return log.Error(a.ctx, 500, err, `Error creating temp dir`)
-	}
-	defer os.RemoveAll(tempDir)
 	wavFile, status := ffmpeg.ConvertMp3ToWav(a.ctx, tempDir, file.FilePath())
 	if status != nil {
 		return status
 	}
-	var timestamps []db.Audio
-	timestamps, status = a.conn.SelectFAScriptTimestamps(file.BookId, file.Chapter)
-	if status != nil {
-		return status
+	var audioFiles []db.Audio
+	if file.ScriptLine != "" {
+		var audioFile db.Audio
+		audioFile, status = a.selectScriptLine(file.ScriptLine)
+		if status != nil {
+			return status
+		}
+		audioFile.AudioVerseWav = wavFile
+		audioFiles = append(audioFiles, audioFile)
+	} else {
+		audioFiles, status = a.conn.SelectFAScriptTimestamps(file.BookId, file.Chapter)
+		if status != nil {
+			return status
+		}
+		audioFiles, status = ffmpeg.ChopByTimestamp(a.ctx, tempDir, wavFile, audioFiles)
 	}
-	timestamps, status = ffmpeg.ChopByTimestamp(a.ctx, tempDir, wavFile, timestamps)
-	for i, ts := range timestamps {
-		timestamps[i].AudioFile = file.Filename
-		timestamps[i].AudioChapterWav = wavFile
+	for i, ts := range audioFiles {
+		audioFiles[i].AudioFile = file.Filename
+		audioFiles[i].AudioChapterWav = wavFile
 		response, status1 := a.mmsAsrPy.Process(ts.AudioVerseWav)
 		if status1 != nil {
 			return status1
 		}
 		fmt.Println(ts.BookId, ts.ChapterNum, ts.VerseStr, ts.ScriptId, response)
-		timestamps[i].Text = response
+		audioFiles[i].Text = response
 		uRoman, status2 := a.uroman.Process(response)
 		if status2 != nil {
 			return status2
 		}
-		timestamps[i].Uroman = uRoman
+		audioFiles[i].Uroman = uRoman
 	}
 	//log.Debug(a.ctx, "Finished ASR", file.BookId, file.Chapter)
 	var recCount int
-	recCount, status = a.conn.UpdateScriptText(timestamps)
-	if recCount != len(timestamps) {
-		log.Warn(a.ctx, "Timestamp update counts need investigation", recCount, len(timestamps))
+	recCount, status = a.conn.UpdateScriptText(audioFiles)
+	if recCount != len(audioFiles) {
+		log.Warn(a.ctx, "Timestamp update counts need investigation", recCount, len(audioFiles))
 	}
 	return status
+}
+
+func (a *MMSASR) selectScriptLine(scriptLine string) (db.Audio, *log.Status) {
+	var rec db.Audio
+	var query = `SELECT script_id, book_id, chapter_num, audio_file FROM scripts WHERE script_num = ?`
+	row := a.conn.DB.QueryRow(query, scriptLine)
+	err := row.Scan(&rec.ScriptId, &rec.BookId, &rec.ChapterNum, &rec.AudioFile)
+	if err != nil {
+		return rec, log.Error(a.ctx, 500, err, "Error during SelectScriptLine.")
+	}
+	return rec, nil
 }

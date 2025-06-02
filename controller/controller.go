@@ -164,7 +164,7 @@ func (c *Controller) processSteps() *log.Status {
 		return status
 	}
 	// Timestamps
-	if !c.req.Timestamps.NoTimestamps {
+	if len(audioFiles) > 0 {
 		log.Info(c.ctx, "Read or create audio timestamp data.")
 		status = c.timestamps(audioFiles)
 		if status != nil {
@@ -406,6 +406,11 @@ func (c *Controller) timestamps(audioFiles []input.InputFile) *log.Status {
 		var ts mms_align.MMSAlign
 		ts = mms_align.NewMMSAlign(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage)
 		status = ts.ProcessFiles(audioFiles)
+		if status != nil {
+			return status
+		}
+	} else { // No timestamps, but has audio files
+		status = timestamp.UpdateFilenames(c.ctx, c.database, audioFiles)
 		if status != nil {
 			return status
 		}

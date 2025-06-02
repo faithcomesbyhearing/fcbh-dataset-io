@@ -39,9 +39,9 @@ func (r *RequestDecoder) Depend(req request.Request) {
 		if req.AudioData.NoAudio {
 			r.errors = append(r.errors, `Speech to Text is requested, but there is no audio`)
 		}
-		if req.Timestamps.NoTimestamps {
-			r.errors = append(r.errors, `Speech to Text is requested, but there are no timestamps`)
-		}
+		//if req.Timestamps.NoTimestamps {
+		//	r.errors = append(r.errors, `Speech to Text is requested, but there are no timestamps`)
+		//}
 	}
 	if req.AudioEncoding.MFCC {
 		if req.Timestamps.NoTimestamps {

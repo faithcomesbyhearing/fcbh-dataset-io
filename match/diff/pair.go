@@ -9,6 +9,7 @@ import (
 type Pair struct {
 	Ref       generic.VerseRef      `json:"ref"`
 	ScriptNum string                `json:"script_num"`
+	AudioFile string                `json:"audio_file"`
 	BeginTS   float64               `json:"begin_ts"`
 	EndTS     float64               `json:"end_ts"`
 	Base      PairText              `json:"base"`

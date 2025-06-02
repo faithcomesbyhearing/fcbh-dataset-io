@@ -124,17 +124,17 @@ func (r ScriptReader) FindColIndexes(heading []string) (ColIndex, *log.Status) {
 	c.TextCol = -1
 	for col, head := range heading {
 		switch strings.ToLower(head) {
-		case `book`, `bk`:
+		case `book`, `bk`, `book name abbr`:
 			c.BookCol = col
-		case `chapter`, `cp`:
+		case `chapter`, `cp`, `chapter number`:
 			c.ChapterCol = col
-		case `verse`, `verse_number`:
+		case `verse`, `verse_number`, `start verse number`:
 			c.VerseCol = col
-		case `line #`, `line_number`, `line id:`, `line`:
+		case `line #`, `line_number`, `line id:`, `line`, `line number`:
 			c.LineCol = col
-		case `character`, `characters1`:
+		case `character`, `characters1`, `character group`:
 			c.CharacterCol = col
-		case `reader`:
+		case `reader`, `reader name`:
 			c.ActorCol = col
 		case `target language`, `verse_content1`:
 			c.TextCol = col
