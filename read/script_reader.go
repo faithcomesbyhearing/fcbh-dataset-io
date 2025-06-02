@@ -94,9 +94,7 @@ func (r ScriptReader) Read(filePath string) *log.Status {
 			text := row[col.TextCol]
 			//text = strings.Replace(text,'_x000D_','' ) // remove excel CR
 			rec.ScriptTexts = append(rec.ScriptTexts, text)
-			if rec.ScriptNum[len(rec.ScriptNum)-1] != 'r' {
-				records = append(records, rec)
-			}
+			records = append(records, rec)
 		}
 	}
 	status = r.db.InsertScripts(records)

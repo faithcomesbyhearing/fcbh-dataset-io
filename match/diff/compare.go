@@ -428,6 +428,7 @@ func (c *Compare) ensureClean(diffs []diffmatchpatch.Diff) {
 	}
 }
 
+// generateBookChapterFilenameMap could be eliminated.  The filenames are now passed in []Pair slice
 func (c *Compare) generateBookChapterFilenameMap() (string, *log.Status) {
 	chapters, status := c.database.SelectBookChapterFilename()
 	if status != nil {
