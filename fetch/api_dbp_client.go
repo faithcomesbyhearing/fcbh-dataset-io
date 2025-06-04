@@ -195,11 +195,9 @@ func (d *APIDBPClient) UpdateIdent(id db.Ident, info BibleInfoType, req request.
 			id.TextNTId = info.TextNTUSXFileset.Id
 		}
 	}
+	id.LanguageISO = req.LanguageISO
 	if info.LanguageISO != `` {
 		id.LanguageISO = info.LanguageISO
-	}
-	if id.LanguageISO == `` {
-		id.LanguageISO = strings.ToLower(id.BibleId[:3])
 	}
 	if info.VersionCode != `` {
 		id.VersionCode = info.VersionCode

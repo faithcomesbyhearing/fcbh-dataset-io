@@ -27,8 +27,9 @@ func TestRequestYamlFile(t *testing.T) {
 func TestParser(t *testing.T) {
 	var test1 = `is_new: Yes
 dataset_name: Test1  # should be a unique name
-bible_id: ENGWEB
 username: GaryNGriswold
+#bible_id: ENGWEB
+language_iso: eng
 alt_language: en
 notify_ok: [emille@fcbhmail.org]
 notify_err: [jbarndt@fcbhmail.org]

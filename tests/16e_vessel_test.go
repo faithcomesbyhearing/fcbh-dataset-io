@@ -6,8 +6,8 @@ import (
 
 const vesselTest = `is_new: yes
 dataset_name: 16e_vessel_test
-bible_id: spatit # incorrect
 username: GaryNTest
+language_iso: eng
 notify_ok: [sqs/vessel_AP]
 testament:
   nt: yes

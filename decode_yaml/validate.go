@@ -27,8 +27,8 @@ func (r *RequestDecoder) checkRequired(req *request.Request) {
 	if req.DatasetName == `` {
 		r.errors = append(r.errors, `Required field dataset_name is empty`)
 	}
-	if req.BibleId == `` {
-		r.errors = append(r.errors, `Required field bible_id: is empty`)
+	if req.BibleId == `` && req.LanguageISO == `` {
+		r.errors = append(r.errors, `Required field bible_id: or language_iso: is empty`)
 	}
 	if req.Username == `` {
 		r.errors = append(r.errors, `Required field username: is empty`)

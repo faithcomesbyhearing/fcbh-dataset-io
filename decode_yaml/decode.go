@@ -36,6 +36,11 @@ func (r *RequestDecoder) Process(yamlRequest []byte) (request.Request, *log.Stat
 		status.Message = strings.Join(r.errors, "\n")
 		return request, status
 	}
+	request.BibleId = strings.ToUpper(request.BibleId)
+	request.LanguageISO = strings.ToLower(request.LanguageISO)
+	if len(request.LanguageISO) == 0 && len(request.BibleId) > 3 {
+		request.LanguageISO = strings.ToLower(request.BibleId[:3])
+	}
 	return request, nil
 }
 

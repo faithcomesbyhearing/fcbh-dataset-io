@@ -15,7 +15,8 @@ func TestValidate(t *testing.T) {
 	}
 	var req, _ = d.Decode(content)
 	req.IsNew = true
-	req.BibleId = `EBGESV`
+	//req.BibleId = `EBGESV`
+	req.LanguageISO = `eng`
 	req.AltLanguage = `en`
 	req.NotifyOk = []string{"abc"}
 	req.NotifyErr = []string{"def"}

@@ -3,8 +3,9 @@ package request
 type Request struct {
 	IsNew         bool          `yaml:"is_new"`
 	DatasetName   string        `yaml:"dataset_name"`
-	BibleId       string        `yaml:"bible_id"`
 	Username      string        `yaml:"username"`
+	BibleId       string        `yaml:"bible_id"`
+	LanguageISO   string        `yaml:"language_iso"`
 	AltLanguage   string        `yaml:"alt_language,omitempty"`
 	NotifyOk      []string      `yaml:"notify_ok"`
 	NotifyErr     []string      `yaml:"notify_err"`
