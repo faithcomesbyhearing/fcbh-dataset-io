@@ -27,7 +27,7 @@ func main() {
 			"MessageRetentionPeriod": "1209600", // 14 days
 		},
 	}
-	result, err := client.CreateQueue(context.TODO(), input)
+	result, err := client.CreateQueue(ctx, input)
 	if err != nil {
 		log.Fatal(err)
 	}

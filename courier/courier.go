@@ -28,6 +28,7 @@ type Courier struct {
 	logFile     string
 	databases   []string
 	outputs     []string
+	outputKeys  []string
 }
 
 func NewCourier(ctx context.Context, yaml []byte) Courier {
@@ -103,22 +104,23 @@ func (b *Courier) PersistToBucket() *log.Status {
 		run, status = b.findLastRun(client)
 		allStatus = append(allStatus, status)
 		run++
-		status = b.uploadString(client, run, "request", b.dataset+".yaml", b.yamlContent)
+		_, status = b.uploadString(client, run, "request", b.dataset+".yaml", b.yamlContent)
 		allStatus = append(allStatus, status)
-		status = b.uploadFile(client, run, "log", b.logFile)
+		_, status = b.uploadFile(client, run, "log", b.logFile)
 		allStatus = append(allStatus, status)
 		for _, database := range b.databases {
-			status = b.uploadFile(client, run, "database", database)
+			_, status = b.uploadFile(client, run, "database", database)
 			allStatus = append(allStatus, status)
 		}
 		for _, output := range b.outputs {
-			status = b.uploadFile(client, run, "output", output)
-			allStatus = append(allStatus, status)
+			outputKey, status2 := b.uploadFile(client, run, "output", output)
+			allStatus = append(allStatus, status2)
+			b.outputKeys = append(b.outputKeys, outputKey)
 		}
 		loc, _ := time.LoadLocation("America/Denver")
-		status = b.uploadString(client, run, "runtime", b.start.In(loc).Format(`Mon Jan 2 2006 03:04:05 pm MST`), "")
+		_, status = b.uploadString(client, run, "runtime", b.start.In(loc).Format(`Mon Jan 2 2006 03:04:05 pm MST`), "")
 		allStatus = append(allStatus, status)
-		status = b.uploadString(client, run, "duration", time.Since(b.start).String(), "")
+		_, status = b.uploadString(client, run, "duration", time.Since(b.start).String(), "")
 		allStatus = append(allStatus, status)
 		for _, stat := range allStatus {
 			if stat != nil {
@@ -173,42 +175,45 @@ func (b *Courier) findLastRun(client *s3.Client) (int, *log.Status) {
 	return maxRun, status
 }
 
-func (b *Courier) uploadString(client *s3.Client, run int, typ string, filename string, content string) *log.Status {
+func (b *Courier) uploadString(client *s3.Client, run int, typ string, filename string, content string) (string, *log.Status) {
+	var objectKey string
 	var status *log.Status
-	key := b.createKey(run, typ, filename)
+	objectKey = b.createKey(run, typ, filename)
 	input := &s3.PutObjectInput{
 		Bucket: &b.bucket,
-		Key:    &key,
+		Key:    &objectKey,
 		Body:   strings.NewReader(content),
 	}
 	_, err := client.PutObject(b.ctx, input)
 	if err != nil {
 		status = log.Error(b.ctx, 500, err, "Error uploading string content.")
 	}
-	return status
+	return objectKey, status
 }
 
-func (b *Courier) uploadFile(client *s3.Client, run int, typ string, filePath string) *log.Status {
+func (b *Courier) uploadFile(client *s3.Client, run int, typ string, filePath string) (string, *log.Status) {
+	var objectKey string
 	var status *log.Status
 	file, err := os.Open(filePath)
 	if err != nil {
 		log.Warn(b.ctx, 500, err, "Error opening file to upload to S3.")
-		return status
+		return objectKey, status
 	}
 	defer file.Close()
-	key := b.createKey(run, typ, filepath.Base(filePath))
+	objectKey = b.createKey(run, typ, filePath)
 	_, err = client.PutObject(b.ctx, &s3.PutObjectInput{
 		Bucket: &b.bucket,
-		Key:    &key,
+		Key:    &objectKey,
 		Body:   file,
 	})
 	if err != nil {
 		status = log.Error(b.ctx, 500, err, "Error uploading file to S3.")
 	}
-	return status
+	return objectKey, status
 }
 
 func (b *Courier) createKey(run int, typ string, filename string) string {
 	runStr := fmt.Sprintf("%05d", run)
+	filename = filepath.Base(filename)
 	return b.username + "/" + b.dataset + "/" + runStr + "/" + typ + "/" + filename
 }

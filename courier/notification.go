@@ -3,7 +3,6 @@ package courier
 import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -26,6 +25,7 @@ func (b *Courier) Notification(req request.Request, status *log.Status, duration
 			emailRecip, sqsURLS = b.groupRecipients(req.NotifyErr)
 			subject = "FAILED: " + b.dataset
 			message = b.failureMsg(status, duration)
+			attachments = append(attachments, b.logFile)
 		}
 		if len(emailRecip) > 0 {
 			_ = GoMailSendMail(b.ctx, emailRecip, subject, message, attachments)
@@ -55,9 +55,10 @@ func (b *Courier) successMsg(duration time.Duration) string {
 	message = append(message, "SUCCESS: "+b.dataset)
 	message = append(message, "Duration: "+duration.Round(100*time.Millisecond).String())
 	message = append(message, "Output: ")
-	files := b.GetOutputByExt(".html")
-	for _, file := range files {
-		message = append(message, "\t"+filepath.Base(file)+"\n")
+	for _, file := range b.outputKeys {
+		if strings.HasSuffix(file, ".html") {
+			message = append(message, "\t"+b.bucket+", "+file+"\n")
+		}
 	}
 	return strings.Join(message, "\n\n")
 }
@@ -83,8 +84,7 @@ func (b *Courier) jsonMsg(duration time.Duration, success bool) CompletionMsg {
 	}
 	msg.Duration = duration.Round(100 * time.Millisecond).String()
 	msg.Bucket = b.bucket
-	files := b.GetOutputPaths()
-	for _, file := range files {
+	for _, file := range b.outputKeys {
 		if strings.HasSuffix(file, "compare.json") {
 			msg.Object = file
 		}
