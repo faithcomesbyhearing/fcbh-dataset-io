@@ -13,3 +13,7 @@ test_data/*
 
 build-ami/user-data-base64.txt
 build-ami/secrets*.*
+bible_brain/timestamp/gen_yaml/test_data/
+match/research/fa_error/data/
+mms/zero_shot_v1/data/
+mms/zero_shot_v1/kenlm/
