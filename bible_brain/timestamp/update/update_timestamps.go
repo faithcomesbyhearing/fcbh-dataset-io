@@ -78,7 +78,8 @@ func (d *UpdateTimestamps) Process() *log.Status {
 			}
 		}
 	}
-	return nil
+	status = updateValidation(d.ctx, d.conn, d.dbpConn)
+	return status
 }
 
 func (d *UpdateTimestamps) UpdateFileset(filesetId string, bookId string, chapterNum int, timestamps []Timestamp) *log.Status {
