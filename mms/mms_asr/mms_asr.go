@@ -43,6 +43,10 @@ func (a *MMSASR) ProcessFiles(files []input.InputFile) *log.Status {
 	if status != nil {
 		return status
 	}
+	status = a.conn.UpdateASRLanguage(lang)
+	if status != nil {
+		return status
+	}
 	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/mms_asr/mms_asr.py")
 	a.mmsAsrPy, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_ASR_PYTHON`), pythonScript, lang)
 	if status != nil {
