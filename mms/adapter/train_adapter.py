@@ -12,6 +12,8 @@ from data_pruner import dataPruner
 from dataset import *
 from data_collator import *
 from evaluate import load
+from safetensors.torch import save_file as safe_save_file
+from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
 
 #
 # https://huggingface.co/blog/mms_adapters
@@ -89,7 +91,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 useGPU = (device == "gpu")
 
 trainingArgs = TrainingArguments(
-  output_dir = "checkpoints",
+  output_dir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters'),
   group_by_length = True,
   per_device_train_batch_size = batchSize,
   #eval_strategy = "epoch",
@@ -121,16 +123,36 @@ trainer = Trainer(
 
 trainer.train()
 
-"""
-from safetensors.torch import save_file as safe_save_file
-from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
-import os
 
-adapter_file = WAV2VEC2_ADAPTER_SAFE_FILE.format(target_lang)
-adapter_file = os.path.join(training_args.output_dir, adapter_file)
 
-safe_save_file(model._get_adapters(), adapter_file, metadata={"format": "pt"})
+adapterFile = WAV2VEC2_ADAPTER_SAFE_FILE.format(targetLang)
+adapterFile = os.path.join(trainingArgs.output_dir, adapterFile)
+safe_save_file(model._get_adapters(), adapterFile, metadata={"format": "pt"})
+processorDir = os.path.join(trainingArgs.output_dir, "processor_" + targetLang)
+processor.save_pretrained(processorDir)
+
+""" Loading Adapter
+model = Wav2Vec2ForCTC.from_pretrained("facebook/mms-1b-all")
+model.init_adapter_layers()
+
+# Load your trained adapter
+from safetensors.torch import load_file as safe_load_file
+adapter_weights = safe_load_file(adapter_file)
+model.load_adapter(adapter_weights, target_lang)
+processorDir = os.path.join(training_args.output_dir, "processor_" + targetLang)
+processor = Wav2Vec2Processor.from_pretrained(processorDir)
 """
+
+""" Alternative Save Model
+# modelPath = os.path.join(os.getenv('FCBH_DATASET_DB'), 'models', targetLang + '_adapter')
+# trainer.save_model(modelPath)
+# processor.save_pretrained(modelPath)
+
+# Then load for inference
+# model = Wav2Vec2ForCTC.from_pretrained(modelPath)
+# processor = Wav2Vec2Processor.from_pretrained(modelPath)
+"""
+
 
 
 
