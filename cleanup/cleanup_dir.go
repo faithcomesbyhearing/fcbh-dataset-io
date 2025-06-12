@@ -10,7 +10,7 @@ import (
 
 func CleanupDownloadDirectory(ctx context.Context) {
 	downloadDir := os.Getenv("FCBH_DATASET_FILES")
-	maxAge := 7 * 24 * time.Hour // 7 day
+	maxAge := 90 * 24 * time.Hour // 90 day
 	_ = CleanupDirectory(ctx, downloadDir, maxAge)
 }
 
