@@ -14,6 +14,7 @@ func (r *RequestDecoder) Validate(req *request.Request) {
 	r.checkSpeechToText(&req.SpeechToText, `SpeechToText`)
 	r.checkDetail(&req.Detail)
 	r.checkTimestamps(&req.Timestamps, `Timestamps`)
+	r.checkTraining(&req.Training, `Training`)
 	r.checkAudioEncoding(&req.AudioEncoding, `AudioEncoding`)
 	r.checkTextEncoding(&req.TextEncoding, `TextEncoding`)
 	//checkCompare(req.Compare, &msgs)
@@ -84,6 +85,13 @@ func (r *RequestDecoder) checkTimestamps(req *request.Timestamps, fieldName stri
 	}
 }
 
+func (r *RequestDecoder) checkTraining(req *request.Training, fieldName string) {
+	count := r.checkForOne(reflect.ValueOf(*req), fieldName)
+	if count == 0 {
+		req.NoTraining = true
+	}
+}
+
 func (r *RequestDecoder) checkAudioEncoding(req *request.AudioEncoding, fieldName string) {
 	count := r.checkForOne(reflect.ValueOf(*req), fieldName)
 	if count == 0 {
@@ -119,6 +127,10 @@ func (r *RequestDecoder) checkForOneRecursive(sVal reflect.Value, wasSet *[]stri
 			}
 		} else if field.Kind() == reflect.Bool {
 			if field.Bool() {
+				*wasSet = append(*wasSet, sVal.Type().Field(i).Name)
+			}
+		} else if field.Kind() == reflect.Int {
+			if field.Int() != 0 && len(*wasSet) == 0 {
 				*wasSet = append(*wasSet, sVal.Type().Field(i).Name)
 			}
 		} else if field.Kind() == reflect.Struct {

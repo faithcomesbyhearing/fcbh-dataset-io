@@ -36,7 +36,7 @@ if __name__ == "__main__":
 # Total records 8122
 # Remove verse 0 -> 7862
 # Remove verses with word error < 0.00001 -> 7860
-# Remove verses with eord error < 0.0001 -> 7817
+# Remove verses with word error < 0.0001 -> 7817
 # Remove verses with word error < 0.001 -> 7793
 # Remove verses with word error < 0.01 -> 7757
 # Remove verses with word error < 0.1 -> 7757

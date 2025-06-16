@@ -15,6 +15,7 @@ type Request struct {
 	AudioData     AudioData     `yaml:"audio_data,omitempty"`
 	TextData      TextData      `yaml:"text_data,omitempty"`
 	Timestamps    Timestamps    `yaml:"timestamps,omitempty"`
+	Training      Training      `yaml:"training,omitempty"`
 	SpeechToText  SpeechToText  `yaml:"speech_to_text,omitempty"`
 	Detail        Detail        `yaml:"detail,omitempty"`
 	AudioEncoding AudioEncoding `yaml:"audio_encoding,omitempty"`
@@ -82,6 +83,7 @@ func (t *Testament) HasNT(bookId string) bool {
 
 type Database struct {
 	AWSS3 string `yaml:"aws_s3,omitempty"`
+	File  string `yaml:"file,omitempty"`
 }
 
 type AudioData struct {
@@ -179,6 +181,16 @@ func (t MediaType) IsFrom(ttype string) bool {
 		result = ttype == `text_none`
 	}
 	return result
+}
+
+type Training struct {
+	MMSAdapter MMSAdapter `yaml:"mms_adapter,omitempty"`
+	NoTraining bool       `yaml:"no_training,omitempty"`
+}
+
+type MMSAdapter struct {
+	BatchSize int `yaml:"batch_size,omitempty"`
+	NumEpochs int `yaml:"num_epochs,omitempty"`
 }
 
 type SpeechToText struct {

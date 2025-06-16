@@ -1,0 +1,71 @@
+package adapter
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/ffmpeg"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+)
+
+type TrainAdapter struct {
+	ctx       context.Context
+	conn      db.DBAdapter
+	langISO   string
+	batchSize int
+	epochs    int
+}
+
+func NewTrainAdapter(ctx context.Context, conn db.DBAdapter, langISO string, batchSize int, epochs int) TrainAdapter {
+	var t TrainAdapter
+	t.ctx = ctx
+	t.conn = conn
+	ident, status := t.conn.SelectIdent()
+	fmt.Println("Status: ", status)
+	fmt.Println("Ident: ", ident)
+	scripts, status := t.conn.SelectScripts()
+	fmt.Println("Status: ", status, "Len Scripts: ", len(scripts))
+	t.langISO = langISO
+	t.batchSize = batchSize
+	t.epochs = epochs
+	return t
+}
+
+func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
+	tempDir, err := os.MkdirTemp(os.Getenv(`FCBH_DATASET_TMP`), t.langISO+`_`)
+	if err != nil {
+		return log.Error(t.ctx, 500, err, `Error creating temp output file in mms adapter`)
+	}
+	defer os.RemoveAll(tempDir)
+	for _, file := range files {
+		_, status := ffmpeg.ConvertMp3ToWav(t.ctx, tempDir, file.FilePath())
+		if status != nil {
+			return status
+		}
+	}
+	pythonPath := os.Getenv(`FCBH_MMS_ADAPTER_PYTHON`)
+	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/adapter/train_adapter.py")
+	cmd := exec.Command(pythonPath, pythonScript,
+		t.langISO,
+		t.conn.DatabasePath,
+		tempDir,
+		strconv.Itoa(t.batchSize),
+		strconv.Itoa(t.epochs))
+	var stdoutBuf, stderrBuf bytes.Buffer
+	cmd.Stdout = &stdoutBuf
+	cmd.Stderr = &stderrBuf
+	err = cmd.Run()
+	if err != nil {
+		return log.Error(t.ctx, 500, err, stderrBuf.String())
+	}
+	if stdoutBuf.Len() > 0 {
+		fmt.Println("STDOUT", stdoutBuf.String())
+	}
+	return nil
+}

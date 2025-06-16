@@ -62,6 +62,13 @@ timestamps: # If timestamps are needed, mark Yes by source
   no_timestamps: # If time stamps are not needed
 # Default: no_timestamps
 
+training: # Include if training in a language is required
+  mms_adapter: # Do training using the MMS language adapter method
+    batch_size: int # Num samples in a batch
+    num_epochs: int # Num epochs to run (i.e. num iterations of dataset to use in training)
+  no_training: bool # if training is not needed
+# Default: no_training
+
 speech_to_text: # If STT is source Yes by desired type
   mms_asr: # This is Meta's MMS Speech to Text model
   whisper: # This is OpenAI’s Speech to Text model

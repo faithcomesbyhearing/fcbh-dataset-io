@@ -14,6 +14,7 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/match/align"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/match/diff"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms/adapter"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms/mms_align"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms/mms_asr"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/output"
@@ -167,6 +168,16 @@ func (c *Controller) processSteps() *log.Status {
 	if len(audioFiles) > 0 {
 		log.Info(c.ctx, "Read or create audio timestamp data.")
 		status = c.timestamps(audioFiles)
+		if status != nil {
+			return status
+		}
+	}
+	// Train MMS Adapter
+	if !c.req.Training.NoTraining {
+		log.Info(c.ctx, "Train", c.ident.LanguageISO)
+		trainer := adapter.NewTrainAdapter(c.ctx, c.database, c.ident.LanguageISO,
+			c.req.Training.MMSAdapter.BatchSize, c.req.Training.MMSAdapter.NumEpochs)
+		status = trainer.Train(audioFiles)
 		if status != nil {
 			return status
 		}

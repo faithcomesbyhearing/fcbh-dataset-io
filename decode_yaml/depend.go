@@ -62,4 +62,12 @@ func (r *RequestDecoder) Depend(req request.Request) {
 			}
 		}
 	}
+	if !req.Training.NoTraining {
+		if req.Training.MMSAdapter.BatchSize == 0 {
+			req.Training.MMSAdapter.BatchSize = 1
+		}
+		if req.Training.MMSAdapter.NumEpochs == 0 {
+			req.Training.MMSAdapter.NumEpochs = 1
+		}
+	}
 }
