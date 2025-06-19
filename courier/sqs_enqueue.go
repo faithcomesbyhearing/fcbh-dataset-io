@@ -14,7 +14,7 @@ func SQSEnqueue(ctx context.Context, queueURL string, data any) (string, *log.St
 	if err != nil {
 		return "", log.Error(ctx, 500, err, "Error Marshalling SQS Message")
 	}
-	cfg, err := config.LoadDefaultConfig(ctx)
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-west-2"))
 	if err != nil {
 		return "", log.Error(ctx, 500, err, "Error loading AWS configuration")
 	}
