@@ -1,15 +1,14 @@
 package adapter
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/ffmpeg"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 )
@@ -51,21 +50,11 @@ func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
 	}
 	pythonPath := os.Getenv(`FCBH_MMS_ADAPTER_PYTHON`)
 	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/adapter/train_adapter.py")
-	cmd := exec.Command(pythonPath, pythonScript,
+	status := stdio_exec.RunScriptWithLogging(t.ctx, pythonPath, pythonScript,
 		t.langISO,
 		t.conn.DatabasePath,
 		tempDir,
 		strconv.Itoa(t.batchSize),
 		strconv.Itoa(t.epochs))
-	var stdoutBuf, stderrBuf bytes.Buffer
-	cmd.Stdout = &stdoutBuf
-	cmd.Stderr = &stderrBuf
-	err = cmd.Run()
-	if err != nil {
-		return log.Error(t.ctx, 500, err, stderrBuf.String())
-	}
-	if stdoutBuf.Len() > 0 {
-		fmt.Println("STDOUT", stdoutBuf.String())
-	}
-	return nil
+	return status
 }

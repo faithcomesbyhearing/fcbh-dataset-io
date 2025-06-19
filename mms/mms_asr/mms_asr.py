@@ -4,7 +4,9 @@ from datasets import Dataset, Audio
 from transformers import Wav2Vec2ForCTC
 from transformers import AutoProcessor
 import torch
-import psutil
+import psutil #probably not used
+from safetensors.torch import load_file as safe_load_file
+from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
 
 
 ## Documentation used to write this program
@@ -19,22 +21,33 @@ def isSupportedLanguage(modelId:str, lang:str):
             return True
     return False
 
-
-if len(sys.argv) < 2:
-    print("Usage: mms_asr.py  {iso639-3}")
+if len(sys.argv) < 3:
+    print("Usage: mms_asr.py  {iso639-3}  adapter(optional)")
     sys.exit(1)
 lang = sys.argv[1]
+adapter = len(sys.argv) > 2 and sys.argv[2].tolower() == "adapter"
 if torch.cuda.is_available():
     device = 'cuda'
 else:
     device = 'cpu'
 modelId = "facebook/mms-1b-all"
-if not isSupportedLanguage(modelId, lang):
-    print(lang, "is not supported by", modelId)
-processor = AutoProcessor.from_pretrained(modelId, target_lang=lang)
-model = Wav2Vec2ForCTC.from_pretrained(modelId, target_lang=lang, ignore_mismatched_sizes=True)
-model = model.to(device)
+if adapter:
+    model = Wav2Vec2ForCTC.from_pretrained(modelId)
+    model.init_adapter_layers()
+    outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters'),
+   	adapterFile = WAV2VEC2_ADAPTER_SAFE_FILE.format(lang)
+   	adapterFile = os.path.join(outputDir, adapterFile)
+   	adapterWeights = safe_load_file(adapter_file)
+   	model.load_adapter(adapterWeights, lang)
+   	processorDir = os.path.join(outputDir, "processor_" + lang)
+   	processor = Wav2Vec2Processor.from_pretrained(processorDir)
+else:
+    if not isSupportedLanguage(modelId, lang):
+        print(lang, "is not supported by", modelId)
+    processor = AutoProcessor.from_pretrained(modelId, target_lang=lang)
+    model = Wav2Vec2ForCTC.from_pretrained(modelId, target_lang=lang, ignore_mismatched_sizes=True)
 
+model = model.to(device)
 for line in sys.stdin:
     torch.cuda.empty_cache() # This will not be OK for concurrent processes
     audioFile = line.strip()
