@@ -33,7 +33,10 @@ func (b *Courier) Notification(req request.Request, status *log.Status, duration
 		if len(sqsURLS) > 0 {
 			jsonMessage := b.jsonMsg(duration, status == nil)
 			for _, queueURL := range sqsURLS {
-				_, _ = SQSEnqueue(b.ctx, queueURL, jsonMessage)
+				_, status = SQSEnqueue(b.ctx, queueURL, jsonMessage)
+				if status != nil {
+					return status
+				}
 			}
 		}
 	}
