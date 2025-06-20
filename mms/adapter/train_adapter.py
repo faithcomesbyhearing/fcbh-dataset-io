@@ -61,7 +61,13 @@ dataPruner(database) # remove lines with likely errors
 dataset = MyDataset(database, audioDirectory, processor)
 database.close()
 
-data_collator = DataCollatorCTCWithPadding(processor=processor, padding=True)
+#data_collator = DataCollatorCTCWithPadding(
+#    processor=processor,
+#    padding=True,
+#    return_attention_mask=True,
+#)
+
+dataCollator = SimpleMMSCollator(processor)
 
 model = Wav2Vec2ForCTC.from_pretrained(
     "facebook/mms-1b-all",
@@ -112,7 +118,7 @@ trainingArgs = TrainingArguments(
 
 trainer = Trainer(
     model = model,
-    data_collator = data_collator,
+    data_collator = dataCollator,
     args = trainingArgs,
     compute_metrics = compute_metrics,
     train_dataset = dataset,
