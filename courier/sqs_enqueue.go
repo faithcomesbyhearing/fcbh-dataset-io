@@ -23,10 +23,9 @@ func SQSEnqueue(ctx context.Context, queueURL string, data any) (string, *log.St
 		QueueUrl:    aws.String(queueURL),
 		MessageBody: aws.String(string(jsonData)),
 	}
-
 	result, err := client.SendMessage(ctx, input)
 	if err != nil {
-		log.Fatal(ctx, 500, err, "Error Enqueueing SQS Message")
+		return "", log.Error(ctx, 500, err, "Error Enqueueing SQS Message")
 	}
 	log.Info(ctx, "Enqueued: ", *result.MessageId)
 	return *result.MessageId, nil
