@@ -93,9 +93,6 @@ adapter_weights = model._get_adapters()
 for param in adapter_weights.values():
     param.requires_grad = True
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-useGPU = (device == "gpu")
-
 trainingArgs = TrainingArguments(
   output_dir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters'),
   group_by_length = True,
@@ -104,9 +101,9 @@ trainingArgs = TrainingArguments(
   save_strategy = "epoch",          # Save checkpoints every epoch
   logging_strategy = "steps",       # Log results every epoch
   num_train_epochs = numEpochs,
-  use_cpu = not useGPU,
+  use_cpu = not torch.cuda.is_available(),
   gradient_checkpointing = True,  # True reduces memory use at cost of performance
-  fp16 = useGPU, # could speed up GPU
+  fp16 = torch.cuda.is_available(), # could speed up GPU
   #save_steps=200,
   #eval_steps=100,
   logging_steps=10,
