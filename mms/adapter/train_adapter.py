@@ -93,8 +93,10 @@ adapter_weights = model._get_adapters()
 for param in adapter_weights.values():
     param.requires_grad = True
 
+outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters', targetLang)
 trainingArgs = TrainingArguments(
-  output_dir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters'),
+  output_dir = outputDir,
+  resume_from_checkpoint = os.path.join(outputDir, "checkpoint-911"),
   group_by_length = True,
   per_device_train_batch_size = batchSize,
   #eval_strategy = "epoch",
