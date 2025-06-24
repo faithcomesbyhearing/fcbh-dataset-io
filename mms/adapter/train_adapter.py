@@ -67,7 +67,7 @@ database.close()
 #    return_attention_mask=True,
 #)
 
-dataCollator = SimpleMMSCollator(processor)
+dataCollator = DataCollatorCTCWithPadding(processor=processor, padding=True)
 
 model = Wav2Vec2ForCTC.from_pretrained(
     "facebook/mms-1b-all",
