@@ -71,14 +71,10 @@ dataCollator = SimpleMMSCollator(processor)
 
 model = Wav2Vec2ForCTC.from_pretrained(
     "facebook/mms-1b-all",
-    attention_dropout=0.0,          # No attention droppout
-    hidden_dropout=0.0,             # No layer? attention
-    feat_proj_dropout=0.0,          # No feature projection dropout
-    layerdrop=0.0,                  # No layer dropout
     ctc_loss_reduction="mean",
     pad_token_id=processor.tokenizer.pad_token_id,
     vocab_size=len(processor.tokenizer),
-    ignore_mismatched_sizes=True,   # accept tokenizer of different size (required I think)
+    ignore_mismatched_sizes=True,   # accept tokenizer of different size (required)
 )
 
 # Claude comment: You've set most dropout parameters to 0.0, which means no regularization through
@@ -94,9 +90,9 @@ for param in adapter_weights.values():
     param.requires_grad = True
 
 outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters', targetLang)
-trainingArgs = TrainingArguments(
+trainingArgs = TrainingArguments (
   output_dir = outputDir,
-  resume_from_checkpoint = os.path.join(outputDir, "checkpoint-911"),
+  #resume_from_checkpoint = os.path.join(outputDir, "checkpoint-911"),
   group_by_length = False,
   dataloader_num_workers = 0,  # Often fixes hanging issues
   per_device_train_batch_size = batchSize,
@@ -123,7 +119,6 @@ trainer = Trainer(
     compute_metrics = compute_metrics,
     train_dataset = dataset,
     #eval_dataset = dataset, Avoid doing eval, until eval dataset is developed
-    #tokenizer=processor.feature_extractor,
     processing_class = processor.feature_extractor,
 )
 
