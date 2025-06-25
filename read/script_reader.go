@@ -82,7 +82,10 @@ func (r ScriptReader) Read(filePath string) *log.Status {
 			} else {
 				rec.VerseStr = row[col.VerseCol]
 			}
-			rec.VerseStr = r.uniqueVerse(uniqueRefs, rec)
+			rec.VerseStr, status = r.uniqueVerse(uniqueRefs, rec)
+			if status != nil {
+				return status
+			}
 			rec.VerseNum = safe.SafeVerseNum(rec.VerseStr)
 			if col.CharacterCol >= 0 {
 				rec.Person = row[col.CharacterCol]
@@ -161,10 +164,11 @@ func (r ScriptReader) FindColIndexes(heading []string) (ColIndex, *log.Status) {
 	return c, status
 }
 
-func (r ScriptReader) uniqueVerse(uniqueRefs map[string]bool, rec db.Script) string {
-	chars := []string{"", "a", "b", "c", "d", "e", "f", "g"}
+func (r ScriptReader) uniqueVerse(uniqueRefs map[string]bool, rec db.Script) (string, *log.Status) {
+	var verse string
+	chars := []string{"", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"}
 	for i := 0; i < len(chars); i++ {
-		verse := rec.VerseStr + chars[i]
+		verse = rec.VerseStr + chars[i]
 		key := generic.VerseRef{
 			BookId:     rec.BookId,
 			ChapterNum: rec.ChapterNum,
@@ -172,8 +176,8 @@ func (r ScriptReader) uniqueVerse(uniqueRefs map[string]bool, rec db.Script) str
 		_, found := uniqueRefs[key]
 		if !found {
 			uniqueRefs[key] = true
-			return verse
+			return verse, nil
 		}
 	}
-	panic("unreachable in ScriptReader.uniqueVerse")
+	return verse, log.ErrorNoErr(r.ctx, 500, "Too many duplicate verse numbers in script")
 }
