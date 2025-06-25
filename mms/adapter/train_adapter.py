@@ -92,7 +92,7 @@ for param in adapter_weights.values():
 outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters', targetLang)
 trainingArgs = TrainingArguments (
   output_dir = outputDir,
-  resume_from_checkpoint = os.path.join(outputDir, "checkpoint-911"),
+  resume_from_checkpoint = os.path.join(outputDir, "checkpoint-1822"),
   group_by_length = False,
   dataloader_num_workers = 0,  # Often fixes hanging issues
   per_device_train_batch_size = batchSize,
@@ -108,7 +108,7 @@ trainingArgs = TrainingArguments (
   logging_steps=10,
   learning_rate = 1e-3,
   warmup_steps = 100,
-  save_total_limit = 2,
+  save_total_limit = 1,
   push_to_hub = False,
 )
 
