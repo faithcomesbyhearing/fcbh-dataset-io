@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Union
 
 
+@dataclass
 class DataCollatorCTCWithPadding:
     """
     Data collator that will dynamically pad the inputs received.
