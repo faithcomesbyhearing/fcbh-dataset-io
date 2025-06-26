@@ -14,6 +14,7 @@ from mms_collator import *
 from evaluate import load
 from safetensors.torch import save_file as safe_save_file
 from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
+from memory_callback import *
 
 #
 # https://huggingface.co/blog/mms_adapters

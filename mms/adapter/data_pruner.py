@@ -22,7 +22,8 @@ def dataPruner(database):
                 FROM scripts WHERE verse_str != '0'
                 AND fa_score > 0.5
                 AND script_id NOT IN
-                (SELECT script_id FROM words WHERE ttype='W' AND fa_score < 0.2)"""
+                (SELECT script_id FROM words WHERE ttype='W' AND fa_score < 0.2)
+                AND length(script_text) < 512"""
     database.select(query,())
 
 
