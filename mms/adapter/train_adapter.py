@@ -61,12 +61,6 @@ dataPruner(database) # remove lines with likely errors
 dataset = MyDataset(database, audioDirectory, processor)
 database.close()
 
-#data_collator = DataCollatorCTCWithPadding(
-#    processor=processor,
-#    padding=True,
-#    return_attention_mask=True,
-#)
-
 dataCollator = DataCollatorCTCWithPadding(processor=processor, padding=True)
 
 model = Wav2Vec2ForCTC.from_pretrained(
@@ -110,6 +104,10 @@ trainingArgs = TrainingArguments (
   warmup_steps = 100,
   save_total_limit = 1,
   push_to_hub = False,
+  # Claude additions
+  max_grad_norm = 1.0, # Add gradient clipping
+  gradient_accumulation_steps = 4,  # Reduce effective batch size
+  dataloader_pin_memory = False,    # Reduce GPU memory pressure
 )
 
 trainer = Trainer(
@@ -120,6 +118,8 @@ trainer = Trainer(
     train_dataset = dataset,
     #eval_dataset = dataset, Avoid doing eval, until eval dataset is developed
     processing_class = processor.feature_extractor,
+    # Suggested by Claude
+    callbacks = [MemoryCallback()],
 )
 
 trainer.train()
