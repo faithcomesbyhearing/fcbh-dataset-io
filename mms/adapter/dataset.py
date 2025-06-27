@@ -21,6 +21,7 @@ class MyDataset(Dataset):
             JOIN words w ON w.script_id = s.script_id
             WHERE w.ttype = 'W' AND s.script_id IN (SELECT script_id FROM pruned_data)
             GROUP BY s.script_id, s.book_id, s.chapter_num, s.verse_str, s.audio_file, s.script_begin_ts, s.script_end_ts
+            ORDER BY s.script_end_ts - s.script_begin_ts
             """
         self.data = self.database.select(query,())
         print("num lines", len(self.data))
@@ -66,7 +67,8 @@ class MyDataset(Dataset):
             "input_values": inputValuesTensor,
             "labels": labelsTensor,
             "text": text,
-            "reference": reference
+            "reference": reference,
+            "num_bytes": speech.nbytes
         }
 
 
