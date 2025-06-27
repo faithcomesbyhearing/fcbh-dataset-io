@@ -15,6 +15,9 @@ from evaluate import load
 from safetensors.torch import save_file as safe_save_file
 from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
 from memory_callback import *
+from bucket_sampler import *
+from torch.utils.data import DataLoader
+
 
 #
 # https://huggingface.co/blog/mms_adapters
@@ -33,14 +36,14 @@ def compute_metrics(pred):
     return {"wer": wer}
 
 
-if len(sys.argv) < 6:
-    print("Usage: python train_adapter.py {iso639-3} {databasePath} {audioDirectory} {batchSize} {numEpochs}")
+if len(sys.argv) < 5:
+    print("Usage: python train_adapter.py {iso639-3} {databasePath} {audioDirectory} {numEpochs}", file=sys.stderr)
     sys.exit(1)
 targetLang = sys.argv[1]
 databasePath = sys.argv[2]
 audioDirectory = sys.argv[3]
-batchSize = int(sys.argv[4])
-numEpochs = int(sys.argv[5])
+#batchSize = int(sys.argv[4])
+numEpochs = int(sys.argv[4])
 
 database = SqliteUtility(databasePath)
 tokenizer = createTokenizer(database, targetLang)
@@ -62,7 +65,20 @@ dataPruner(database) # remove lines with likely errors
 dataset = MyDataset(database, audioDirectory, processor)
 database.close()
 
+bucketSampler = BucketSampler(
+    dataset,
+    target_memory_mb = 8000,
+    max_batch_size = 32
+)
+
 dataCollator = DataCollatorCTCWithPadding(processor=processor, padding=True)
+
+dataLoader = DataLoader(
+    dataset,
+    batch_sampler = bucketSampler,
+    collate_fn = dataCollator,
+    num_workers = 0
+)
 
 model = Wav2Vec2ForCTC.from_pretrained(
     "facebook/mms-1b-all",
@@ -87,10 +103,10 @@ for param in adapter_weights.values():
 outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters', targetLang)
 trainingArgs = TrainingArguments (
   output_dir = outputDir,
-  resume_from_checkpoint = os.path.join(outputDir, "checkpoint-1822"),
+  #resume_from_checkpoint = os.path.join(outputDir, "checkpoint-1822"),
   group_by_length = False,
   dataloader_num_workers = 0,  # Often fixes hanging issues
-  per_device_train_batch_size = batchSize,
+  #per_device_train_batch_size = batchSize,
   #eval_strategy = "epoch",
   save_strategy = "epoch",          # Save checkpoints every epoch
   logging_strategy = "steps",       # Log results every epoch
@@ -113,15 +129,18 @@ trainingArgs = TrainingArguments (
 
 trainer = Trainer(
     model = model,
-    data_collator = dataCollator,
     args = trainingArgs,
-    compute_metrics = compute_metrics,
     train_dataset = dataset,
+    data_collator = dataCollator,
+    compute_metrics = compute_metrics,
     #eval_dataset = dataset, Avoid doing eval, until eval dataset is developed
     processing_class = processor.feature_extractor,
     # Suggested by Claude
     callbacks = [MemoryCallback()],
 )
+
+# Override the train dataloader
+trainer.get_train_dataloader = lambda: dataLoader
 
 trainer.train()
 
