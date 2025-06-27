@@ -36,14 +36,14 @@ def compute_metrics(pred):
     return {"wer": wer}
 
 
-if len(sys.argv) < 5:
-    print("Usage: python train_adapter.py {iso639-3} {databasePath} {audioDirectory} {numEpochs}", file=sys.stderr)
+if len(sys.argv) < 6:
+    print("Usage: python train_adapter.py {iso639-3} {databasePath} {audioDirectory} {batchMB} {numEpochs}", file=sys.stderr)
     sys.exit(1)
 targetLang = sys.argv[1]
 databasePath = sys.argv[2]
 audioDirectory = sys.argv[3]
-#batchSize = int(sys.argv[4])
-numEpochs = int(sys.argv[4])
+batchSizeMB = int(sys.argv[4])
+numEpochs = int(sys.argv[5])
 
 database = SqliteUtility(databasePath)
 tokenizer = createTokenizer(database, targetLang)
@@ -67,7 +67,7 @@ database.close()
 
 bucketSampler = BucketSampler(
     dataset,
-    target_memory_mb = 8000,
+    target_memory_mb = batchSizeMB,
     max_batch_size = 32
 )
 
