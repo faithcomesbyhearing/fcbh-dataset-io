@@ -3,10 +3,12 @@ package ffmpeg
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -74,13 +76,16 @@ func ConvertMp3ToWav(ctx context.Context, tempDir string, inputFile string) (str
 	filename := filepath.Base(inputFile)
 	outputFilename := strings.TrimSuffix(filename, filepath.Ext(filename))
 	outputPath = filepath.Join(tempDir, outputFilename+".wav")
-	err := ffmpeg.Input(inputFile).Output(outputPath, ffmpeg.KwArgs{
-		"acodec": "pcm_s16le",
-		"ar":     "16000",
-		"ac":     "1",
-	}).Silent(true).OverWriteOutput().Run()
-	if err != nil {
-		return outputPath, log.Error(ctx, 500, err, "Error ")
+	_, err := os.Stat(outputPath)
+	if errors.Is(err, os.ErrNotExist) {
+		err = ffmpeg.Input(inputFile).Output(outputPath, ffmpeg.KwArgs{
+			"acodec": "pcm_s16le",
+			"ar":     "16000",
+			"ac":     "1",
+		}).Silent(true).OverWriteOutput().Run()
+		if err != nil {
+			return outputPath, log.Error(ctx, 500, err, "Error ")
+		}
 	}
 	return outputPath, nil
 }

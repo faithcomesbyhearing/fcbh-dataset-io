@@ -10,7 +10,7 @@ from data_pruner import dataPruner
 
 class MyDataset(Dataset):
     def __init__(self, database, audioDir, processor):
-        super(MyDataset).__init__()
+        super().__init__()
         self.database = database
         self.audioDir = audioDir
         self.processor = processor
@@ -58,23 +58,30 @@ class MyDataset(Dataset):
             ).input_values
         inputValues = np.array(inputValues)
         inputValuesTensor = torch.tensor(inputValues, dtype=torch.float).squeeze(0)
+        memoryBytes = inputValuesTensor.element_size() * inputValuesTensor.numel()
+        if memoryBytes == 0:
+            print(reference, audioFile, "Has Zero Length input_values", file=sys.stderr, flush=True)
+            sys.exit(1)
 
         # Prepare text
         labels = self.processor(text=text).input_ids
         labelsTensor = torch.tensor(labels, dtype=torch.long)
+        if memoryBytes == 0.0:
+            print(reference, memoryBytes)
 
         return {
             "input_values": inputValuesTensor,
             "labels": labelsTensor,
             "text": text,
             "reference": reference,
-            "num_bytes": speech.nbytes
+            "memory_mb": memoryBytes / (1024 * 1024)
         }
 
 
 if __name__ == "__main__":
     from tokenizer import createTokenizer
     from transformers import Wav2Vec2Processor, Wav2Vec2FeatureExtractor, Wav2Vec2CTCTokenizer
+    from data_pruner import *
     dbPath = os.getenv("FCBH_DATASET_DB") + "/GaryNTest/N2ENGWEB.db"
     database = SqliteUtility(dbPath)
     audioPath = os.getenv("FCBH_DATASET_FILES") + "/ENGWEB/ENGWEBN2DA"
@@ -86,15 +93,19 @@ if __name__ == "__main__":
     )
     processor = Wav2Vec2Processor(feature_extractor=featureExtractor, tokenizer=tokenizer)
     #wav2Vec2Processor = Wav2Vec2Processor.from_pretrained(model_name)
+    dataPruner(database)
     dataset = MyDataset(database, audioPath, processor)
-    length = dataset.__len__()
-    print("length", length)
-    data = dataset.__getitem__(0)
-    #(audioTensor, labelsTensor, text) = data.__getitem__(0)
-    audioTensor = data["input_ids"]
-    print("audio", audioTensor.shape, type(audioTensor), audioTensor)
-    labelsTensor = data["labels"]
-    print("labels", labelsTensor.shape, type(labelsTensor), labelsTensor)
-    print("text", data["text"])
-    print("reference", data["reference"])
     database.close()
+    length = len(dataset)
+    print("length", length)
+    for i in range(length):
+        data = dataset[i]
+        #data = dataset[1000]
+        #(audioTensor, labelsTensor, text) = data.__getitem__(0)
+        audioTensor = data["input_values"]
+        print("audio", audioTensor.shape, type(audioTensor))
+        labelsTensor = data["labels"]
+        print("labels", labelsTensor.shape, type(labelsTensor), labelsTensor)
+        print("text", data["text"])
+        print("reference", data["reference"])
+        print("memory_mb", data["memory_mb"])

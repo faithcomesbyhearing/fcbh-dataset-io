@@ -18,7 +18,7 @@ audio_data:
   file: /Users/gary/FCBH2024/GaryNTest/17a_mms_adapter/*.mp3
 training:
   mms_adapter:
-    batch_size: 1
+    batch_size: 4
     num_epochs: 1
 speech_to_text:
   mms_asr: y

@@ -37,11 +37,10 @@ func NewTrainAdapter(ctx context.Context, conn db.DBAdapter, langISO string, bat
 }
 
 func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
-	tempDir, err := os.MkdirTemp(os.Getenv(`FCBH_DATASET_TMP`), t.langISO+`_`)
-	if err != nil {
-		return log.Error(t.ctx, 500, err, `Error creating temp output file in mms adapter`)
+	if len(files) == 0 {
+		return nil
 	}
-	defer os.RemoveAll(tempDir)
+	tempDir := files[0].Directory
 	for _, file := range files {
 		_, status := ffmpeg.ConvertMp3ToWav(t.ctx, tempDir, file.FilePath())
 		if status != nil {

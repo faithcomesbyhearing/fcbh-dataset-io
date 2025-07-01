@@ -44,6 +44,7 @@ databasePath = sys.argv[2]
 audioDirectory = sys.argv[3]
 batchSizeMB = int(sys.argv[4])
 numEpochs = int(sys.argv[5])
+print("BatchSizeMB", batchSizeMB, "NumEpochs", numEpochs)
 
 database = SqliteUtility(databasePath)
 tokenizer = createTokenizer(database, targetLang)
@@ -68,7 +69,7 @@ database.close()
 bucketSampler = BucketSampler(
     dataset,
     target_memory_mb = batchSizeMB,
-    max_batch_size = 32
+    max_batch_size = 256
 )
 
 dataCollator = DataCollatorCTCWithPadding(processor=processor, padding=True)
@@ -116,7 +117,7 @@ trainingArgs = TrainingArguments (
   fp16 = torch.cuda.is_available(), # could speed up GPU
   #save_steps=200,
   #eval_steps=100,
-  logging_steps=10,
+  logging_steps = 1,
   learning_rate = 1e-3,
   warmup_steps = 100,
   save_total_limit = 1,
