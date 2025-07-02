@@ -8,7 +8,7 @@ const vesselTest = `is_new: yes
 dataset_name: 16e_vessel_test
 username: GaryNTest
 language_iso: eng
-notify_ok: [sqs/vessel_AP]
+notify_ok: [sqs/vessel_AP.fifo]
 testament:
   nt: yes
 text_data:

@@ -13,7 +13,7 @@ type Msg struct {
 
 func TestSQSEnqueue(t *testing.T) {
 	ctx := context.Background()
-	sqsURL := "https://sqs.us-west-2.amazonaws.com/078432969830/vessel_AP"
+	sqsURL := "sqs/vessel_AP.fifo/GaryNTest"
 	var m = Msg{Name: "testName", Content: "testContent"}
 	msgId, status := SQSEnqueue(ctx, sqsURL, m)
 	if status != nil {

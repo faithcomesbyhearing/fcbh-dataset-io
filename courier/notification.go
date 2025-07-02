@@ -100,8 +100,7 @@ func (b *Courier) groupRecipients(recipients []string) ([]string, []string) {
 	var sqs []string
 	for _, recip := range recipients {
 		if strings.HasPrefix(recip, "sqs/") {
-			url := strings.Replace(recip, "sqs/", "https://sqs.us-west-2.amazonaws.com/078432969830/", 1)
-			sqs = append(sqs, url)
+			sqs = append(sqs, recip)
 		} else {
 			email = append(email, recip)
 		}

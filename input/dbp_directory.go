@@ -48,9 +48,9 @@ func Directory(ctx context.Context, bibleId string, fsType request.MediaType, fi
 	} else if fsType == request.Audio || fsType == request.AudioDrama {
 		directory = filepath.Join(os.Getenv("FCBH_DATASET_FILES"), bibleId, filesetId)
 		if tType == `OT` {
-			search = filepath.Join(directory, "A*.*")
+			search = filepath.Join(directory, "A*.mp3")
 		} else {
-			search = filepath.Join(directory, "B*.*")
+			search = filepath.Join(directory, "B*.mp3")
 		}
 	}
 	//fmt.Println("search:", tType, search)
