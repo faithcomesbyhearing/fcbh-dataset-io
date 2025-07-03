@@ -2,6 +2,7 @@ import os
 import sys
 from datasets import Dataset, Audio
 from transformers import Wav2Vec2ForCTC
+from transformers import Wav2Vec2Processor
 from transformers import AutoProcessor
 import torch
 import psutil #probably not used
