@@ -42,7 +42,8 @@ if adapter:
     model.init_adapter_layers()
     #model.add_adapter(lang)
     adapterWeights = safe_load_file(adapterFile)
-    model.load_adapter(adapterWeights, lang)
+    #model.load_adapter(adapterWeights, lang)
+    model.load_adapter(adapterWeights, strict=False)
     model.set_adapter(lang)
 else:
     if not isSupportedLanguage(modelId, lang):
