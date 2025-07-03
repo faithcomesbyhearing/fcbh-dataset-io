@@ -19,16 +19,18 @@ type MMSASR struct {
 	conn     db.DBAdapter
 	lang     string
 	sttLang  string
+	adapter  bool
 	mmsAsrPy stdio_exec.StdioExec
 	uroman   stdio_exec.StdioExec
 }
 
-func NewMMSASR(ctx context.Context, conn db.DBAdapter, lang string, sttLang string) MMSASR {
+func NewMMSASR(ctx context.Context, conn db.DBAdapter, lang string, sttLang string, adapter bool) MMSASR {
 	var a MMSASR
 	a.ctx = ctx
 	a.conn = conn
 	a.lang = lang
 	a.sttLang = sttLang
+	a.adapter = adapter
 	return a
 }
 
@@ -48,7 +50,11 @@ func (a *MMSASR) ProcessFiles(files []input.InputFile) *log.Status {
 		return status
 	}
 	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/mms_asr/mms_asr.py")
-	a.mmsAsrPy, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_ASR_PYTHON`), pythonScript, lang)
+	var useAdapter string
+	if a.adapter {
+		useAdapter = "adapter"
+	}
+	a.mmsAsrPy, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_ASR_PYTHON`), pythonScript, lang, useAdapter)
 	if status != nil {
 		return status
 	}

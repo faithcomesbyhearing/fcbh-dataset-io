@@ -176,7 +176,7 @@ func (c *Controller) processSteps() *log.Status {
 	if !c.req.Training.NoTraining {
 		log.Info(c.ctx, "Train", c.ident.LanguageISO)
 		trainer := adapter.NewTrainAdapter(c.ctx, c.database, c.ident.LanguageISO,
-			c.req.Training.MMSAdapter.BatchSize, c.req.Training.MMSAdapter.NumEpochs)
+			c.req.Training.MMSAdapter.BatchMB, c.req.Training.MMSAdapter.NumEpochs)
 		status = trainer.Train(audioFiles)
 		if status != nil {
 			return status
@@ -435,7 +435,11 @@ func (c *Controller) speechToText(audioFiles []input.InputFile) *log.Status {
 	bibleId := c.req.BibleId
 	if c.req.SpeechToText.MMS {
 		var asr mms_asr.MMSASR
-		asr = mms_asr.NewMMSASR(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage)
+		asr = mms_asr.NewMMSASR(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage, false)
+		status = asr.ProcessFiles(audioFiles)
+	} else if c.req.SpeechToText.MMSAdapter {
+		var asr mms_asr.MMSASR
+		asr = mms_asr.NewMMSASR(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage, true)
 		status = asr.ProcessFiles(audioFiles)
 	} else {
 		var whisperModel = c.req.SpeechToText.Whisper.Model.String()

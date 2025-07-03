@@ -189,12 +189,13 @@ type Training struct {
 }
 
 type MMSAdapter struct {
-	BatchSize int `yaml:"batch_size,omitempty"`
+	BatchMB   int `yaml:"batch_mb,omitempty"`
 	NumEpochs int `yaml:"num_epochs,omitempty"`
 }
 
 type SpeechToText struct {
 	MMS            bool    `yaml:"mms_asr,omitempty"`
+	MMSAdapter     bool    `yaml:"adapter_asr,omitempty"`
 	Whisper        Whisper `yaml:"whisper,omitempty"`
 	NoSpeechToText bool    `yaml:"no_speech_to_text,omitempty"`
 }
