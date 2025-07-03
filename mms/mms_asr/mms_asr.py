@@ -43,8 +43,9 @@ if adapter:
     #model.add_adapter(lang)
     adapterWeights = safe_load_file(adapterFile)
     #model.load_adapter(adapterWeights, lang)
-    model.load_adapter(adapterWeights, strict=False)
-    model.set_adapter(lang)
+    print("Len adapterWeights", len(adapterWeights), "Len lang", len(lang))
+    model.load_adapter(adapterWeights, lang)
+    #model.set_adapter(lang)
 else:
     if not isSupportedLanguage(modelId, lang):
         print(lang, "is not supported by", modelId, file=sys.stderr)

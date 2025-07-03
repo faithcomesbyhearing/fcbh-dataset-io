@@ -18,8 +18,8 @@ from memory_callback import *
 from bucket_sampler import *
 from torch.utils.data import DataLoader
 
-
 #
+# This program was adapted from the following tutorial
 # https://huggingface.co/blog/mms_adapters
 #
 
