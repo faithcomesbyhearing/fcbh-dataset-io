@@ -33,19 +33,11 @@ else:
     device = 'cpu'
 modelId = "facebook/mms-1b-all"
 if adapter:
-    outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters', lang)
-    adapterFile = WAV2VEC2_ADAPTER_SAFE_FILE.format(lang)
-    adapterFile = os.path.join(outputDir, adapterFile)
-    processorDir = os.path.join(outputDir, "processor_" + lang)
-    processor = Wav2Vec2Processor.from_pretrained(processorDir)
+    outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters')
+    processor = AutoProcessor.from_pretrained(modelId)
     model = Wav2Vec2ForCTC.from_pretrained(modelId)
-    model.init_adapter_layers()
-    #model.add_adapter(lang)
-    adapterWeights = safe_load_file(adapterFile)
-    #model.load_adapter(adapterWeights, lang)
-    print("Len adapterWeights", len(adapterWeights), "Len lang", len(lang))
-    model.load_adapter(adapterWeights, lang)
-    #model.set_adapter(lang)
+    processor.tokenizer.set_target_lang(lang)
+    model.load_adapter(target_lang=lang, force_load=True, cache_dir=outputDir)
 else:
     if not isSupportedLanguage(modelId, lang):
         print(lang, "is not supported by", modelId, file=sys.stderr)

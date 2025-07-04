@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-const mmsAdapter = `is_new: no
+const mmsAdapterASR = `is_new: no
 dataset_name: 17a_mms_adapter
 username: GaryNTest
 language_iso: cul
@@ -16,10 +16,6 @@ database:
   file: /Users/gary/FCBH2024/GaryNTest/17a_mms_adapter.db
 audio_data:
   file: /Users/gary/FCBH2024/GaryNTest/17a_mms_adapter/*.mp3
-training:
-  mms_adapter:
-    batch_mb: 32
-    num_epochs: 1
 speech_to_text:
   adapter_asr: y
 compare:
@@ -38,7 +34,7 @@ compare:
       normalize_nfkd: y
 `
 
-func TestMMSAdapter(t *testing.T) {
-	var yaml = mmsAdapter
+func TestMMSAdapterASR(t *testing.T) {
+	var yaml = mmsAdapterASR
 	DirectSqlTest(yaml, []SqliteTest{}, t)
 }
