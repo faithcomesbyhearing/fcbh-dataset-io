@@ -36,5 +36,4 @@ class BucketSampler(Sampler):
                 current_idx += 1
 
             if batch:
-                print("Load batch", len(batch), current_memory)
                 yield batch
