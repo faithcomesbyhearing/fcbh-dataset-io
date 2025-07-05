@@ -9,15 +9,6 @@ class BucketSampler(Sampler):
         self.max_batch_size = max_batch_size
         self.dataset_len = len(dataset)
 
-        # Calculate sequence lengths
-        #start = time.time()
-        #self.lengths = []
-        #for i in range(len(dataset)):
-        #    item = dataset[i]
-        #    memoryEst = item['memory_mb']
-        #    self.lengths.append((i, memoryEst))
-        #print("run through dataset", time.time() - start)
-
     def __len__(self):
         return len(self.dataset)
 
@@ -47,32 +38,3 @@ class BucketSampler(Sampler):
             if batch:
                 print("Load batch", len(batch), current_memory)
                 yield batch
-
-
-"""
-    def __iter__(self):
-        batches = []
-        current_batch = []
-        current_memory = 0
-
-        for idx, memoryEst in self.lengths:
-            # Check if adding this sample exceeds limits
-            if (current_memory + memoryEst > self.target_memory_mb or
-                len(current_batch) >= self.max_batch_size) and current_batch:
-                batches.append(current_batch)
-                current_batch = []
-                current_memory = 0
-
-            current_batch.append(idx)
-            current_memory += memoryEst
-
-        # The last batch
-        if current_batch:
-            batches.append(current_batch)
-
-        # Shuffle batches
-        np.random.shuffle(batches)
-
-        for batch in batches:
-            yield batch
-"""
