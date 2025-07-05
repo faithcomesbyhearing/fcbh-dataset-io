@@ -8,7 +8,7 @@ if [[ "$FCBH_DATASET_QUEUE" == *"-dev" ]]; then
 else
     git pull origin main
 fi
-go install ./controller/queue_server
+go install -a ./controller/queue_server
 cd
 nohup ~/go/bin/queue_server &
 EOF

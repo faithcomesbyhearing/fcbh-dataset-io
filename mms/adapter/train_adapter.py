@@ -69,7 +69,7 @@ database.close()
 bucketSampler = BucketSampler(
     dataset,
     target_memory_mb = batchSizeMB,
-    max_batch_size = 256
+    max_batch_size = 128
 )
 
 dataCollator = DataCollatorCTCWithPadding(processor=processor, padding=True)
@@ -109,18 +109,18 @@ trainingArgs = TrainingArguments (
   dataloader_num_workers = 0,  # Often fixes hanging issues
   #per_device_train_batch_size = batchSize,
   #eval_strategy = "epoch",
-  save_strategy = "epoch",          # Save checkpoints every epoch
+  save_strategy = "steps",          # Save checkpoints every epoch
   logging_strategy = "steps",       # Log results every epoch
   num_train_epochs = numEpochs,
   use_cpu = not torch.cuda.is_available(),
   gradient_checkpointing = True,  # True reduces memory use at cost of performance
   fp16 = torch.cuda.is_available(), # could speed up GPU
-  #save_steps=200,
+  save_steps = 100,
   #eval_steps=100,
-  logging_steps = 1,
+  logging_steps = 10,
   learning_rate = 1e-3,
   warmup_steps = 100,
-  save_total_limit = 1,
+  save_total_limit = 2,
   push_to_hub = False,
   # Claude additions
   max_grad_norm = 1.0, # Add gradient clipping
