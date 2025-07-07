@@ -8,14 +8,15 @@ from transformers import TrainingArguments
 from transformers import Wav2Vec2ForCTC
 from tokenizer import createTokenizer
 from sqlite_utility import *
-from data_pruner import dataPruner
+#from data_pruner import dataPruner
+from data_preparation import *
 from dataset import *
 from mms_collator import *
 from evaluate import load
 from safetensors.torch import save_file as safe_save_file
 from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
 from memory_callback import *
-from bucket_sampler import *
+from sampler import *
 from torch.utils.data import DataLoader
 
 #
@@ -62,21 +63,23 @@ processor = Wav2Vec2Processor(
     tokenizer=tokenizer
 )
 
-dataPruner(database) # remove lines with likely errors
-dataset = MyDataset(database, audioDirectory, processor)
-database.close()
+#dataPruner(database) # remove lines with likely errors
+dataPreparation(database, audioDirectory, processor, 128, batchSizeMB)
+dataset = MyDataset(database)#, audioDirectory, processor)
+#database.close()
 
-bucketSampler = BucketSampler(
-    dataset,
-    target_memory_mb = batchSizeMB,
-    max_batch_size = 128
-)
+#bucketSampler = BucketSampler(
+#    dataset,
+#    target_memory_mb = batchSizeMB,
+#    max_batch_size = 128
+#)
+sampler = MySampler(database)
 
 dataCollator = DataCollatorCTCWithPadding(processor=processor, padding=True)
 
 dataLoader = DataLoader(
     dataset,
-    batch_sampler = bucketSampler,
+    batch_sampler = sampler,
     collate_fn = dataCollator,
     num_workers = 0
 )
@@ -144,6 +147,7 @@ trainer = Trainer(
 trainer.get_train_dataloader = lambda: dataLoader
 
 trainer.train()
+database.close()
 
 adapterFile = WAV2VEC2_ADAPTER_SAFE_FILE.format(targetLang)
 adapterFile = os.path.join(trainingArgs.output_dir, adapterFile)

@@ -1,20 +1,45 @@
 import os
 import sys
 import torch
-import torchaudio
+#import torchaudio
 from torch.utils.data import Dataset, DataLoader
-import numpy as np
+#import numpy as np
 from sqlite_utility import *
-from data_pruner import dataPruner
+#from data_pruner import dataPruner
+from io import BytesIO
 
+class MyDataset(Dataset):
+    def __init__(self, database):
+        super().__init__()
+        self.database = database
 
+    def __len__(self):
+        count = self.database.selectOne('SELECT count(*) FROM samples', ())
+        return count[0]
+
+    def __getitem__(self, idx):
+        query = 'SELECT input_values, labels, text, reference, memory_mb FROM samples WHERE idx = ?'
+        (inputValues, labels, text, reference, memoryMB) = self.database.selectOne(query, (idx,))
+        inputBuffer = BytesIO(inputValues)
+        audioTensor = torch.load(inputBuffer)
+        labelsBuffer = BytesIO(labels)
+        labelsTensor = torch.load(labelsBuffer)
+        return {
+            "input_values": audioTensor,
+            "labels": labelsTensor,
+            "text": text,
+            "reference": reference,
+            "memory_mb": memoryMB
+        }
+
+"""
 class MyDataset(Dataset):
     def __init__(self, database, audioDir, processor):
         super().__init__()
         self.database = database
         self.audioDir = audioDir
         self.processor = processor
-        query = """
+        query = ""#"
             SELECT s.book_id || ' ' || s.chapter_num || ':' || s.verse_str as ref,
                 s.audio_file, s.script_begin_ts, s.script_end_ts, GROUP_CONCAT(w.word, ' ') AS text
             FROM scripts s
@@ -22,7 +47,7 @@ class MyDataset(Dataset):
             WHERE w.ttype = 'W' AND s.script_id IN (SELECT script_id FROM pruned_data)
             GROUP BY s.script_id, s.book_id, s.chapter_num, s.verse_str, s.audio_file, s.script_begin_ts, s.script_end_ts
             ORDER BY s.script_end_ts - s.script_begin_ts
-            """
+            ""#"
         self.data = self.database.select(query,())
         print("num lines", len(self.data))
 
@@ -76,26 +101,25 @@ class MyDataset(Dataset):
             "reference": reference,
             "memory_mb": memoryBytes / (1024 * 1024)
         }
-
+"""
 
 if __name__ == "__main__":
-    from tokenizer import createTokenizer
-    from transformers import Wav2Vec2Processor, Wav2Vec2FeatureExtractor, Wav2Vec2CTCTokenizer
-    from data_pruner import *
+    #from tokenizer import createTokenizer
+    #from transformers import Wav2Vec2Processor, Wav2Vec2FeatureExtractor, Wav2Vec2CTCTokenizer
+    #from data_pruner import *
     dbPath = os.getenv("FCBH_DATASET_DB") + "/GaryNTest/N2ENGWEB.db"
     database = SqliteUtility(dbPath)
-    audioPath = os.getenv("FCBH_DATASET_FILES") + "/ENGWEB/ENGWEBN2DA"
+    #audioPath = os.getenv("FCBH_DATASET_FILES") + "/ENGWEB/ENGWEBN2DA"
     #model_name = "facebook/mms-1b-all"
-    tokenizer = createTokenizer(database, "eng")
-    featureExtractor = Wav2Vec2FeatureExtractor(
-        feature_size=1, sampling_rate=16000, padding_value=0.0,
-        do_normalize=True, return_attention_mask=True
-    )
-    processor = Wav2Vec2Processor(feature_extractor=featureExtractor, tokenizer=tokenizer)
+    #tokenizer = createTokenizer(database, "eng")
+    #featureExtractor = Wav2Vec2FeatureExtractor(
+    #    feature_size=1, sampling_rate=16000, padding_value=0.0,
+    #    do_normalize=True, return_attention_mask=True
+    #)
+    #processor = Wav2Vec2Processor(feature_extractor=featureExtractor, tokenizer=tokenizer)
     #wav2Vec2Processor = Wav2Vec2Processor.from_pretrained(model_name)
-    dataPruner(database)
-    dataset = MyDataset(database, audioPath, processor)
-    database.close()
+    #dataPruner(database)
+    dataset = MyDataset(database)#, audioPath, processor)
     length = len(dataset)
     print("length", length)
     for i in range(length):
@@ -109,3 +133,4 @@ if __name__ == "__main__":
         print("text", data["text"])
         print("reference", data["reference"])
         print("memory_mb", data["memory_mb"])
+    database.close()
