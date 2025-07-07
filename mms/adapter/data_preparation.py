@@ -3,6 +3,7 @@ import sys
 import torch
 import torchaudio
 import numpy as np
+from io import BytesIO
 from sqlite_utility import *
 from data_pruner import dataPruner
 
@@ -11,11 +12,12 @@ def dataPreparation(database, audioDir, processor):
     exists = database.selectOne("SELECT name FROM sqlite_master WHERE type='table' AND name='samples'", ())
     if exists:
         numScripts = database.selectOne("SELECT count(*) FROM scripts", ())
-        numSamples = database.select("SELECT count(*) FROM samples", ())
-        if numSamples > (numScripts / 2):
+        numSamples = database.selectOne("SELECT count(*) FROM samples", ())
+        print(type(numScripts), type(numSamples))
+        if numSamples[0] > numScripts[0] / 2:
             return numSamples
-    samples = 'CREATE TABLE samples (index INTEGER, input_values BLOB, labels BLOB, text TEXT, reference TEXT, memory_mb FLOAT)'
-    ### make index a primary key
+    database.execute('DROP TABLE IF EXISTS samples', ())
+    samples = 'CREATE TABLE samples (idx INTEGER PRIMARY KEY, input_values BLOB, labels BLOB, text TEXT, reference TEXT, memory_mb FLOAT)'
     database.execute(samples,())
     dataPruner(database)
     query = """
@@ -70,8 +72,9 @@ def dataPreparation(database, audioDir, processor):
         torch.save(labelsTensor, buffer)
         labelsBlob = buffer.getvalue()
 
-        update = 'UPDATE samples SET input_values = ?, labels = ?, text = ?, reference = ?, memory_mb = ? WHERE index = ?'
-        database.execute(update, (inputValuesBlob, labelsBlob, text, reference, memoryMB, index))
+        print("Update", index)
+        update = 'REPLACE INTO samples (idx, input_values, labels, text, reference, memory_mb) VALUES (?,?,?,?,?,?)'
+        database.execute(update, (index, inputValuesBlob, labelsBlob, text, reference, memoryMB))
 
 
 if __name__ == "__main__":
@@ -88,17 +91,17 @@ if __name__ == "__main__":
     )
     processor = Wav2Vec2Processor(feature_extractor=featureExtractor, tokenizer=tokenizer)
     numSamples = dataPreparation(database, audioPath, processor)
-    query = 'SELECT index, input_values, labels, text, reference, memory_mb)'
+    query = 'SELECT idx, input_values, labels, text, reference, memory_mb FROM samples'
     dataset = database.select(query, ())
     print("length", len(dataset))
-    for (index, inputValues, labels, text, reference, memoryMB) in data:
+    for (index, inputValues, labels, text, reference, memoryMB) in dataset:
         buffer = BytesIO(inputValues)
         audioTensor = torch.load(buffer)
         buffer = BytesIO(labels)
         labelsTensor = torch.load(buffer)
         print("\nIndex", index)
         print("audio", audioTensor.shape, type(audioTensor))
-        print("labels", labelsTensor.shape, type(labelsTensor), labelsTensor)
+        print("labels", labelsTensor.shape, type(labelsTensor))
         print("text", text)
         print("reference", reference)
         print("memory_mb", memoryMB)

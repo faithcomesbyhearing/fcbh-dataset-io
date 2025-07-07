@@ -39,13 +39,13 @@ class SqliteUtility:
             self.error(cursor, statement, err)
 
     def execute(self, statement, values):
-        cursor = conn.cursor()
+        cursor = self.conn.cursor()
         try:
             cursor.execute(statement, values)
             cursor.close()
-            conn.commit()
-         except Exception as err:
-             self.error(cursor, statement, err)
+            self.conn.commit()
+        except Exception as err:
+            self.error(cursor, statement, err)
 
     def error(self, cursor, stmt, error):
         cursor.close()
