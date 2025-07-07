@@ -4,6 +4,7 @@ import numpy as np
 
 class BucketSampler(Sampler):
     def __init__(self, dataset, target_memory_mb=1000, max_batch_size=32):
+        super().__init__()
         self.dataset = dataset
         self.target_memory_mb = target_memory_mb
         self.max_batch_size = max_batch_size
