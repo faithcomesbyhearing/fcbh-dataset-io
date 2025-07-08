@@ -126,9 +126,9 @@ trainingArgs = TrainingArguments (
   save_total_limit = 2,
   push_to_hub = False,
   # Claude additions
-  max_grad_norm = 1.0, # Add gradient clipping
-  gradient_accumulation_steps = 4,  # Reduce effective batch size
-  dataloader_pin_memory = False,    # Reduce GPU memory pressure
+  #max_grad_norm = 1.0, # Add gradient clipping
+  #gradient_accumulation_steps = 4,  # It recommended 4, 1 is default
+  #dataloader_pin_memory = False,    # Reduce GPU memory pressure
 )
 
 trainer = Trainer(
