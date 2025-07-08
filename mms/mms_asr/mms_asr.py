@@ -43,7 +43,11 @@ if adapter:
     processorDir = os.path.join(outputDir, f"processor_{lang}")
     processor = AutoProcessor.from_pretrained(processorDir)
     model = Wav2Vec2ForCTC.from_pretrained(modelId)
-    model.resize_token_embeddings(len(processor.tokenizer))
+    #model.resize_token_embeddings(len(processor.tokenizer))
+    # Resize vocab
+    vocabSize = len(processor.tokenizer)
+    hiddenSize = model.lm_head.weight.shape[1]
+    model.lm_head = nn.Linear(hiddenSize, vocabSize)
     adapterFile = WAV2VEC2_ADAPTER_SAFE_FILE.format(lang)
     adapterFile = os.path.join(outputDir, adapterFile)
     adapter_weights = load_file(adapterFile)
