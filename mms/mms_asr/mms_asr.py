@@ -6,8 +6,9 @@ from transformers import Wav2Vec2Processor
 from transformers import AutoProcessor
 import torch
 import psutil #probably not used
-from safetensors.torch import load_file as safe_load_file
+#from safetensors.torch import load_file as safe_load_file
 from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
+from safetensors.torch import load_file
 
 
 ## Documentation used to write this program
