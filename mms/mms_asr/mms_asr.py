@@ -47,7 +47,7 @@ if adapter:
     # Resize vocab
     vocabSize = len(processor.tokenizer)
     hiddenSize = model.lm_head.weight.shape[1]
-    model.lm_head = nn.Linear(hiddenSize, vocabSize)
+    model.lm_head = torch.nn.Linear(hiddenSize, vocabSize)
     adapterFile = WAV2VEC2_ADAPTER_SAFE_FILE.format(lang)
     adapterFile = os.path.join(outputDir, adapterFile)
     adapter_weights = load_file(adapterFile)
