@@ -67,17 +67,11 @@ processor = Wav2Vec2Processor(
     tokenizer=tokenizer
 )
 
-#dataPruner(database) # remove lines with likely errors
-dataPreparation(database, databasePath, audioDirectory, processor, 128, batchSizeMB)
-dataset = MyDataset(database)#, audioDirectory, processor)
-#database.close()
+sampleDB = dataPreparation(database, databasePath, audioDirectory, processor, 128, batchSizeMB)
+database.close()
+dataset = MyDataset(sampleDB)
 
-#bucketSampler = BucketSampler(
-#    dataset,
-#    target_memory_mb = batchSizeMB,
-#    max_batch_size = 128
-#)
-sampler = MySampler(database)
+sampler = MySampler(sampleDB)
 
 dataCollator = DataCollatorCTCWithPadding(processor=processor, padding=True)
 
@@ -151,7 +145,7 @@ trainer = Trainer(
 trainer.get_train_dataloader = lambda: dataLoader
 
 trainer.train()
-database.close()
+sampleDB.close()
 
 adapterFile = WAV2VEC2_ADAPTER_SAFE_FILE.format(targetLang)
 adapterFile = os.path.join(trainingArgs.output_dir, adapterFile)
