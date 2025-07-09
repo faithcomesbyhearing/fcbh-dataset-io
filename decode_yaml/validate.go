@@ -133,8 +133,10 @@ func (r *RequestDecoder) checkForOneRecursive(sVal reflect.Value, wasSet *[]stri
 			if field.Int() != 0 && len(*wasSet) == 0 {
 				*wasSet = append(*wasSet, sVal.Type().Field(i).Name)
 			}
-		} else if field.Kind() == reflect.Struct && recurse {
-			r.checkForOneRecursive(field, wasSet, recurse)
+		} else if field.Kind() == reflect.Struct {
+			if recurse {
+				r.checkForOneRecursive(field, wasSet, recurse)
+			}
 		} else {
 			msg := sVal.Type().Field(i).Name + ` has unexpected type ` + field.Type().Name()
 			r.errors = append(r.errors, msg)
