@@ -68,7 +68,7 @@ processor = Wav2Vec2Processor(
 )
 
 #dataPruner(database) # remove lines with likely errors
-dataPreparation(database, audioDirectory, processor, 128, batchSizeMB)
+dataPreparation(database, databasePath, audioDirectory, processor, 128, batchSizeMB)
 dataset = MyDataset(database)#, audioDirectory, processor)
 #database.close()
 
