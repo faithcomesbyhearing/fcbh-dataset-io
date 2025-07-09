@@ -45,7 +45,11 @@ databasePath = sys.argv[2]
 audioDirectory = sys.argv[3]
 batchSizeMB = int(sys.argv[4])
 numEpochs = int(sys.argv[5])
-print("BatchSizeMB", batchSizeMB, "NumEpochs", numEpochs)
+restart_point = ''
+if len(sys.argv) > 6:
+    restart_point = sys.argv[6]
+
+print("BatchSizeMB", batchSizeMB, "NumEpochs", numEpochs, "Restart", restart)
 
 database = SqliteUtility(databasePath)
 tokenizer = createTokenizer(database, targetLang)
@@ -104,13 +108,14 @@ adapter_weights = model._get_adapters()
 for param in adapter_weights.values():
     param.requires_grad = True
 
+if restart_point != '':
+    restart_point = os.path.join(outputDir, restart)
+
 outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters', targetLang)
 trainingArgs = TrainingArguments (
   output_dir = outputDir,
-  #resume_from_checkpoint = os.path.join(outputDir, "checkpoint-1822"),
-  #group_by_length = False,
+  resume_from_checkpoint = restart_point,
   dataloader_num_workers = 0,  # Often fixes hanging issues
-  #per_device_train_batch_size = batchSize,
   #eval_strategy = "epoch",
   save_strategy = "epoch",          # Save checkpoints every epoch
   logging_strategy = "steps",       # Log results every epoch

@@ -3,23 +3,28 @@ import sys
 import torch
 import torchaudio
 import numpy as np
-#import array
 from io import BytesIO
 from sqlite_utility import *
 from data_pruner import dataPruner
 import time
 
-def dataPreparation(database, audioDir, processor, maxBatchSize, targetMemoryMB):
-    dataPruner(database) # 0.02 sec
-    numSamples = prepareDataset(database, audioDir, processor) # 22 sec
+def dataPreparation(scriptsDB, scriptsDBPath, audioDir, processor, maxBatchSize, targetMemoryMB):
+    dataPruner(scriptsDB) # 0.02
+    scriptsDBName = os.path.basename(scriptsDBPath)
+    samplesDBPath = os.path.join(os.getenv('FCBH_DATASET_TMP'), scriptsDBName)
+    if os.path.exists(samplesDBPath):
+        os.remove(samplesDBPath)
+    samplesDB = SqliteUtility(samplesDBPath)
+    numSamples = prepareDataset(scriptsDB, samplesDB, audioDir, processor) # 22 sec
     print("numSamples", numSamples)
-    numBatches = prepareBatches(database, maxBatchSize, targetMemoryMB) # 3.8 sec
+    numBatches = prepareBatches(samplesDB, maxBatchSize, targetMemoryMB) # 3.8 sec
     print("numBatches", numBatches)
+    return samplesDB
 
-def prepareDataset(database, audioDir, processor):
-    database.execute('DROP TABLE IF EXISTS samples', ())
+def prepareDataset(scriptsDB, samplesDB, audioDir, processor):
+    #database.execute('DROP TABLE IF EXISTS samples', ())
     samples = 'CREATE TABLE samples (idx INTEGER PRIMARY KEY, input_values BLOB, labels BLOB, text TEXT, reference TEXT, memory_mb FLOAT)'
-    database.execute(samples,())
+    samplesDB.execute(samples,())
     query = """
         SELECT s.book_id || ' ' || s.chapter_num || ':' || s.verse_str as ref,
             s.audio_file, s.script_begin_ts, s.script_end_ts, GROUP_CONCAT(w.word, ' ') AS text
@@ -30,7 +35,7 @@ def prepareDataset(database, audioDir, processor):
         ORDER BY s.script_end_ts - s.script_begin_ts
         """
     index = -1
-    data = database.select(query,())
+    data = scriptsDB.select(query,())
     for (reference, audioFile, beginTS, endTS, text) in data:
         index += 1
         audioFile = audioFile.replace(".mp3", ".wav")
@@ -72,11 +77,10 @@ def prepareDataset(database, audioDir, processor):
         torch.save(labelsTensor, buffer)
         labelsBlob = buffer.getvalue()
         insert = 'INSERT INTO samples (idx, input_values, labels, text, reference, memory_mb) VALUES (?,?,?,?,?,?)'
-        database.execute(insert, (index, inputValuesBlob, labelsBlob, text, reference, memoryMB))
+        samplesDB.execute(insert, (index, inputValuesBlob, labelsBlob, text, reference, memoryMB))
     return index + 1
 
 def prepareBatches(database, maxBatchSize, targetMemoryMB):
-    database.execute('DROP TABLE IF EXISTS batches', ())
     batches = 'CREATE TABLE batches (idx INTEGER PRIMARY KEY, memory_mb FLOAT, indexes BLOB)'
     database.execute(batches,())
     query = 'SELECT idx, input_values, labels, text, reference, memory_mb FROM samples'
@@ -125,17 +129,20 @@ if __name__ == "__main__":
     from tokenizer import createTokenizer
     from transformers import Wav2Vec2Processor, Wav2Vec2FeatureExtractor, Wav2Vec2CTCTokenizer
     from data_pruner import *
-    dbPath = os.getenv("FCBH_DATASET_DB") + "/GaryNTest/N2ENGWEB.db"
+    #dbPath = os.getenv("FCBH_DATASET_DB") + "/GaryNTest/N2ENGWEB.db"
+    dbPath = os.getenv("FCBH_DATASET_DB") + "/GaryNTest/N2KEUWB4.db"
     database = SqliteUtility(dbPath)
-    audioPath = os.getenv("FCBH_DATASET_FILES") + "/ENGWEB/ENGWEBN2DA"
-    tokenizer = createTokenizer(database, "eng")
+    #audioPath = os.getenv("FCBH_DATASET_FILES") + "/ENGWEB/ENGWEBN2DA"
+    audioPath = os.getenv("FCBH_DATASET_FILES") + "/N2KEUWB4/N2KEUWBT"
+    #tokenizer = createTokenizer(database, "eng")
+    tokenizer = createTokenizer(database, "keu")
     featureExtractor = Wav2Vec2FeatureExtractor(
         feature_size=1, sampling_rate=16000, padding_value=0.0,
         do_normalize=True, return_attention_mask=True
     )
     processor = Wav2Vec2Processor(feature_extractor=featureExtractor, tokenizer=tokenizer)
-    database.execute('DROP TABLE IF EXISTS batches',())
-    numSamples = dataPreparation(database, audioPath, processor, 128, 32)
-    displaySamples(database)
-    displayBatches(database)
+    samplesDB = dataPreparation(database, dbPath, audioPath, processor, 128, 32)
     database.close()
+    displaySamples(samplesDB)
+    displayBatches(samplesDB)
+    samplesDB.close()

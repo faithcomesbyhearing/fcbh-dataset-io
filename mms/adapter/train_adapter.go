@@ -19,9 +19,10 @@ type TrainAdapter struct {
 	langISO     string
 	batchSizeMB int
 	epochs      int
+	restart     string
 }
 
-func NewTrainAdapter(ctx context.Context, conn db.DBAdapter, langISO string, batchSize int, epochs int) TrainAdapter {
+func NewTrainAdapter(ctx context.Context, conn db.DBAdapter, langISO string, batchSize int, epochs int, restart string) TrainAdapter {
 	var t TrainAdapter
 	t.ctx = ctx
 	t.conn = conn
@@ -33,6 +34,7 @@ func NewTrainAdapter(ctx context.Context, conn db.DBAdapter, langISO string, bat
 	t.langISO = langISO
 	t.batchSizeMB = batchSize
 	t.epochs = epochs
+	t.restart = restart
 	return t
 }
 
@@ -54,6 +56,7 @@ func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
 		t.conn.DatabasePath,
 		tempDir,
 		strconv.Itoa(t.batchSizeMB),
-		strconv.Itoa(t.epochs))
+		strconv.Itoa(t.epochs),
+		t.restart)
 	return status
 }
