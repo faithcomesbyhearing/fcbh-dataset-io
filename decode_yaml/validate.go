@@ -111,7 +111,7 @@ func (r *RequestDecoder) checkForOne(structVal reflect.Value, fieldName string, 
 	var wasSet []string
 	r.checkForOneRecursive(structVal, &wasSet, recurse)
 	errorCount += len(wasSet)
-	if len(wasSet) > 1 {
+	if len(wasSet) > 1 && recurse {
 		msg := `Only 1 field can be set on ` + fieldName + `: ` + strings.Join(wasSet, `,`)
 		r.errors = append(r.errors, msg)
 	}
@@ -134,9 +134,7 @@ func (r *RequestDecoder) checkForOneRecursive(sVal reflect.Value, wasSet *[]stri
 				*wasSet = append(*wasSet, sVal.Type().Field(i).Name)
 			}
 		} else if field.Kind() == reflect.Struct {
-			if recurse {
-				r.checkForOneRecursive(field, wasSet, recurse)
-			}
+			r.checkForOneRecursive(field, wasSet, recurse)
 		} else {
 			msg := sVal.Type().Field(i).Name + ` has unexpected type ` + field.Type().Name()
 			r.errors = append(r.errors, msg)
