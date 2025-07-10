@@ -11,7 +11,7 @@ class MySampler(Sampler):
       return count[0]
 
     def __iter__(self):
-        batches = database.select('SELECT idx, num_samples, memory_mb, padded_mb, indexes FROM batches', ())
+        batches = self.database.select('SELECT idx, num_samples, memory_mb, padded_mb, indexes FROM batches', ())
         for (index, numSamples, memoryMB, paddedMB, indexes) in batches:
             print("Batch", index, numSamples, memoryMB, "MB", paddedMB, "MB")
             batch = [int(x) for x in indexes.split(',')]
