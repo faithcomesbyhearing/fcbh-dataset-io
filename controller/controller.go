@@ -177,7 +177,7 @@ func (c *Controller) processSteps() *log.Status {
 		log.Info(c.ctx, "Train", c.ident.LanguageISO)
 		train := c.req.Training.MMSAdapter
 		trainer := adapter.NewTrainAdapter(c.ctx, c.database, c.ident.LanguageISO,
-			train.BatchMB, train.NumEpochs, train.Restart)
+			train.BatchMB, train.NumEpochs)
 		status = trainer.Train(audioFiles)
 		if status != nil {
 			return status

@@ -21,7 +21,7 @@ class MyDataset(Dataset):
         audioTensor = torch.load(inputBuffer)
         labelsBuffer = BytesIO(labels)
         labelsTensor = torch.load(labelsBuffer)
-        print(reference, memoryMB, "MB")
+        #print(reference, memoryMB, "MB")
         return {
             "input_values": audioTensor,
             "labels": labelsTensor,

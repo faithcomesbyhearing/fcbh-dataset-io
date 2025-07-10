@@ -189,9 +189,8 @@ type Training struct {
 }
 
 type MMSAdapter struct {
-	BatchMB   int    `yaml:"batch_mb,omitempty"`
-	NumEpochs int    `yaml:"num_epochs,omitempty"`
-	Restart   string `yaml:"restart,omitempty"`
+	BatchMB   int `yaml:"batch_mb,omitempty"`
+	NumEpochs int `yaml:"num_epochs,omitempty"`
 }
 
 type SpeechToText struct {

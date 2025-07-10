@@ -45,11 +45,11 @@ databasePath = sys.argv[2]
 audioDirectory = sys.argv[3]
 batchSizeMB = int(sys.argv[4])
 numEpochs = int(sys.argv[5])
-restartPoint = ''
-if len(sys.argv) > 6:
-    restartPoint = sys.argv[6]
+#restartPoint = ''
+#if len(sys.argv) > 6:
+#    restartPoint = sys.argv[6]
 
-print("BatchSizeMB", batchSizeMB, "NumEpochs", numEpochs, "Restart", restartPoint)
+print("BatchSizeMB", batchSizeMB, "NumEpochs", numEpochs)
 
 database = SqliteUtility(databasePath)
 tokenizer = createTokenizer(database, targetLang)
@@ -103,14 +103,14 @@ for param in adapter_weights.values():
     param.requires_grad = True
 
 outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters', targetLang)
-if restartPoint != '':
-    restartPoint = os.path.join(outputDir, restartPoint)
+#if restartPoint != '':
+#    restartPoint = os.path.join(outputDir, restartPoint)
 trainingArgs = TrainingArguments (
   output_dir = outputDir,
-  resume_from_checkpoint = True,#restartPoint,
+  #resume_from_checkpoint = True,#restartPoint,
   dataloader_num_workers = 0,  # Often fixes hanging issues
   #eval_strategy = "epoch",
-  save_strategy = "epoch",          # Save checkpoints every epoch
+  save_strategy = "no",          # Save checkpoints every epoch
   logging_strategy = "steps",       # Log results every epoch
   num_train_epochs = numEpochs,
   use_cpu = not torch.cuda.is_available(),
@@ -121,7 +121,7 @@ trainingArgs = TrainingArguments (
   logging_steps = 1,
   learning_rate = 1e-3,
   warmup_steps = 10,
-  save_total_limit = 2,
+  #save_total_limit = 2,
   push_to_hub = False,
   # Claude additions
   #max_grad_norm = 1.0, # Add gradient clipping

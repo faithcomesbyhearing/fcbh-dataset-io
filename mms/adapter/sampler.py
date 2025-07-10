@@ -13,6 +13,7 @@ class MySampler(Sampler):
     def __iter__(self):
         batches = self.database.select('SELECT idx, memory_mb, indexes FROM batches ORDER BY RANDOM()', ())
         for (index, memoryMB, indexes) in batches:
+            print("Batch", index, memoryMB, "MB")
             batch = [int(x) for x in indexes.split(',')]
             yield batch
 
