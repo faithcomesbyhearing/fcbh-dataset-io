@@ -81,24 +81,33 @@ def prepareDataset(scriptsDB, samplesDB, audioDir, processor):
     return index + 1
 
 def prepareBatches(database, maxBatchSize, targetMemoryMB):
-    batches = 'CREATE TABLE batches (idx INTEGER PRIMARY KEY, memory_mb FLOAT, indexes BLOB)'
+    batches = """CREATE TABLE batches (idx INTEGER PRIMARY KEY, num_samples INTEGER, memory_mb FLOAT,
+                padded_mb FLOAT, indexes BLOB)"""
     database.execute(batches,())
     query = 'SELECT idx, input_values, labels, text, reference, memory_mb FROM samples'
     samples = database.select(query, ())
-    insert = 'INSERT INTO batches (idx, memory_mb, indexes) VALUES (?,?,?)'
+    insert = 'INSERT INTO batches (idx, num_samples, memory_mb, padded_mb, indexes) VALUES (?,?,?,?,?)'
     batchNum = 0
     batch = []
-    currentMemory = 0
+    currentMemory = 0.0
+    largestSampleMB = 0.0
     for (index, inputValues, labels, text, reference, memoryMB) in samples:
         if len(batch) >= maxBatchSize or currentMemory + memoryMB >= targetMemoryMB:
-            database.execute(insert, (batchNum, currentMemory, ','.join(map(str, batch))))
+            totalMemory = largestSampleMB * len(batch)
+            database.execute(insert, (batchNum, len(batch), currentMemory, totalMemory,
+                ','.join(map(str, batch))))
             batchNum += 1
             batch = []
-            currentMemory = 0
+            currentMemory = 0.0
+            largestSampleMB = 0.0
         batch.append(index)
         currentMemory += memoryMB
+        if largestSampleMB < memoryMB:
+            largestSampleMB = memoryMB
     if len(batch) > 0:
-        database.execute(insert, (batchNum, currentMemory, ','.join(map(str, batch))))
+        totalMemory = largestSampleMB * len(batch)
+        database.execute(insert, (batchNum, len(batch), currentMemory, totalMemory,
+            ','.join(map(str, batch))))
     return batchNum + 1
 
 
@@ -120,9 +129,9 @@ def displaySamples(database):
     print("numSamples", len(samples))
 
 def displayBatches(database):
-    batches = database.select('SELECT idx, memory_mb, indexes FROM batches', ())
-    for (index, memoryMB, indexes) in batches:
-        print("\nIndex", index, memoryMB, indexes)
+    batches = database.select('SELECT idx, num_samples, memory_mb, padded_mb, indexes FROM batches', ())
+    for (index, numSamples, memoryMB, paddedMB, indexes) in batches:
+        print("\nIndex", index, numSamples, memoryMB, paddedMB, indexes)
     print("numBatches", len(batches))
 
 def checkBlob(idx, name, blob):
