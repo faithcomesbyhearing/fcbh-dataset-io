@@ -125,6 +125,22 @@ def displayBatches(database):
         print("\nIndex", index, memoryMB, indexes)
     print("numBatches", len(batches))
 
+def checkBlob(idx, name, blob):
+    buffer = BytesIO(blob)
+    tensor = torch.load(buffer)
+    if torch.isnan(tensor).any():
+        print(f"NaN found in {name} {idx}")
+    if torch.isinf(tensor).any():
+        print(f"Inf found in {name} {idx}")
+    if tensor.numel() == 0:
+        print(f"Empty tensor {nme} in sample {idx}")
+
+def checkSamples(samplesDB):
+    samples = samplesDB.select('SELECT idx, input_values, labels, text TEXT, reference, memory_mb FROM samples',())
+    for (idx, inputValues, labels, text, reference, memoryMB) in samples:
+        checkBlob(idx, 'input_values', inputValues)
+        checkBlob(idx, 'labels', labels)
+
 if __name__ == "__main__":
     from tokenizer import createTokenizer
     from transformers import Wav2Vec2Processor, Wav2Vec2FeatureExtractor, Wav2Vec2CTCTokenizer
@@ -145,4 +161,5 @@ if __name__ == "__main__":
     database.close()
     displaySamples(samplesDB)
     displayBatches(samplesDB)
+    checkSamples(samplesDB)
     samplesDB.close()
