@@ -3,6 +3,9 @@ from transformers import Wav2Vec2Processor
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Union
 
+#
+# This is no longer used
+#
 
 @dataclass
 class DataCollatorCTCWithPadding:

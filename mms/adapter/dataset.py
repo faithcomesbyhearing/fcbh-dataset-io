@@ -11,23 +11,29 @@ class MyDataset(Dataset):
         self.database = database
 
     def __len__(self):
-        count = self.database.selectOne('SELECT count(*) FROM samples', ())
+        #count = self.database.selectOne('SELECT count(*) FROM samples', ())
+        count = self.database.selectOne('SELECT count(*) FROM tensors', ())
         return count[0]
 
     def __getitem__(self, idx):
-        query = 'SELECT input_values, labels, text, reference, memory_mb FROM samples WHERE idx = ?'
-        (inputValues, labels, text, reference, memoryMB) = self.database.selectOne(query, (idx,))
+        #query = 'SELECT input_values, labels, text, reference, memory_mb FROM samples WHERE idx = ?'
+        query = 'SELECT input_values, attention_mask, labels, memory_mb FROM tensors WHERE idx = ?'
+        (inputValues, attentionMask, labels, memoryMB) = self.database.selectOne(query, (idx,))
         inputBuffer = BytesIO(inputValues)
         audioTensor = torch.load(inputBuffer)
+        maskBuffer = BytesIO(attentionMask)
+        maskTensor = torch.load(maskBuffer)
         labelsBuffer = BytesIO(labels)
         labelsTensor = torch.load(labelsBuffer)
+        print("tensor", idx, audioTensor.shape, type(audioTensor), audioTensor.nbytes / (1024**2))
         #print(reference, memoryMB, "MB")
         return {
             "input_values": audioTensor,
-            "labels": labelsTensor,
-            "text": text,
-            "reference": reference,
-            "memory_mb": memoryMB
+            "attention_mask": maskTensor,
+            "labels": labelsTensor#,
+            #"text": text,
+            #"reference": reference,
+            #"memory_mb": memoryMB
         }
 
 if __name__ == "__main__":

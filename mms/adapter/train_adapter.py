@@ -36,6 +36,11 @@ def compute_metrics(pred):
     return {"wer": wer}
 
 
+# dataset return pre-batched and padded data
+def identity_collator(batch):
+    return batch[0]
+
+
 if len(sys.argv) < 6:
     print("Usage: python train_adapter.py {iso639-3} {databasePath} {audioDirectory} {batchMB} {numEpochs}", file=sys.stderr)
     sys.exit(1)
@@ -65,18 +70,18 @@ processor = Wav2Vec2Processor(
 
 sampleDB = dataPreparation(database, databasePath, audioDirectory, processor, 128, batchSizeMB)
 database.close()
-dataset = MyDataset(sampleDB)
+#dataset = MyDataset(sampleDB)
 
-sampler = MySampler(sampleDB)
+#sampler = MySampler(sampleDB)
 
-dataCollator = DataCollatorCTCWithPadding(processor=processor, padding=True)
+#dataCollator = DataCollatorCTCWithPadding(processor=processor, padding=True)
 
-dataLoader = DataLoader(
-    dataset,
-    batch_sampler = sampler,
-    collate_fn = dataCollator,
-    num_workers = 0
-)
+#dataLoader = DataLoader(
+#    dataset,
+#    batch_sampler = sampler,
+#    collate_fn = dataCollator,
+#    num_workers = 0
+#)
 
 model = Wav2Vec2ForCTC.from_pretrained(
     "facebook/mms-1b-all",
@@ -101,7 +106,7 @@ for param in adapter_weights.values():
 outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters', targetLang)
 trainingArgs = TrainingArguments (
   output_dir = outputDir,
-  dataloader_num_workers = 0,  # Often fixes hanging issues
+  per_device_train_batch_size = 1,
   save_strategy = "no",          # Save checkpoints every epoch
   logging_strategy = "steps",       # Log results every epoch
   num_train_epochs = numEpochs,
@@ -114,6 +119,11 @@ trainingArgs = TrainingArguments (
   warmup_steps = 10,
   push_to_hub = False,
   # Claude additions
+  dataloader_num_workers = 0,  # Often fixes hanging issues
+  gradient_accumulation_steps = 1,      # Steps before optimizer update
+  dataloader_pin_memory = True,         # Pin memory for faster transfer
+  dataloader_drop_last = False,         # Drop last incomplete batch
+  remove_unused_columns = False,
   #max_grad_norm = 1.0, # Add gradient clipping
   #gradient_accumulation_steps = 4,  # It recommended 4, 1 is default
   #dataloader_pin_memory = False,    # Reduce GPU memory pressure
@@ -122,17 +132,16 @@ trainingArgs = TrainingArguments (
 trainer = Trainer(
     model = model,
     args = trainingArgs,
-    train_dataset = dataset,
-    data_collator = dataCollator,
+    train_dataset = MyDataset(sampleDB),
+    data_collator = identity_collator,
     compute_metrics = compute_metrics,
-    #eval_dataset = dataset, Avoid doing eval, until eval dataset is developed
     processing_class = processor.feature_extractor,
     # Suggested by Claude
     callbacks = [MemoryCallback()],
 )
 
 # Override the train dataloader
-trainer.get_train_dataloader = lambda: dataLoader
+#trainer.get_train_dataloader = lambda: dataLoader
 
 trainer.train()
 sampleDB.close()

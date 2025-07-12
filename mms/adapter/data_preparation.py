@@ -3,10 +3,12 @@ import sys
 import torch
 import torchaudio
 import numpy as np
+from transformers import Wav2Vec2Processor
 from io import BytesIO
 from sqlite_utility import *
 from data_pruner import dataPruner
 import time
+
 
 def dataPreparation(scriptsDB, scriptsDBPath, audioDir, processor, maxBatchSize, targetMemoryMB):
     dataPruner(scriptsDB) # 0.02
@@ -17,12 +19,15 @@ def dataPreparation(scriptsDB, scriptsDBPath, audioDir, processor, maxBatchSize,
     samplesDB = SqliteUtility(samplesDBPath)
     numSamples = prepareDataset(scriptsDB, samplesDB, audioDir, processor) # 22 sec
     print("numSamples", numSamples)
-    numBatches = prepareBatches(samplesDB, maxBatchSize, targetMemoryMB) # 3.8 sec
+    numBatches = identifyBatches(samplesDB, maxBatchSize, targetMemoryMB) # 3.8 sec
     print("numBatches", numBatches)
+    numTensors = prepareBatches(samplesDB, processor)
+    print("numTensors", numTensors)
     return samplesDB
 
+
 def prepareDataset(scriptsDB, samplesDB, audioDir, processor):
-    #database.execute('DROP TABLE IF EXISTS samples', ())
+    samplesDB.execute('DROP TABLE IF EXISTS samples', ())
     samples = 'CREATE TABLE samples (idx INTEGER PRIMARY KEY, input_values BLOB, labels BLOB, text TEXT, reference TEXT, memory_mb FLOAT)'
     samplesDB.execute(samples,())
     query = """
@@ -80,7 +85,9 @@ def prepareDataset(scriptsDB, samplesDB, audioDir, processor):
         samplesDB.execute(insert, (index, inputValuesBlob, labelsBlob, text, reference, memoryMB))
     return index + 1
 
-def prepareBatches(database, maxBatchSize, targetMemoryMB):
+
+def identifyBatches(database, maxBatchSize, targetMemoryMB):
+    database.execute('DROP TABLE IF EXISTS batches', ())
     batches = """CREATE TABLE batches (idx INTEGER PRIMARY KEY, num_samples INTEGER, memory_mb FLOAT,
                 padded_mb FLOAT, indexes BLOB)"""
     database.execute(batches,())
@@ -111,6 +118,53 @@ def prepareBatches(database, maxBatchSize, targetMemoryMB):
     return batchNum + 1
 
 
+def prepareBatches(database, processor):
+    database.execute('DROP TABLE IF EXISTS tensors', ())
+    padding: Union[bool, str] = True
+    table = """CREATE TABLE tensors (idx INTEGER PRIMARY KEY, num_samples INTEGER, memory_mb FLOAT,
+                input_values BLOB, attention_mask BLOB, labels BLOB)"""
+    database.execute(table, ())
+    batches = database.select('SELECT idx, num_samples, memory_mb, padded_mb, indexes FROM batches', ())
+    for (index, numSamples, memoryMB, paddedMB, indexes) in batches:
+        #print("\nIndex", index, numSamples, memoryMB, paddedMB, indexes)
+        samples = indexes.split(',')
+        inputFeatures = []
+        labelFeatures = []
+        for s in samples:
+            sampleQuery = """SELECT idx, input_values, labels, text, reference, memory_mb
+                            FROM samples WHERE idx = ?"""
+            (sampleIdx, inputValues, labels, text, reference, memoryMB) = database.selectOne(sampleQuery, (int(s),))
+            buffer = BytesIO(inputValues)
+            inputTensor = torch.load(buffer)
+            inputFeatures.append({"input_values": inputTensor})
+            buffer = BytesIO(labels)
+            labelsTensor = torch.load(buffer)
+            labelFeatures.append({"input_ids": labelsTensor})
+        batch = processor.pad(
+            inputFeatures,
+            padding = padding,
+            return_tensors = "pt",
+        )
+        labelsBatch = processor.pad(
+            labels = labelFeatures,
+            padding = padding,
+            return_tensors = "pt",
+        )
+        # replace padding with -100 to ignore loss correctly
+        labels = labelsBatch["input_ids"].masked_fill(labelsBatch.attention_mask.ne(1), -100)
+        insert = """INSERT INTO tensors (idx, num_samples, memory_mb, input_values,
+                    attention_mask, labels) VALUES (?,?,?,?,?,?)"""
+        inputValuesBuffer = BytesIO()
+        torch.save(batch['input_values'], inputValuesBuffer)
+        attentionMaskBuffer = BytesIO()
+        torch.save(batch['attention_mask'], attentionMaskBuffer)
+        labelsBuffer = BytesIO()
+        torch.save(labels, labelsBuffer)
+        database.execute(insert, (index, numSamples, memoryMB, inputValuesBuffer.getvalue(),
+                attentionMaskBuffer.getvalue(), labelsBuffer.getvalue()))
+    return len(batches)
+
+
 def displaySamples(database):
     query = 'SELECT idx, input_values, labels, text, reference, memory_mb FROM samples'
     samples = database.select(query, ())
@@ -128,11 +182,29 @@ def displaySamples(database):
         print("memory_mb", memoryMB)
     print("numSamples", len(samples))
 
+
 def displayBatches(database):
     batches = database.select('SELECT idx, num_samples, memory_mb, padded_mb, indexes FROM batches', ())
     for (index, numSamples, memoryMB, paddedMB, indexes) in batches:
         print("\nIndex", index, numSamples, memoryMB, paddedMB, indexes)
     print("numBatches", len(batches))
+
+
+def displayTensors(database):
+    batches = database.select('SELECT idx, num_samples, memory_mb, input_values, attention_mask, labels FROM tensors', ())
+    for (index, numSamples, memoryMB, inputValues, attentionMask, labels) in batches:
+        inputValuesBuffer = BytesIO(inputValues)
+        audioTensor = torch.load(inputValuesBuffer)
+        maskBuffer = BytesIO(attentionMask)
+        maskTensor = torch.load(maskBuffer)
+        labelsBuffer = BytesIO(labels)
+        labelsTensor = torch.load(labelsBuffer)
+        print("\nIndex", index)
+        print("audio", audioTensor.shape, type(audioTensor), audioTensor.nbytes / (1024**2))
+        print("mask", maskTensor.shape, type(maskTensor), maskTensor.nbytes / (1024**2))
+        print("labels", labelsTensor.shape, type(labelsTensor), labelsTensor.nbytes / (1024**2))
+        print("memory_mb", memoryMB)
+
 
 def checkBlob(idx, name, blob):
     buffer = BytesIO(blob)
@@ -144,11 +216,13 @@ def checkBlob(idx, name, blob):
     if tensor.numel() == 0:
         print(f"Empty tensor {nme} in sample {idx}")
 
+
 def checkSamples(samplesDB):
     samples = samplesDB.select('SELECT idx, input_values, labels, text TEXT, reference, memory_mb FROM samples',())
     for (idx, inputValues, labels, text, reference, memoryMB) in samples:
         checkBlob(idx, 'input_values', inputValues)
         checkBlob(idx, 'labels', labels)
+
 
 if __name__ == "__main__":
     from tokenizer import createTokenizer
@@ -170,5 +244,6 @@ if __name__ == "__main__":
     database.close()
     displaySamples(samplesDB)
     displayBatches(samplesDB)
+    displayTensors(samplesDB)
     checkSamples(samplesDB)
     samplesDB.close()

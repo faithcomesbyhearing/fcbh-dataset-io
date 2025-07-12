@@ -1,6 +1,10 @@
 from torch.utils.data import Sampler
 from sqlite_utility import *
 
+#
+# This is no longer used
+#
+
 class MySampler(Sampler):
     def __init__(self, database):
         super().__init__()
