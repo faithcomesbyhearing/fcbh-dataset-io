@@ -70,18 +70,6 @@ processor = Wav2Vec2Processor(
 
 sampleDB = dataPreparation(database, databasePath, audioDirectory, processor, 128, batchSizeMB)
 database.close()
-#dataset = MyDataset(sampleDB)
-
-#sampler = MySampler(sampleDB)
-
-#dataCollator = DataCollatorCTCWithPadding(processor=processor, padding=True)
-
-#dataLoader = DataLoader(
-#    dataset,
-#    batch_sampler = sampler,
-#    collate_fn = dataCollator,
-#    num_workers = 0
-#)
 
 model = Wav2Vec2ForCTC.from_pretrained(
     "facebook/mms-1b-all",
@@ -139,9 +127,6 @@ trainer = Trainer(
     # Suggested by Claude
     callbacks = [MemoryCallback()],
 )
-
-# Override the train dataloader
-#trainer.get_train_dataloader = lambda: dataLoader
 
 trainer.train()
 sampleDB.close()

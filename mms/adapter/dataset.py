@@ -11,12 +11,10 @@ class MyDataset(Dataset):
         self.database = database
 
     def __len__(self):
-        #count = self.database.selectOne('SELECT count(*) FROM samples', ())
         count = self.database.selectOne('SELECT count(*) FROM tensors', ())
         return count[0]
 
     def __getitem__(self, idx):
-        #query = 'SELECT input_values, labels, text, reference, memory_mb FROM samples WHERE idx = ?'
         query = 'SELECT input_values, attention_mask, labels, memory_mb FROM tensors WHERE idx = ?'
         (inputValues, attentionMask, labels, memoryMB) = self.database.selectOne(query, (idx,))
         inputBuffer = BytesIO(inputValues)
@@ -30,10 +28,7 @@ class MyDataset(Dataset):
         return {
             "input_values": audioTensor,
             "attention_mask": maskTensor,
-            "labels": labelsTensor#,
-            #"text": text,
-            #"reference": reference,
-            #"memory_mb": memoryMB
+            "labels": labelsTensor
         }
 
 if __name__ == "__main__":
