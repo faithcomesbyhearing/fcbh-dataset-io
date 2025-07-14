@@ -154,6 +154,9 @@ adapter_weights = model._get_adapters()
 for param in adapter_weights.values():
     param.requires_grad = True
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+
 dataset = MyDataset(sampleDB)
 warmupSteps = int(len(dataset) * numEpochs * 0.05)
 trainedModel = train_mms_adapter(
