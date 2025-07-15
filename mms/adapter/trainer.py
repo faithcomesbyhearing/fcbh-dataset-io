@@ -14,12 +14,8 @@ from sqlite_utility import *
 from data_preparation import *
 from dataset import *
 from debug import *
-#from evaluate import load
 from safetensors.torch import save_file as safe_save_file
 from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
-#from memory_callback import *
-#from torch.utils.data import DataLoader
-#import psutil
 
 #
 # This is sample code provided by Claude 7/12/25
@@ -103,11 +99,9 @@ numEpochs = int(sys.argv[5])
 
 print(targetLang, "BatchSizeMB", batchSizeMB, "NumEpochs", numEpochs)
 
-memoryStatistics(logger, "Before CreateTokenizer")
 database = SqliteUtility(databasePath)
 tokenizer = createTokenizer(database, targetLang)
 
-memoryStatistics(logger, "Before Feature Extractor")
 featureExtractor = Wav2Vec2FeatureExtractor(
     feature_size=1,
     sampling_rate=16000,
@@ -116,18 +110,15 @@ featureExtractor = Wav2Vec2FeatureExtractor(
     return_attention_mask=True
 )
 
-memoryStatistics(logger, "Before CreateProcessor")
 processor = Wav2Vec2Processor(
     feature_extractor=featureExtractor,
     tokenizer=tokenizer
 )
 
-memoryStatistics(logger, "Before DataPreparation")
 sampleDB = dataPreparation(database, databasePath, audioDirectory, processor, 128, batchSizeMB)
 #sampleDB = SqliteUtility(os.path.join(os.getenv('FCBH_DATASET_TMP'), 'N2KEUWB4.db'))
 database.close()
 
-memoryStatistics(logger, "Before Model")
 model = Wav2Vec2ForCTC.from_pretrained(
     "facebook/mms-1b-all",
     ctc_loss_reduction="mean",
@@ -135,24 +126,18 @@ model = Wav2Vec2ForCTC.from_pretrained(
     vocab_size=len(processor.tokenizer),
     ignore_mismatched_sizes=True,   # accept tokenizer of different size (required)
 )
-memoryStatistics(logger, "Before Init Layers")
 model.init_adapter_layers()
-memoryStatistics(logger, "Before Freeze base model")
 model.freeze_base_model()
 
-memoryStatistics(logger, "get adapter weights")
 adapter_weights = model._get_adapters()
-memoryStatistics(logger, "Before param.requires_grad = True")
 for param in adapter_weights.values():
     param.requires_grad = True
 
-memoryStatistics(logger, "Before to device")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
 dataset = MyDataset(sampleDB)
 warmupSteps = int(len(dataset) * numEpochs * 0.05)
-memoryStatistics(logger, "Before call train_mms_adapter")
 trainedModel = train_mms_adapter(
         model,
         dataset,
