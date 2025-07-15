@@ -145,7 +145,7 @@ trainedModel = train_mms_adapter(
         lr = 5e-5,
         warmup_steps = warmupSteps,
         max_grad_norm = 0.5,
-        log_steps = 1
+        log_steps = 10
 )
 sampleDB.close()
 
