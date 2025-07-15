@@ -13,12 +13,13 @@ from tokenizer import createTokenizer
 from sqlite_utility import *
 from data_preparation import *
 from dataset import *
+from debug import *
 #from evaluate import load
 from safetensors.torch import save_file as safe_save_file
 from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
 #from memory_callback import *
 #from torch.utils.data import DataLoader
-import psutil
+#import psutil
 
 #
 # This is sample code provided by Claude 7/12/25
@@ -31,8 +32,7 @@ logger = logging.getLogger(__name__)
 def train_mms_adapter(model, dataset, num_epochs=3, lr=5e-5,
                      warmup_steps=100, max_grad_norm=1.0, log_steps=50):
     """
-    Train MMS adapter with raw PyTorch
-
+    Train MMS adapter with PyTorch
     Args:
         model: Your MMS model with adapter
         dataset: Your custom dataset that returns padded batches as dicts
@@ -42,12 +42,6 @@ def train_mms_adapter(model, dataset, num_epochs=3, lr=5e-5,
         max_grad_norm: Max gradient norm for clipping
         log_steps: Steps between logging
     """
-#dataset = MyDataset(sampleDB)
-#num_epochs = 1
-#lr = 5e-5
-#warmup_steps = 20
-#max_grad_norm = 1.0
-#log_steps = 1
 
     dataloader = DataLoader(dataset, batch_size=None, shuffle=True)
 
@@ -67,8 +61,6 @@ def train_mms_adapter(model, dataset, num_epochs=3, lr=5e-5,
 
         #for step, batch in enumerate(tqdm(dataloader, desc=f"Epoch {epoch + 1}")):
         for step, batch in enumerate(dataloader):
-        #dataloader_iter = iter(enumerate(dataloader))
-        #step, batch = next(dataloader_iter):
             batch = {k: v.to(model.device) for k, v in batch.items()}
             outputs = model(**batch)
             loss = outputs.loss
@@ -81,32 +73,18 @@ def train_mms_adapter(model, dataset, num_epochs=3, lr=5e-5,
             total_loss += loss.item()
             global_step += 1
             if global_step % log_steps == 0:
+                step_label = f"Step {epoch + 1}/{step}"
                 avg_loss = total_loss / global_step
                 current_lr = scheduler.get_last_lr()[0]
                 logger.info(
-                    f"Step {epoch}/{step}: Loss = {loss.item():.4f}, "
+                    f"{step_label}: Loss = {loss.item():.4f}, "
                     f"Avg Loss = {avg_loss:.4f}, LR = {current_lr:.2e}"
                 )
+                memoryStatistics(logger, step_label)
+                modelMemoryStatistics(logger, model, step_label)
                 if torch.cuda.is_available():
-                    allocated = torch.cuda.memory_allocated() / 1024**3
-                    reserved = torch.cuda.memory_reserved() / 1024**3
-                    free = reserved - allocated
-                    fragmentation = free / reserved if reserved > 0 else 0
-                    gpuMax = torch.cuda.max_memory_allocated() / 1024**3
-                    logger.info(f"Step: {epoch}/{step}  Allocated: {allocated:.2f}MB, Reserved: {reserved:.2f}GB, "
-                             f"Free: {free:.2f}GB, Fragmentation: {fragmentation:.4f}, GPU Max {gpuMax}")
-                    # Display model size
-                    total_params = sum(p.numel() for p in model.parameters())
-                    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-                    print(f"Total parameters: {total_params / 1e9:.2f}GB")
-                    print(f"Trainable parameters: {trainable_params / 1e6:.2f}MB")
-                    print(f"Frozen parameters: {(total_params - trainable_params) / 1e9:.2f}GB")
-                    if fragmentation > 0.3:  # 30% fragmentation
-                        torch.cuda.empty_cache()
-                        logger.warn("Cleared CUDA cache due to fragmentation")
-                cpu_mem = psutil.virtual_memory().percent
-                logger.info(f"Step {epoch}/{step}: CPU memory {cpu_mem:.1f}%")
-
+                    torch.cuda.empty_cache()
+                    logger.warn("Cleared CUDA cache due to fragmentation")
         avg_epoch_loss = epoch_loss / len(dataloader)
         logger.info(f"Epoch {epoch + 1} completed. Average loss: {avg_epoch_loss:.4f}")
 
@@ -125,9 +103,11 @@ numEpochs = int(sys.argv[5])
 
 print(targetLang, "BatchSizeMB", batchSizeMB, "NumEpochs", numEpochs)
 
+memoryStatistics(logger, "Before CreateTokenizer")
 database = SqliteUtility(databasePath)
 tokenizer = createTokenizer(database, targetLang)
 
+memoryStatistics(logger, "Before Feature Extractor")
 featureExtractor = Wav2Vec2FeatureExtractor(
     feature_size=1,
     sampling_rate=16000,
@@ -136,15 +116,18 @@ featureExtractor = Wav2Vec2FeatureExtractor(
     return_attention_mask=True
 )
 
+memoryStatistics(logger, "Before CreateProcessor")
 processor = Wav2Vec2Processor(
     feature_extractor=featureExtractor,
     tokenizer=tokenizer
 )
 
+memoryStatistics(logger, "Before DataPreparation")
 sampleDB = dataPreparation(database, databasePath, audioDirectory, processor, 128, batchSizeMB)
 #sampleDB = SqliteUtility(os.path.join(os.getenv('FCBH_DATASET_TMP'), 'N2KEUWB4.db'))
 database.close()
 
+memoryStatistics(logger, "Before Model")
 model = Wav2Vec2ForCTC.from_pretrained(
     "facebook/mms-1b-all",
     ctc_loss_reduction="mean",
@@ -152,18 +135,24 @@ model = Wav2Vec2ForCTC.from_pretrained(
     vocab_size=len(processor.tokenizer),
     ignore_mismatched_sizes=True,   # accept tokenizer of different size (required)
 )
+memoryStatistics(logger, "Before Init Layers")
 model.init_adapter_layers()
+memoryStatistics(logger, "Before Freeze base model")
 model.freeze_base_model()
 
+memoryStatistics(logger, "get adapter weights")
 adapter_weights = model._get_adapters()
+memoryStatistics(logger, "Before param.requires_grad = True")
 for param in adapter_weights.values():
     param.requires_grad = True
 
+memoryStatistics(logger, "Before to device")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
 dataset = MyDataset(sampleDB)
 warmupSteps = int(len(dataset) * numEpochs * 0.05)
+memoryStatistics(logger, "Before call train_mms_adapter")
 trainedModel = train_mms_adapter(
         model,
         dataset,
@@ -176,6 +165,7 @@ trainedModel = train_mms_adapter(
 sampleDB.close()
 
 outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters', targetLang)
+os.makedirs(outputDir, exist_ok=True)
 adapterFile = WAV2VEC2_ADAPTER_SAFE_FILE.format(targetLang)
 adapterFile = os.path.join(outputDir, adapterFile)
 print("OutputDir for weights", adapterFile)
