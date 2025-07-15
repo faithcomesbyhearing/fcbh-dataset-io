@@ -85,7 +85,7 @@ def train_mms_adapter(model, dataset, num_epochs=3, lr=5e-5,
                 avg_loss = total_loss / global_step
                 current_lr = scheduler.get_last_lr()[0]
                 logger.info(
-                    f"Step {epoch}.{step}: Loss = {loss.item():.4f}, "
+                    f"Step {epoch}/{step}: Loss = {loss.item():.4f}, "
                     f"Avg Loss = {avg_loss:.4f}, LR = {current_lr:.2e}"
                 )
                 if torch.cuda.is_available():
@@ -94,19 +94,22 @@ def train_mms_adapter(model, dataset, num_epochs=3, lr=5e-5,
                     free = reserved - allocated
                     fragmentation = free / reserved if reserved > 0 else 0
                     gpuMax = torch.cuda.max_memory_allocated() / 1024**3
-                    logger.info(f"Step: {epoch}.{step}  Allocated: {allocated:.2f}MB, Reserved: {reserved:.2f}GB, "
+                    logger.info(f"Step: {epoch}/{step}  Allocated: {allocated:.2f}MB, Reserved: {reserved:.2f}GB, "
                              f"Free: {free:.2f}GB, Fragmentation: {fragmentation:.4f}, GPU Max {gpuMax}")
                     # Display model size
                     total_params = sum(p.numel() for p in model.parameters())
                     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-                    print(f"Total parameters: {total_params / 1e9:.2f}B")
-                    print(f"Trainable parameters: {trainable_params / 1e6:.2f}M")
-                    print(f"Frozen parameters: {(total_params - trainable_params) / 1e9:.2f}B")
+                    print(f"Total parameters: {total_params / 1e9:.2f}GB")
+                    print(f"Trainable parameters: {trainable_params / 1e6:.2f}MB")
+                    print(f"Frozen parameters: {(total_params - trainable_params) / 1e9:.2f}GB")
                     if fragmentation > 0.3:  # 30% fragmentation
                         torch.cuda.empty_cache()
                         logger.warn("Cleared CUDA cache due to fragmentation")
+                    torch.cuda.empty_cache()
                 cpu_mem = psutil.virtual_memory().percent
-                logger.info(f"Step {epoch}.{step}: CPU memory {cpu_mem:.1f}%")
+                logger.info(f"Step {epoch}/{step}: CPU memory {cpu_mem:.1f}%")
+                torch.cuda.empty_cache() gc.collect()
+                gc.collect()
 
         avg_epoch_loss = epoch_loss / len(dataloader)
         logger.info(f"Epoch {epoch + 1} completed. Average loss: {avg_epoch_loss:.4f}")
@@ -179,6 +182,8 @@ sampleDB.close()
 outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters', targetLang)
 adapterFile = WAV2VEC2_ADAPTER_SAFE_FILE.format(targetLang)
 adapterFile = os.path.join(outputDir, adapterFile)
+print("OutputDir for weights", adapterFile)
 safe_save_file(trainedModel._get_adapters(), adapterFile, metadata={"format": "pt"})
-processorDir = os.path.join(trainingArgs.output_dir, "processor_" + targetLang)
+processorDir = os.path.join(outputDir, "processor_" + targetLang)
+print("OutputDir for processor", processorDir)
 processor.save_pretrained(processorDir)
