@@ -3,8 +3,6 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from transformers import get_linear_schedule_with_warmup
 import logging
-#from tqdm import tqdm
-import gc
 # from train_adapter
 import os
 import sys
@@ -106,11 +104,8 @@ def train_mms_adapter(model, dataset, num_epochs=3, lr=5e-5,
                     if fragmentation > 0.3:  # 30% fragmentation
                         torch.cuda.empty_cache()
                         logger.warn("Cleared CUDA cache due to fragmentation")
-                    torch.cuda.empty_cache()
                 cpu_mem = psutil.virtual_memory().percent
                 logger.info(f"Step {epoch}/{step}: CPU memory {cpu_mem:.1f}%")
-                torch.cuda.empty_cache() gc.collect()
-                gc.collect()
 
         avg_epoch_loss = epoch_loss / len(dataloader)
         logger.info(f"Epoch {epoch + 1} completed. Average loss: {avg_epoch_loss:.4f}")
