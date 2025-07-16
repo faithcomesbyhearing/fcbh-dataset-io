@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
+	req "github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/ffmpeg"
@@ -14,15 +15,13 @@ import (
 )
 
 type TrainAdapter struct {
-	ctx         context.Context
-	conn        db.DBAdapter
-	langISO     string
-	batchSizeMB int
-	epochs      int
-	restart     string
+	ctx     context.Context
+	conn    db.DBAdapter
+	langISO string
+	args    req.MMSAdapter
 }
 
-func NewTrainAdapter(ctx context.Context, conn db.DBAdapter, langISO string, batchSize int, epochs int) TrainAdapter {
+func NewTrainAdapter(ctx context.Context, conn db.DBAdapter, langISO string, train req.MMSAdapter) TrainAdapter {
 	var t TrainAdapter
 	t.ctx = ctx
 	t.conn = conn
@@ -32,8 +31,7 @@ func NewTrainAdapter(ctx context.Context, conn db.DBAdapter, langISO string, bat
 	scripts, status := t.conn.SelectScripts()
 	fmt.Println("Status: ", status, "Len Scripts: ", len(scripts))
 	t.langISO = langISO
-	t.batchSizeMB = batchSize
-	t.epochs = epochs
+	t.args = train
 	return t
 }
 
@@ -55,7 +53,10 @@ func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
 		t.langISO,
 		t.conn.DatabasePath,
 		tempDir,
-		strconv.Itoa(t.batchSizeMB),
-		strconv.Itoa(t.epochs))
+		strconv.Itoa(t.args.BatchMB),
+		strconv.Itoa(t.args.NumEpochs),
+		strconv.FormatFloat(t.args.LearningRate, 'e', -1, 64),
+		strconv.FormatFloat(t.args.WarmupPct, 'f', -1, 64),
+		strconv.FormatFloat(t.args.GradNormMax, 'f', -1, 64))
 	return status
 }

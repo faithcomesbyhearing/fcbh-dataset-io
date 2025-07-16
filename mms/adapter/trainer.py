@@ -88,16 +88,22 @@ def train_mms_adapter(model, dataset, num_epochs=3, lr=5e-5,
     return model
 
 
-if len(sys.argv) < 6:
-    print("Usage: python train_adapter.py {iso639-3} {databasePath} {audioDirectory} {batchMB} {numEpochs}", file=sys.stderr)
+if len(sys.argv) < 9:
+    usage = """Usage: python train_adapter.py {iso639-3} {databasePath} {audioDirectory}
+                    {batchMB} {numEpochs} {learningRage} {warmupPct} {gradNormMax}"""
+    print(usage, file=sys.stderr)
     sys.exit(1)
 targetLang = sys.argv[1]
 databasePath = sys.argv[2]
 audioDirectory = sys.argv[3]
 batchSizeMB = int(sys.argv[4])
 numEpochs = int(sys.argv[5])
+learningRate = float(sys.argv[6])
+warmupPct = float(sys.argv[7])
+gradNormMax = float(sys.argv[8])
 
-print(targetLang, "BatchSizeMB", batchSizeMB, "NumEpochs", numEpochs)
+print("BatchSizeMB", batchSizeMB, "NumEpochs", numEpochs, "learningRate", learningRate,
+    "warmupPct", warmupPct, "gradNormMax", gradNormMax)
 
 database = SqliteUtility(databasePath)
 tokenizer = createTokenizer(database, targetLang)
@@ -137,15 +143,16 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
 dataset = MyDataset(sampleDB)
-warmupSteps = int(len(dataset) * numEpochs * 0.05)
+warmupSteps = int(len(dataset) * numEpochs * warmupPct / 100.0)
+print("warmupSteps", warmupSteps)
 trainedModel = train_mms_adapter(
         model,
         dataset,
         num_epochs = numEpochs,
-        lr = 5e-5,
+        lr = learningRate,
         warmup_steps = warmupSteps,
-        max_grad_norm = 0.5,
-        log_steps = 10
+        max_grad_norm = gradNormMax,
+        log_steps = 100
 )
 sampleDB.close()
 

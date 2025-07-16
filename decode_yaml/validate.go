@@ -89,6 +89,31 @@ func (r *RequestDecoder) checkTraining(req *request.Training, fieldName string) 
 	count := r.checkForOne(reflect.ValueOf(*req), fieldName, false)
 	if count == 0 {
 		req.NoTraining = true
+	} else {
+		req2 := req.MMSAdapter
+		if req2.BatchMB > 0 ||
+			req2.NumEpochs > 0 ||
+			req2.LearningRate > 0.0 ||
+			req2.WarmupPct > 0.0 ||
+			req2.GradNormMax > 0.0 {
+			if req.MMSAdapter.BatchMB == 0 {
+				req.MMSAdapter.BatchMB = 8
+			}
+			if req.MMSAdapter.NumEpochs == 0 {
+				req.MMSAdapter.NumEpochs = 32
+			}
+			if req.MMSAdapter.LearningRate == 0.0 {
+				req.MMSAdapter.LearningRate = 5e-5
+			}
+			if req.MMSAdapter.WarmupPct == 0.0 {
+				req.MMSAdapter.WarmupPct = 1.0
+			}
+			if req.MMSAdapter.GradNormMax == 0.0 {
+				req.MMSAdapter.GradNormMax = 1.0
+			}
+		} else {
+			req.NoTraining = true
+		}
 	}
 }
 
@@ -131,6 +156,10 @@ func (r *RequestDecoder) checkForOneRecursive(sVal reflect.Value, wasSet *[]stri
 			}
 		} else if field.Kind() == reflect.Int {
 			if field.Int() != 0 && len(*wasSet) == 0 {
+				*wasSet = append(*wasSet, sVal.Type().Field(i).Name)
+			}
+		} else if field.Kind() == reflect.Float64 {
+			if field.Float() != 0 && len(*wasSet) == 0 {
 				*wasSet = append(*wasSet, sVal.Type().Field(i).Name)
 			}
 		} else if field.Kind() == reflect.Struct {

@@ -175,9 +175,7 @@ func (c *Controller) processSteps() *log.Status {
 	// Train MMS Adapter
 	if !c.req.Training.NoTraining {
 		log.Info(c.ctx, "Train", c.ident.LanguageISO)
-		train := c.req.Training.MMSAdapter
-		trainer := adapter.NewTrainAdapter(c.ctx, c.database, c.ident.LanguageISO,
-			train.BatchMB, train.NumEpochs)
+		trainer := adapter.NewTrainAdapter(c.ctx, c.database, c.ident.LanguageISO, c.req.Training.MMSAdapter)
 		status = trainer.Train(audioFiles)
 		if status != nil {
 			return status
