@@ -96,24 +96,31 @@ def identifyBatches(database, maxBatchSize, targetMemoryMB):
     insert = 'INSERT INTO batches (idx, num_samples, memory_mb, padded_mb, indexes) VALUES (?,?,?,?,?)'
     batchNum = 0
     batch = []
-    currentMemory = 0.0
-    largestSampleMB = 0.0
+    #currentMemory = 0.0
+    unpaddedSize = 0.0
+    paddedSize = 0.0
+    #largestSampleMB = 0.0
     for (index, inputValues, labels, text, reference, memoryMB) in samples:
-        if len(batch) >= maxBatchSize or currentMemory + memoryMB >= targetMemoryMB:
-            totalMemory = largestSampleMB * len(batch)
-            database.execute(insert, (batchNum, len(batch), currentMemory, totalMemory,
+        if len(batch) >= maxBatchSize or (memoryMB * (len(batch) + 1)) >= targetMemoryMB:
+        #if len(batch) >= maxBatchSize or currentMemory + memoryMB >= targetMemoryMB:
+            #totalMemory = largestSampleMB * len(batch)
+            database.execute(insert, (batchNum, len(batch), unpaddedSize, paddedSize,
                 ','.join(map(str, batch))))
             batchNum += 1
             batch = []
-            currentMemory = 0.0
-            largestSampleMB = 0.0
+            #currentMemory = 0.0
+            unpaddedSize = 0.0
+            #largestSampleMB = 0.0
+            paddedSize = 0.0
         batch.append(index)
-        currentMemory += memoryMB
-        if largestSampleMB < memoryMB:
-            largestSampleMB = memoryMB
+        #currentMemory += memoryMB
+        unpaddedSize += memoryMB
+        paddedSize = len(batch) * memoryMB
+        #if largestSampleMB < memoryMB:
+        #    largestSampleMB = memoryMB
     if len(batch) > 0:
-        totalMemory = largestSampleMB * len(batch)
-        database.execute(insert, (batchNum, len(batch), currentMemory, totalMemory,
+        #totalMemory = largestSampleMB * len(batch)
+        database.execute(insert, (batchNum, len(batch), unpaddedSize, paddedSize,
             ','.join(map(str, batch))))
     return batchNum + 1
 
@@ -160,7 +167,7 @@ def prepareBatches(database, processor):
         torch.save(batch['attention_mask'], attentionMaskBuffer)
         labelsBuffer = BytesIO()
         torch.save(labels, labelsBuffer)
-        database.execute(insert, (index, numSamples, memoryMB, inputValuesBuffer.getvalue(),
+        database.execute(insert, (index, numSamples, paddedMB, inputValuesBuffer.getvalue(),
                 attentionMaskBuffer.getvalue(), labelsBuffer.getvalue()))
     return len(batches)
 
