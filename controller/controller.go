@@ -14,6 +14,7 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/match/align"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/match/diff"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms/adapter"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms/mms_align"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms/mms_asr"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/output"
@@ -171,8 +172,18 @@ func (c *Controller) processSteps() *log.Status {
 			return status
 		}
 	}
+	// Train MMS Adapter
+	if !c.req.Training.NoTraining {
+		log.Info(c.ctx, "Train", c.ident.LanguageISO)
+		trainer := adapter.NewTrainAdapter(c.ctx, c.database, c.ident.LanguageISO, c.req.Training.MMSAdapter)
+		status = trainer.Train(audioFiles)
+		if status != nil {
+			return status
+		}
+	}
 	// Copy for STT
-	if !c.req.TextData.NoText && !c.req.SpeechToText.NoSpeechToText {
+	//if !c.req.TextData.NoText &&
+	if !c.req.SpeechToText.NoSpeechToText {
 		c.req.Compare.BaseDataset = c.database.Project
 		c.req.AudioProof.BaseDataset = c.database.Project // ? should there be one BaseDataset ?
 		// This makes a copy of database, and closes it.  Names the new database *_audio, and returns new
@@ -423,7 +434,11 @@ func (c *Controller) speechToText(audioFiles []input.InputFile) *log.Status {
 	bibleId := c.req.BibleId
 	if c.req.SpeechToText.MMS {
 		var asr mms_asr.MMSASR
-		asr = mms_asr.NewMMSASR(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage)
+		asr = mms_asr.NewMMSASR(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage, false)
+		status = asr.ProcessFiles(audioFiles)
+	} else if c.req.SpeechToText.MMSAdapter {
+		var asr mms_asr.MMSASR
+		asr = mms_asr.NewMMSASR(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage, true)
 		status = asr.ProcessFiles(audioFiles)
 	} else {
 		var whisperModel = c.req.SpeechToText.Whisper.Model.String()

@@ -17,12 +17,15 @@ that all errors are removed, I eliminate more lines that just those.
 """
 
 def dataPruner(database):
+    # Version 2
+    database.execute('DROP TABLE IF EXISTS pruned_data',())
     query = """CREATE TEMPORARY TABLE pruned_data AS
-                SELECT script_id
-                FROM scripts WHERE verse_str != '0'
-                AND fa_score > 0.5
-                AND script_id NOT IN
-                (SELECT script_id FROM words WHERE ttype='W' AND fa_score < 0.2)"""
+            SELECT script_id
+            FROM scripts WHERE verse_str != '0'
+            AND fa_score > 0.2
+            AND script_id NOT IN
+            (SELECT script_id FROM words WHERE ttype='W' AND fa_score < 0.01)
+            """
     database.select(query,())
 
 
@@ -33,17 +36,14 @@ if __name__ == "__main__":
     count = database.selectOne("SELECT count(*) FROM quality_lines",())[0]
     print(count)
 
-# Total records 8122
-# Remove verse 0 -> 7862
-# Remove verses with word error < 0.00001 -> 7860
-# Remove verses with eord error < 0.0001 -> 7817
-# Remove verses with word error < 0.001 -> 7793
-# Remove verses with word error < 0.01 -> 7757
-# Remove verses with word error < 0.1 -> 7757
-# Remove verses with word error < 0.2 -> 7305
-# Remove verses with word error < 0.3 -> 5135
-# Remove verses with word error < 0.4 -> 3333
-# Remove verses with word error < 0.5 -> 850
+"""
+Version 1
+SELECT script_id
+FROM scripts WHERE verse_str != '0'
+AND fa_score > 0.5
+AND script_id NOT IN
+(SELECT script_id FROM words WHERE ttype='W' AND fa_score < 0.2)
+"""
 
 
 

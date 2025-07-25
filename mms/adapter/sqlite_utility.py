@@ -38,6 +38,15 @@ class SqliteUtility:
         except Exception as err:
             self.error(cursor, statement, err)
 
+    def execute(self, statement, values):
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute(statement, values)
+            cursor.close()
+            self.conn.commit()
+        except Exception as err:
+            self.error(cursor, statement, err)
+
     def error(self, cursor, stmt, error):
         cursor.close()
         print("ERROR executing SQL %s on '%s'" % (error, stmt))

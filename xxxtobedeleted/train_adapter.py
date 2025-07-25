@@ -8,14 +8,16 @@ from transformers import TrainingArguments
 from transformers import Wav2Vec2ForCTC
 from tokenizer import createTokenizer
 from sqlite_utility import *
-from data_pruner import dataPruner
+from data_preparation import *
 from dataset import *
-from data_collator import *
 from evaluate import load
 from safetensors.torch import save_file as safe_save_file
 from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
+from memory_callback import *
+from torch.utils.data import DataLoader
 
 #
+# This program was adapted from the following tutorial
 # https://huggingface.co/blog/mms_adapters
 #
 
@@ -32,14 +34,21 @@ def compute_metrics(pred):
     return {"wer": wer}
 
 
+# dataset return pre-batched and padded data
+def identity_collator(batch):
+    return batch[0]
+
+
 if len(sys.argv) < 6:
-    print("Usage: python train_adapter.py {iso639-3} {databasePath} {audioDirectory} {batchSize} {numEpochs}")
+    print("Usage: python train_adapter.py {iso639-3} {databasePath} {audioDirectory} {batchMB} {numEpochs}", file=sys.stderr)
     sys.exit(1)
 targetLang = sys.argv[1]
 databasePath = sys.argv[2]
 audioDirectory = sys.argv[3]
-batchSize = int(sys.argv[4])
+batchSizeMB = int(sys.argv[4])
 numEpochs = int(sys.argv[5])
+
+print("BatchSizeMB", batchSizeMB, "NumEpochs", numEpochs)
 
 database = SqliteUtility(databasePath)
 tokenizer = createTokenizer(database, targetLang)
@@ -57,22 +66,15 @@ processor = Wav2Vec2Processor(
     tokenizer=tokenizer
 )
 
-dataPruner(database) # remove lines with likely errors
-dataset = MyDataset(database, audioDirectory, processor)
+sampleDB = dataPreparation(database, databasePath, audioDirectory, processor, 128, batchSizeMB)
 database.close()
-
-data_collator = DataCollatorCTCWithPadding(processor=processor, padding=True)
 
 model = Wav2Vec2ForCTC.from_pretrained(
     "facebook/mms-1b-all",
-    attention_dropout=0.0,          # No attention droppout
-    hidden_dropout=0.0,             # No layer? attention
-    feat_proj_dropout=0.0,          # No feature projection dropout
-    layerdrop=0.0,                  # No layer dropout
     ctc_loss_reduction="mean",
     pad_token_id=processor.tokenizer.pad_token_id,
     vocab_size=len(processor.tokenizer),
-    ignore_mismatched_sizes=True,   # accept tokenizer of different size (required I think)
+    ignore_mismatched_sizes=True,   # accept tokenizer of different size (required)
 )
 
 # Claude comment: You've set most dropout parameters to 0.0, which means no regularization through
@@ -87,43 +89,45 @@ adapter_weights = model._get_adapters()
 for param in adapter_weights.values():
     param.requires_grad = True
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-useGPU = (device == "gpu")
-
-trainingArgs = TrainingArguments(
-  output_dir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters'),
-  group_by_length = True,
-  per_device_train_batch_size = batchSize,
-  #eval_strategy = "epoch",
-  save_strategy = "epoch",          # Save checkpoints every epoch
+outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters', targetLang)
+trainingArgs = TrainingArguments (
+  output_dir = outputDir,
+  per_device_train_batch_size = 1,
+  save_strategy = "no",          # Save checkpoints every epoch
   logging_strategy = "steps",       # Log results every epoch
   num_train_epochs = numEpochs,
-  use_cpu = not useGPU,
-  gradient_checkpointing = True,  # True reduces memory use at cost of performance
-  fp16 = useGPU, # could speed up GPU
-  #save_steps=200,
-  #eval_steps=100,
-  logging_steps=10,
+  use_cpu = not torch.cuda.is_available(),
+  bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported(),
+  fp16 = False, # changed to see if it affected hanging torch.cuda.is_available(), # could speed up GPU
+  gradient_checkpointing = False, # changed to see if it affected hanging True,  # True reduces memory use at cost of performance
+  logging_steps = 1,
   learning_rate = 1e-3,
-  warmup_steps = 100,
-  save_total_limit = 2,
+  warmup_steps = 10,
   push_to_hub = False,
+  # Claude additions
+  dataloader_num_workers = 0,  # Often fixes hanging issues
+  gradient_accumulation_steps = 1,      # Steps before optimizer update
+  dataloader_pin_memory = True,         # Pin memory for faster transfer
+  dataloader_drop_last = False,         # Drop last incomplete batch
+  remove_unused_columns = False,
+  #max_grad_norm = 1.0, # Add gradient clipping
+  #gradient_accumulation_steps = 4,  # It recommended 4, 1 is default
+  #dataloader_pin_memory = False,    # Reduce GPU memory pressure
 )
 
 trainer = Trainer(
     model = model,
-    data_collator = data_collator,
     args = trainingArgs,
+    train_dataset = MyDataset(sampleDB),
+    data_collator = identity_collator,
     compute_metrics = compute_metrics,
-    train_dataset = dataset,
-    #eval_dataset = dataset, Avoid doing eval, until eval dataset is developed
-    #tokenizer=processor.feature_extractor,
     processing_class = processor.feature_extractor,
+    # Suggested by Claude
+    callbacks = [MemoryCallback()],
 )
 
 trainer.train()
-
-
+sampleDB.close()
 
 adapterFile = WAV2VEC2_ADAPTER_SAFE_FILE.format(targetLang)
 adapterFile = os.path.join(trainingArgs.output_dir, adapterFile)

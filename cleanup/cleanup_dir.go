@@ -12,6 +12,8 @@ func CleanupDownloadDirectory(ctx context.Context) {
 	downloadDir := os.Getenv("FCBH_DATASET_FILES")
 	maxAge := 90 * 24 * time.Hour // 90 day
 	_ = CleanupDirectory(ctx, downloadDir, maxAge)
+	tmpDir := os.Getenv("FCBH_DATASET_TMP")
+	_ = CleanupDirectory(ctx, tmpDir, maxAge)
 }
 
 func CleanupDirectory(ctx context.Context, directory string, maxAge time.Duration) *log.Status {

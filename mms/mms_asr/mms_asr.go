@@ -19,36 +19,49 @@ type MMSASR struct {
 	conn     db.DBAdapter
 	lang     string
 	sttLang  string
+	adapter  bool
 	mmsAsrPy stdio_exec.StdioExec
 	uroman   stdio_exec.StdioExec
 }
 
-func NewMMSASR(ctx context.Context, conn db.DBAdapter, lang string, sttLang string) MMSASR {
+func NewMMSASR(ctx context.Context, conn db.DBAdapter, lang string, sttLang string, adapter bool) MMSASR {
 	var a MMSASR
 	a.ctx = ctx
 	a.conn = conn
 	a.lang = lang
 	a.sttLang = sttLang
+	a.adapter = adapter
 	return a
 }
 
 // ProcessFiles will perform Auto Speech Recognition on these files
 func (a *MMSASR) ProcessFiles(files []input.InputFile) *log.Status {
+	var status *log.Status
 	tempDir, err := os.MkdirTemp(os.Getenv(`FCBH_DATASET_TMP`), "mms_asr_")
 	if err != nil {
 		return log.Error(a.ctx, 500, err, `Error creating temp dir`)
 	}
 	defer os.RemoveAll(tempDir)
-	lang, status := mms.CheckLanguage(a.ctx, a.lang, a.sttLang, "mms_asr")
-	if status != nil {
-		return status
+	var lang = a.lang
+	if a.sttLang != "" {
+		lang = a.sttLang
+	}
+	if !a.adapter {
+		lang, status = mms.CheckLanguage(a.ctx, a.lang, a.sttLang, "mms_asr")
+		if status != nil {
+			return status
+		}
 	}
 	status = a.conn.UpdateASRLanguage(lang)
 	if status != nil {
 		return status
 	}
 	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/mms_asr/mms_asr.py")
-	a.mmsAsrPy, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_ASR_PYTHON`), pythonScript, lang)
+	var useAdapter string
+	if a.adapter {
+		useAdapter = "adapter"
+	}
+	a.mmsAsrPy, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_ASR_PYTHON`), pythonScript, lang, useAdapter)
 	if status != nil {
 		return status
 	}

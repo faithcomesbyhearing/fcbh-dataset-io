@@ -19,3 +19,6 @@ pip install uroman
 cp /opt/conda/envs/mms_asr/bin/uroman /opt/conda/envs/mms_asr/bin/uroman.pl
 # on Mac
 # cp /Users/gary/miniforge3/envs/mms_asr/bin/uroman /Users/gary/miniforge3/envs/mms_asr/bin/uroman.pl
+
+# recently added in dev for adapter loading
+#pip install peft
