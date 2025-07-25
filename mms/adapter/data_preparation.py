@@ -96,30 +96,20 @@ def identifyBatches(database, maxBatchSize, targetMemoryMB):
     insert = 'INSERT INTO batches (idx, num_samples, memory_mb, padded_mb, indexes) VALUES (?,?,?,?,?)'
     batchNum = 0
     batch = []
-    #currentMemory = 0.0
     unpaddedSize = 0.0
     paddedSize = 0.0
-    #largestSampleMB = 0.0
     for (index, inputValues, labels, text, reference, memoryMB) in samples:
         if len(batch) >= maxBatchSize or (memoryMB * (len(batch) + 1)) >= targetMemoryMB:
-        #if len(batch) >= maxBatchSize or currentMemory + memoryMB >= targetMemoryMB:
-            #totalMemory = largestSampleMB * len(batch)
             database.execute(insert, (batchNum, len(batch), unpaddedSize, paddedSize,
                 ','.join(map(str, batch))))
             batchNum += 1
             batch = []
-            #currentMemory = 0.0
             unpaddedSize = 0.0
-            #largestSampleMB = 0.0
             paddedSize = 0.0
         batch.append(index)
-        #currentMemory += memoryMB
         unpaddedSize += memoryMB
         paddedSize = len(batch) * memoryMB
-        #if largestSampleMB < memoryMB:
-        #    largestSampleMB = memoryMB
     if len(batch) > 0:
-        #totalMemory = largestSampleMB * len(batch)
         database.execute(insert, (batchNum, len(batch), unpaddedSize, paddedSize,
             ','.join(map(str, batch))))
     return batchNum + 1
@@ -235,12 +225,9 @@ if __name__ == "__main__":
     from tokenizer import createTokenizer
     from transformers import Wav2Vec2Processor, Wav2Vec2FeatureExtractor, Wav2Vec2CTCTokenizer
     from data_pruner import *
-    #dbPath = os.getenv("FCBH_DATASET_DB") + "/GaryNTest/N2ENGWEB.db"
     dbPath = os.getenv("FCBH_DATASET_DB") + "/GaryNTest/N2KEUWB4.db"
     database = SqliteUtility(dbPath)
-    #audioPath = os.getenv("FCBH_DATASET_FILES") + "/ENGWEB/ENGWEBN2DA"
     audioPath = os.getenv("FCBH_DATASET_FILES") + "/N2KEUWB4/N2KEUWBT"
-    #tokenizer = createTokenizer(database, "eng")
     tokenizer = createTokenizer(database, "keu")
     featureExtractor = Wav2Vec2FeatureExtractor(
         feature_size=1, sampling_rate=16000, padding_value=0.0,

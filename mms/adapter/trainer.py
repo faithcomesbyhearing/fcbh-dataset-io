@@ -55,7 +55,6 @@ def train_mms_adapter(model, dataset, num_epochs=3, lr=5e-5,
         logger.info(f"Starting epoch {epoch + 1}/{num_epochs}")
         epoch_loss = 0
 
-        #for step, batch in enumerate(tqdm(dataloader, desc=f"Epoch {epoch + 1}")):
         for step, batch in enumerate(dataloader):
             batch = {k: v.to(model.device) for k, v in batch.items()}
             outputs = model(**batch)
@@ -122,7 +121,6 @@ processor = Wav2Vec2Processor(
 )
 
 sampleDB = dataPreparation(database, databasePath, audioDirectory, processor, 128, batchSizeMB)
-#sampleDB = SqliteUtility(os.path.join(os.getenv('FCBH_DATASET_TMP'), 'N2KEUWB4.db'))
 database.close()
 
 model = Wav2Vec2ForCTC.from_pretrained(

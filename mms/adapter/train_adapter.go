@@ -47,7 +47,6 @@ func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
 		}
 	}
 	pythonPath := os.Getenv(`FCBH_MMS_ADAPTER_PYTHON`)
-	//pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/adapter/train_adapter.py")
 	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/adapter/trainer.py")
 	status := stdio_exec.RunScriptWithLogging(t.ctx, pythonPath, pythonScript,
 		t.langISO,
