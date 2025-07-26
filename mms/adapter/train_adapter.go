@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 type TrainAdapter struct {
@@ -39,7 +40,7 @@ func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
 	if len(files) == 0 {
 		return nil
 	}
-	tempDir := files[0].Directory
+	tempDir := strings.Replace(files[0].Directory, ` `, `\ `, -1)
 	for _, file := range files {
 		_, status := ffmpeg.ConvertMp3ToWav(t.ctx, tempDir, file.FilePath())
 		if status != nil {
