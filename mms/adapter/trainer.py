@@ -94,7 +94,7 @@ if len(sys.argv) < 9:
     sys.exit(1)
 targetLang = sys.argv[1]
 databasePath = sys.argv[2]
-audioDirectory = sys.argv[3]
+audioDirectory = sys.argv[3].strip("'")
 batchSizeMB = int(sys.argv[4])
 numEpochs = int(sys.argv[5])
 learningRate = float(sys.argv[6])
