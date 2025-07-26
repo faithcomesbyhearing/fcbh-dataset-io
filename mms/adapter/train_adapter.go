@@ -40,7 +40,7 @@ func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
 	if len(files) == 0 {
 		return nil
 	}
-	tempDir := strings.Replace(files[0].Directory, ` `, `\ `, -1)
+	tempDir := files[0].Directory
 	for _, file := range files {
 		_, status := ffmpeg.ConvertMp3ToWav(t.ctx, tempDir, file.FilePath())
 		if status != nil {
@@ -52,7 +52,7 @@ func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
 	status := stdio_exec.RunScriptWithLogging(t.ctx, pythonPath, pythonScript,
 		t.langISO,
 		t.conn.DatabasePath,
-		tempDir,
+		strings.Replace(tempDir, ` `, `\ `, -1),
 		strconv.Itoa(t.args.BatchMB),
 		strconv.Itoa(t.args.NumEpochs),
 		strconv.FormatFloat(t.args.LearningRate, 'e', -1, 64),
