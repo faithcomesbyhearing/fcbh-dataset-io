@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 type TrainAdapter struct {
@@ -48,17 +49,14 @@ func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
 	}
 	pythonPath := os.Getenv(`FCBH_MMS_ADAPTER_PYTHON`)
 	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/adapter/trainer.py")
-	//replacer := strings.NewReplacer(
-	//	" ", "\\ ",
-	//	"(", "\\(",
-	//	")", "\\)",
-	//)
+	replacer := strings.NewReplacer(` `, `\ `,
+		`(`, `\(`,
+		`)`, `\)`,
+	)
 	status := stdio_exec.RunScriptWithLogging(t.ctx, pythonPath, pythonScript,
 		t.langISO,
 		t.conn.DatabasePath,
-		//strings.Replace(tempDir, ` `, `\ `, -1),
-		//replacer.Replace(tempDir),
-		`'`+tempDir+`'`,
+		replacer.Replace(tempDir),
 		strconv.Itoa(t.args.BatchMB),
 		strconv.Itoa(t.args.NumEpochs),
 		strconv.FormatFloat(t.args.LearningRate, 'e', -1, 64),
