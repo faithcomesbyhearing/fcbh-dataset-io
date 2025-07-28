@@ -18,7 +18,7 @@ from safetensors.torch import save_file as safe_save_file
 from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
 
 #
-# This is sample code provided by Claude 7/12/25
+# https://docs.pytorch.org/tutorials/beginner/introyt/trainingyt.html
 #
 
 # Setup logging

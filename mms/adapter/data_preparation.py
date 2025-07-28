@@ -87,12 +87,15 @@ def prepareDataset(scriptsDB, samplesDB, audioDir, processor):
 
 
 def identifyBatches(database, maxBatchSize, targetMemoryMB):
+    count = database.selectOne('SELECT count(*) FROM samples WHERE memory_mb > ?', (targetMemoryMB,))
+    if len(count) > 0 and count[0] > 0:
+        print(count[0], "samples were dropped, because they were too large.", file=sys.stderr)
     database.execute('DROP TABLE IF EXISTS batches', ())
     batches = """CREATE TABLE batches (idx INTEGER PRIMARY KEY, num_samples INTEGER, memory_mb FLOAT,
                 padded_mb FLOAT, indexes BLOB)"""
     database.execute(batches,())
-    query = 'SELECT idx, input_values, labels, text, reference, memory_mb FROM samples'
-    samples = database.select(query, ())
+    query = 'SELECT idx, input_values, labels, text, reference, memory_mb FROM samples WHERE memory_mb <= ?'
+    samples = database.select(query, (targetMemoryMB,))
     insert = 'INSERT INTO batches (idx, num_samples, memory_mb, padded_mb, indexes) VALUES (?,?,?,?,?)'
     batchNum = 0
     batch = []
