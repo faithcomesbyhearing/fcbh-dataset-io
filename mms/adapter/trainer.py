@@ -163,3 +163,17 @@ safe_save_file(trainedModel._get_adapters(), adapterFile, metadata={"format": "p
 processorDir = os.path.join(outputDir, "processor_" + targetLang)
 print("OutputDir for processor", processorDir)
 processor.save_pretrained(processorDir)
+
+
+"""
+# bf16 performance improvement
+for step, batch in enumerate(dataloader):
+    batch = {k: v.to(device) for k, v in batch.items()}
+    optimizer.zero_grad()
+    with autocast(dtype=torch.bfloat16):
+        outputs = model(**batch)
+        loss = outputs.loss
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+    optimizer.step()
+"""
