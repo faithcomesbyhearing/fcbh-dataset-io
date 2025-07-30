@@ -71,7 +71,7 @@ def prepareDataset(scriptsDB, samplesDB, audioDir, processor):
             print(reference, audioFile, "Has Zero Length input_values", file=sys.stderr, flush=True)
             sys.exit(1)
 
-        labels = processor(text=text).input_ids
+        labels = processor(text=text.lower()).input_ids
         labelsTensor = torch.tensor(labels, dtype=torch.long)
 
         buffer = BytesIO()
