@@ -4,7 +4,6 @@ import (
 	"context"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"github.com/sergi/go-diff/diffmatchpatch"
-	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -85,12 +84,8 @@ func (h *HTMLWriter) WriteHeading(baseDataset string, languageISO string) string
     <thead>
     <tr>
         <th>Line</th>
-        <th>Err %</th>
-		<th>Chars</th>
-		<th>Imbal</th>
 		<th>Len</th>
 		<th>Button</th>
-		<th>Error</th>
         <th>Ref</th>
 		<th>Text Comparison</th>
     </tr>
@@ -109,16 +104,16 @@ func (h *HTMLWriter) WriteLine(verse Pair) {
 		h.insertSum += inserts
 		deletes := verse.Deletes()
 		h.deleteSum += deletes
-		errPct := verse.ErrorPct(inserts, deletes)
+		//errPct := verse.ErrorPct(inserts, deletes)
 		_, _ = h.out.WriteString("<tr>\n")
 		if verse.ScriptNum != "" {
 			h.writeCell(verse.ScriptNum)
 		} else {
 			h.writeCell(strconv.Itoa(verse.ScriptId()))
 		}
-		h.writeCell(strconv.FormatFloat(errPct, 'f', 0, 64))
-		h.writeCell(strconv.Itoa(inserts + deletes))
-		h.writeCell(strconv.Itoa(int(math.Abs(float64(inserts - deletes)))))
+		//h.writeCell(strconv.FormatFloat(errPct, 'f', 0, 64))
+		//h.writeCell(strconv.Itoa(inserts + deletes))
+		//h.writeCell(strconv.Itoa(int(math.Abs(float64(inserts - deletes)))))
 		h.writeCell(strconv.Itoa(largest))
 		//h.writeCell(h.minSecFormat(verse.beginTS))
 		var params []string
@@ -128,7 +123,7 @@ func (h *HTMLWriter) WriteLine(verse Pair) {
 		params = append(params, strconv.FormatFloat(verse.BeginTS, 'f', 4, 64))
 		params = append(params, strconv.FormatFloat(verse.EndTS, 'f', 4, 64))
 		h.writeCell("<button title=\"" + h.minSecFormat(verse.BeginTS) + "\" onclick=\"playVerse(" + strings.Join(params, ",") + ")\">Play</button>")
-		h.writeCell(`+` + strconv.Itoa(inserts) + ` -` + strconv.Itoa(deletes))
+		//h.writeCell(`+` + strconv.Itoa(inserts) + ` -` + strconv.Itoa(deletes))
 		h.writeCell(verse.Ref.Description())
 		h.writeCell(verse.HTML)
 		_, _ = h.out.WriteString("</tr>\n")
@@ -185,17 +180,17 @@ func (h *HTMLWriter) WriteEnd(filenameMap string) {
     $(document).ready(function() {
         var table = $('#diffTable').DataTable({
             "columnDefs": [
-                { "orderable": false, "targets": [5,6,8] }
+                { "orderable": false, "targets": [2,4] }
 				// { "visible": false, "targets": [8] }  
             ],
             "pageLength": 50,
             "lengthMenu": [[50, 500, -1], [50, 500, "All"]],
-			"order": [[ 4, "desc" ]]
+			"order": [[ 1, "desc" ]]
         });
     	$.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
         	var hideZeros = $('#hideVerse0').prop('checked');
         	if (!hideZeros) return true;
-        	return !data[7].endsWith(":0"); 
+        	return !data[3].endsWith(":0"); 
     	});
     	$('#hideVerse0').prop('checked', true);
     	table.draw();
