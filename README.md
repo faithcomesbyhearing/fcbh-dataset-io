@@ -251,8 +251,18 @@ timestamps: # If timestamps are needed, mark Yes by source
   no_timestamps: # If time stamps are not needed
 # Default: no_timestamps
 
+training:
+  mms_adapter:
+    batch_mb: 4
+    num_epochs: 0 
+    learning_rate: 1e-3
+    warmup_pct: 12.0
+    grad_norm_max: 0.4
+# Default: no_training
+
 speech_to_text: # If STT is source Yes by desired type
   mms_asr: # This is Meta's MMS Speech to Text model
+  adapter_asr: # This ASR using the model created by mms_adapter training
   whisper: # This is OpenAI’s Speech to Text model
     model: # If using Whisper, choose one of the model sizes by marking it Yes
       large:
