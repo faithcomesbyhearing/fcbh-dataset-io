@@ -1,0 +1,18 @@
+# Minimal FCBH Dataset I/O Python Dependencies
+# Core utilities only - no heavy ML libraries
+
+# Text processing
+uroman>=1.0.0
+num2words>=0.5.12
+
+# Database
+pymysql>=1.1.0
+
+# AWS
+boto3>=1.28.0
+
+# Utilities
+requests>=2.31.0
+tqdm>=4.65.0
+
+

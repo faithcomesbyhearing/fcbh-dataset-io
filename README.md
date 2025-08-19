@@ -173,6 +173,16 @@ by the MMS model.
 Glottolog<br>
 https://glottolog.org<br>
 
+## Prerequisites
+
+**System Dependencies:**
+- FFmpeg and Sox (see MMS documentation for installation)
+- Python 3.8+ with virtual environment
+
+**For MMS Forced Alignment:**
+- See `mms/forced_align/README.md` for detailed setup instructions
+- Includes PyTorch, model download, and platform-specific commands
+
 ## Current and Future Development
 
 * Identification and removal of false positives from proofing reports
