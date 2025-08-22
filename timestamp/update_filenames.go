@@ -16,17 +16,15 @@ type audioFile struct {
 }
 
 func UpdateFilenames(ctx context.Context, conn db.DBAdapter, files []input.InputFile) *log.Status {
-	var status *log.Status
+	//var status *log.Status
 	var results []audioFile
 	for _, file := range files {
 		var ts audioFile
 		ts.scriptLine = file.ScriptLine
 		ts.filename = file.Filename
 		ts.beginTS = 0.0
-		ts.endTS, status = ffmpeg.GetAudioDuration(ctx, file.Directory, file.Filename)
-		if status != nil {
-			return status
-		}
+		ts.endTS, _ = ffmpeg.GetAudioDuration(ctx, file.Directory, file.Filename)
+		// Note bad durations are logged, but processing continues; this is used by Vessel
 		results = append(results, ts)
 	}
 	err := updateScriptTimestamps(conn, results)
