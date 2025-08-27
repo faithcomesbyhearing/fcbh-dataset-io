@@ -131,7 +131,7 @@ model = Wav2Vec2ForCTC.from_pretrained(
     pad_token_id=processor.tokenizer.pad_token_id,
     vocab_size=len(processor.tokenizer),
     ignore_mismatched_sizes = True,   # accept tokenizer of different size (required)
-    mask_time_prob = 0.05,         # Reduce masking probability
+    mask_time_prob = 0.01,         # Reduce masking probability 0.01 to 0.02
     mask_time_length = 2,          # Shorter mask length
     mask_feature_prob = 0.0,       # Disable feature masking
 )
