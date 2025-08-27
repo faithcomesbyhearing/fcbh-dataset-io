@@ -1,4 +1,4 @@
-package adapter
+package train
 
 import (
 	"context"
@@ -14,7 +14,7 @@ func TestNewWav2Vec2Trainer(t *testing.T) {
 	if status != nil {
 		t.Fatal(status)
 	}
-	params := req.MMSAdapter{BatchMB: 4, NumEpochs: 1, LearningRate: 1e-3, WarmupPct: 12, GradNormMax: 0.4}
+	params := req.Wav2Vec2{BatchMB: 4, NumEpochs: 1, LearningRate: 1e-3, WarmupPct: 12, GradNormMax: 0.4}
 	trainer := NewWav2Vec2Trainer(ctx, database, "keu", params)
 	var f1 input.InputFile
 	f1.Directory = "/Users/gary/FCBH2024/download/N2KEUWB4/N2KEUWBT"

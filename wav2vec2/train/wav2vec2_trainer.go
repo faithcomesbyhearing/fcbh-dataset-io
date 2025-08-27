@@ -1,4 +1,4 @@
-package adapter
+package train
 
 import (
 	"context"
@@ -18,10 +18,10 @@ type Wav2Vec2Trainer struct {
 	ctx     context.Context
 	conn    db.DBAdapter
 	langISO string
-	args    req.MMSAdapter
+	args    req.Wav2Vec2
 }
 
-func NewWav2Vec2Trainer(ctx context.Context, conn db.DBAdapter, langISO string, train req.MMSAdapter) Wav2Vec2Trainer {
+func NewWav2Vec2Trainer(ctx context.Context, conn db.DBAdapter, langISO string, train req.Wav2Vec2) Wav2Vec2Trainer {
 	var t Wav2Vec2Trainer
 	t.ctx = ctx
 	t.conn = conn

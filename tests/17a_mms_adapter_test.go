@@ -17,7 +17,7 @@ database:
 audio_data:
   file: /Users/gary/FCBH2024/GaryNTest/17a_mms_adapter/*.mp3
 training:
-  mms_adapter:
+  wav2vec2:
     batch_mb: 4
     num_epochs: 1
     learning_rate: 3e-5

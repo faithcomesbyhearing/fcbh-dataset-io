@@ -21,6 +21,7 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/read"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/speech_to_text"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/timestamp"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/wav2vec2/train"
 	"os"
 	"path/filepath"
 	"time"
@@ -175,10 +176,19 @@ func (c *Controller) processSteps() *log.Status {
 	// Train MMS Adapter
 	if !c.req.Training.NoTraining {
 		log.Info(c.ctx, "Train", c.ident.LanguageISO)
-		trainer := adapter.NewTrainAdapter(c.ctx, c.database, c.ident.LanguageISO, c.req.Training.MMSAdapter)
-		status = trainer.Train(audioFiles)
-		if status != nil {
-			return status
+		if c.req.Training.MMSAdapter.NumEpochs != 0 {
+			trainer := adapter.NewTrainAdapter(c.ctx, c.database, c.ident.LanguageISO, c.req.Training.MMSAdapter)
+			status = trainer.Train(audioFiles)
+			if status != nil {
+				return status
+			}
+		}
+		if c.req.Training.Wav2Vec2.NumEpochs != 0 {
+			trainer := train.NewWav2Vec2Trainer(c.ctx, c.database, c.ident.LanguageISO, c.req.Training.Wav2Vec2)
+			status = trainer.Train(audioFiles)
+			if status != nil {
+				return status
+			}
 		}
 	}
 	// Copy for STT
