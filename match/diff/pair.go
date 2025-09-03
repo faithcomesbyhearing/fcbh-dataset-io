@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/generic"
 	"github.com/sergi/go-diff/diffmatchpatch"
+	"unicode/utf8"
 )
 
 type Pair struct {
@@ -80,9 +81,8 @@ func (p *Pair) Text(isLatin sql.NullBool) (string, string) {
 func (p *Pair) Inserts() int {
 	var inserts int
 	for _, diff := range p.Diffs {
-		lenText := len(diff.Text)
 		if diff.Type == diffmatchpatch.DiffInsert {
-			inserts += lenText
+			inserts += utf8.RuneCountInString(diff.Text)
 		}
 	}
 	return inserts
@@ -91,9 +91,8 @@ func (p *Pair) Inserts() int {
 func (p *Pair) Deletes() int {
 	var deletes int
 	for _, diff := range p.Diffs {
-		lenText := len(diff.Text)
 		if diff.Type == diffmatchpatch.DiffDelete {
-			deletes += lenText
+			deletes += utf8.RuneCountInString(diff.Text)
 		}
 	}
 	return deletes
@@ -104,7 +103,7 @@ func (p *Pair) LargestLength() int {
 	var length int
 	for _, diff := range p.Diffs {
 		if diff.Type != diffmatchpatch.DiffEqual {
-			length += len(diff.Text)
+			length += utf8.RuneCountInString(diff.Text)
 		} else {
 			if length > result {
 				result = length
