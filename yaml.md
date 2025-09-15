@@ -4,25 +4,108 @@ This document provides comprehensive documentation for all available configurati
 
 ## Table of Contents
 
+- [Example Configurations](#example-configurations)
 - [Required Fields](#required-fields)
 - [Optional Configuration Sections](#optional-configuration-sections)
-  - [Output Configuration](#output-configuration)
-  - [Testament Selection](#testament-selection)
-  - [Database Configuration](#database-configuration)
   - [Audio Data Sources](#audio-data-sources)
   - [Text Data Sources](#text-data-sources)
-  - [Timestamp Generation](#timestamp-generation)
-  - [Training Configuration](#training-configuration)
-  - [Speech-to-Text Options](#speech-to-text-options)
+  - [Testament Selection](#testament-selection)
   - [Processing Detail](#processing-detail)
-  - [Audio Encoding](#audio-encoding)
-  - [Text Encoding](#text-encoding)
+  - [Output Configuration](#output-configuration)
+  - [Speech-to-Text Options](#speech-to-text-options)
+  - [Timestamp Generation](#timestamp-generation)
   - [Audio Proofing](#audio-proofing)
   - [Text Comparison](#text-comparison)
+  - [Training Configuration](#training-configuration)
+  - [Audio Encoding](#audio-encoding)
+  - [Text Encoding](#text-encoding)
+  - [Database Configuration](#database-configuration)
   - [Update DBP (Planned Feature)](#update-dbp-planned-feature)
 - [Validation Rules](#validation-rules)
 - [Default Values](#default-values)
-- [Example Configurations](#example-configurations)
+
+## Example Configurations
+
+We'll start with some handy examples to get you up and running quickly, then provide detailed explanations of all available options.
+
+### Basic Audio Proofing
+```yaml
+is_new: yes
+dataset_name: AudioProof_Example
+username: JohnDoe
+bible_id: ATIWBT
+
+testament:
+  nt: yes
+
+audio_data:
+  bible_brain:
+    mp3_64: yes
+
+text_data:
+  bible_brain:
+    text_usx_edit: yes
+
+timestamps:
+  mms_align: yes
+
+speech_to_text:
+  mms_asr: yes
+
+audio_proof:
+  html_report: yes
+
+output:
+  directory: /output
+  html_report: yes
+```
+
+### Text Comparison
+```yaml
+is_new: no
+dataset_name: Compare_Example
+username: JohnDoe
+bible_id: ATIWBT
+
+compare:
+  html_report: yes
+  base_dataset: Original_Dataset
+  gordon_filter: 4
+  compare_settings:
+    lower_case: yes
+    remove_punctuation: yes
+    double_quotes:
+      normalize: yes
+```
+
+### Training Configuration
+```yaml
+is_new: yes
+dataset_name: Training_Example
+username: JohnDoe
+bible_id: ATIWBT
+
+testament:
+  nt: yes
+
+audio_data:
+  bible_brain:
+    mp3_64: yes
+
+text_data:
+  bible_brain:
+    text_usx_edit: yes
+
+training:
+  mms_adapter:
+    batch_mb: 16
+    num_epochs: 100
+    learning_rate: 1e-4
+
+output:
+  directory: /output
+  sqlite: yes
+```
 
 ## Required Fields
 
@@ -46,50 +129,6 @@ alt_language: eng                 # Force use of a specific language code (bypas
 **Note:** `alt_language` overrides automatic language selection for MMS ASR and other AI tools. Use this when you want to force a specific language instead of letting the system find the closest supported language.
 
 ## Optional Configuration Sections
-
-### Output Configuration
-
-Specify the format and location of output files. **Multiple output formats can be generated in a single run**:
-
-```yaml
-output:
-  directory: /path/to/output   # Server directory path where output should be written
-  csv: yes                     # Mark yes for CSV output
-  json: yes                    # Mark yes for JSON output
-  sqlite: yes                  # Mark yes for SQLite database output
-```
-
-**Multiple Formats:** You can enable any combination of CSV, JSON, and SQLite outputs simultaneously. Each format will be generated as a separate file in the specified output directory.
-
-### Testament Selection
-
-Choose which portions of the Bible to process:
-
-```yaml
-testament:
-  nt: yes                      # Mark yes for entire New Testament
-  nt_books: [MAT,MRK,LUK,JHN]  # To process part of the NT, list specific USFM NT book codes
-  ot: yes                      # Mark yes for entire Old Testament
-  ot_books: [GEN,EXO,LEV,NUM]  # To process part of the OT, list specific USFM OT book codes
-```
-
-**Default:** If no testament is specified, `nt: yes` is assumed.
-
-**Note:** `nt` and `nt_books` are **not mutually exclusive** - you can specify both. If `nt: yes` is set, the entire New Testament will be processed regardless of `nt_books`. Similarly, `ot` and `ot_books` can be used together, with `ot: yes` taking precedence over `ot_books`.
-
-### Database Configuration
-
-**Advanced users only** - Configure database access and storage:
-
-```yaml
-database:
-  aws_s3: s3://bucket/path/database_name.db  # Import existing database from S3 (no wildcards allowed)
-  file: /local/path/to/database.db           # Use local database file
-```
-
-**Note:** When using `database.aws_s3`, `is_new` must be set to `no`.
-
-**Advanced Usage:** These options are **not mutually exclusive**. If both are specified, the S3 database is downloaded to the local file system. Most users can omit this section entirely - the system will automatically create and manage the database locally.
 
 ### Audio Data Sources
 
@@ -131,51 +170,47 @@ text_data:
 
 **Note:** If multiple Bible Brain options are specified, the system uses the first one given (in the order listed above).
 
-### Timestamp Generation
+### Testament Selection
 
-Choose timestamp generation method (only one can be selected):
-
-```yaml
-timestamps:
-  bible_brain: yes             # Use Bible Brain timestamps (not recommended - last verse has no ending timestamp)
-  aeneas: yes                  # Compute timestamps using Aeneas forced alignment (requires audio and text)
-  ts_bucket: yes               # Pull timestamp data from Sandeep's bucket
-  mms_fa_verse: yes            # Compute timestamps using MMS forced alignment
-  mms_align: yes               # Second method for computing timestamps with word/verse scores
-  no_timestamps: yes           # If timestamps are not needed
-```
-
-**Default:** `no_timestamps: yes`
-
-**Note:** Multiple timestamp options cannot be specified - the system will return a validation error if more than one is selected.
-
-**Note:** `mms_align` automatically sets `detail.words: yes` as a prerequisite (see [Processing Detail](#processing-detail) section).
-
-### Training Configuration
-
-Configure MMS adapter training:
+Choose which portions of the Bible to process:
 
 ```yaml
-training:
-  mms_adapter:                 # Do training using the MMS language adapter method
-    batch_mb: 32               # Maximum size of batch in MB
-    num_epochs: 50            # Number of epochs to run
-    learning_rate: 1e-3       # Learning rate for training
-    warmup_pct: 12.0          # Warmup percentage
-    grad_norm_max: 0.4        # Maximum gradient norm
-  no_training: yes             # Explicitly disable training
+testament:
+  nt: yes                      # Mark yes for entire New Testament
+  nt_books: [MAT,MRK,LUK,JHN]  # To process part of the NT, list specific USFM NT book codes
+  ot: yes                      # Mark yes for entire Old Testament
+  ot_books: [GEN,EXO,LEV,NUM]  # To process part of the OT, list specific USFM OT book codes
 ```
 
-**Training Enablement:** Training is enabled if **any** `mms_adapter` parameter is specified (even if set to 0). Training is disabled if `no_training: yes` is specified or if no training parameters are provided.
+**Default:** If no testament is specified, `nt: yes` is assumed.
 
-**Default:** `no_training: yes` (training disabled)
+**Note:** `nt` and `nt_books` are **not mutually exclusive** - you can specify both. If `nt: yes` is set, the entire New Testament will be processed regardless of `nt_books`. Similarly, `ot` and `ot_books` can be used together, with `ot: yes` taking precedence over `ot_books`.
 
-**Default Values:** When training is enabled, unspecified parameters use these defaults:
-- `batch_mb: 8`
-- `num_epochs: 32`
-- `learning_rate: 5e-5`
-- `warmup_pct: 1.0`
-- `grad_norm_max: 1.0`
+### Processing Detail
+
+Choose processing granularity:
+
+```yaml
+detail:
+  lines: yes                   # Mark yes to process script lines
+  words: yes                   # Mark yes to process individual words
+```
+
+**Default:** `lines: yes`
+
+### Output Configuration
+
+Specify the format and location of output files. **Multiple output formats can be generated in a single run**:
+
+```yaml
+output:
+  directory: /path/to/output   # Server directory path where output should be written
+  csv: yes                     # Mark yes for CSV output
+  json: yes                    # Mark yes for JSON output
+  sqlite: yes                  # Mark yes for SQLite database output
+```
+
+**Multiple Formats:** You can enable any combination of CSV, JSON, and SQLite outputs simultaneously. Each format will be generated as a separate file in the specified output directory.
 
 ### Speech-to-Text Options
 
@@ -221,60 +256,25 @@ speech_to_text:
 - **Use pre-existing adapter**: Include only `speech_to_text.adapter_asr` if adapter files already exist from a previous training run (and use "is_new: no")
 - **Training only**: Include only `training.mms_adapter` to train an adapter for future use
 
-### Processing Detail
+### Timestamp Generation
 
-Choose processing granularity:
-
-```yaml
-detail:
-  lines: yes                   # Mark yes to process script lines
-  words: yes                   # Mark yes to process individual words
-```
-
-**Default:** `lines: yes`
-
-### Audio Encoding
-
-**Advanced users only** - Configure audio feature extraction:
+Choose timestamp generation method (only one can be selected):
 
 ```yaml
-audio_encoding:
-  mfcc: yes                    # Generate Mel-Frequency Cepstral Coefficients (MFCCs)
-  no_encoding: yes             # If no audio encoding is needed
+timestamps:
+  bible_brain: yes             # Use Bible Brain timestamps (not recommended - last verse has no ending timestamp)
+  aeneas: yes                  # Compute timestamps using Aeneas forced alignment (requires audio and text)
+  ts_bucket: yes               # Pull timestamp data from Sandeep's bucket
+  mms_fa_verse: yes            # Compute timestamps using MMS forced alignment
+  mms_align: yes               # Second method for computing timestamps with word/verse scores
+  no_timestamps: yes           # If timestamps are not needed
 ```
 
-**Default:** `no_encoding: yes`
+**Default:** `no_timestamps: yes`
 
-**Note:** `no_encoding` operates similarly to `no_training` - it's automatically set to `yes` if no audio encoding options are specified in the YAML configuration.
+**Note:** Multiple timestamp options cannot be specified - the system will return a validation error if more than one is selected.
 
-**Requirements:**
-- **Timestamps required**: MFCC generation requires timestamps to segment the audio features
-- **Processing granularity**: Works with both `detail.lines` (script-level) and `detail.words` (word-level) granularity
-
-**Output Effects:**
-- **With `mfcc: yes`**: Adds 7 MFCC columns (`mfcc0`-`mfcc6`) to CSV/JSON output, significantly increasing file size
-- **With `no_encoding: yes`**: Smaller output files (and database tables) with only text, timestamps, and metadata
-
-### Text Encoding
-
-**Advanced users only** - Configure text feature extraction:
-
-```yaml
-text_encoding:
-  fast_text: yes               # Generate FastText word embeddings
-  no_encoding: yes             # If no text encoding is needed
-```
-
-**Default:** `no_encoding: yes`
-
-**Note:** `no_encoding` operates similarly to `no_training` - it's automatically set to `yes` if no text encoding options are specified in the YAML configuration.
-
-**Requirements:**
-- **Text data required**: Must have text data to process
-
-**Output Effects:**
-- **With `fast_text: yes`**: Adds word embedding columns to CSV/JSON output, increasing file size
-- **With `no_encoding: yes`**: Smaller output files (and database tables) with only text, timestamps, and metadata
+**Note:** `mms_align` automatically sets `detail.words: yes` as a prerequisite (see [Processing Detail](#processing-detail) section).
 
 ### Audio Proofing
 
@@ -376,6 +376,46 @@ The four Unicode normalization forms handle character encoding differently:
 - **NFKC**: Identifier matching where different representations should be equivalent
 - **NFKD**: Text analysis that needs fundamental character components
 
+### Training Configuration
+
+Configure MMS adapter training:
+
+```yaml
+training:
+  mms_adapter:                 # Do training using the MMS language adapter method
+    batch_mb: 32               # Maximum size of batch in MB
+    num_epochs: 50            # Number of epochs to run
+    learning_rate: 1e-3       # Learning rate for training
+    warmup_pct: 12.0          # Warmup percentage
+    grad_norm_max: 0.4        # Maximum gradient norm
+  no_training: yes             # Explicitly disable training
+```
+
+**Training Enablement:** Training is enabled if **any** `mms_adapter` parameter is specified (even if set to 0). Training is disabled if `no_training: yes` is specified or if no training parameters are provided.
+
+**Default:** `no_training: yes` (training disabled)
+
+**Default Values:** When training is enabled, unspecified parameters use these defaults:
+- `batch_mb: 8`
+- `num_epochs: 32`
+- `learning_rate: 5e-5`
+- `warmup_pct: 1.0`
+- `grad_norm_max: 1.0`
+
+### Database Configuration
+
+**Advanced users only** - Configure database access and storage:
+
+```yaml
+database:
+  aws_s3: s3://bucket/path/database_name.db  # Import existing database from S3 (no wildcards allowed)
+  file: /local/path/to/database.db           # Use local database file
+```
+
+**Note:** When using `database.aws_s3`, `is_new` must be set to `no`.
+
+**Advanced Usage:** These options are **not mutually exclusive**. If both are specified, the S3 database is downloaded to the local file system. Most users can omit this section entirely - the system will automatically create and manage the database locally.
+
 ### Update DBP (Planned Feature)
 
 **⚠️ This feature is planned but not fully implemented yet**
@@ -422,87 +462,6 @@ When options are not specified, the following defaults apply:
 - `detail.lines: yes`
 - `audio_encoding.no_encoding: yes`
 - `text_encoding.no_encoding: yes`
-
-## Example Configurations
-
-### Basic Audio Proofing
-```yaml
-is_new: yes
-dataset_name: AudioProof_Example
-username: JohnDoe
-bible_id: ATIWBT
-
-testament:
-  nt: yes
-
-audio_data:
-  bible_brain:
-    mp3_64: yes
-
-text_data:
-  bible_brain:
-    text_usx_edit: yes
-
-timestamps:
-  mms_align: yes
-
-speech_to_text:
-  mms_asr: yes
-
-audio_proof:
-  html_report: yes
-
-output:
-  directory: /output
-  html_report: yes
-```
-
-### Text Comparison
-```yaml
-is_new: no
-dataset_name: Compare_Example
-username: JohnDoe
-bible_id: ATIWBT
-
-compare:
-  html_report: yes
-  base_dataset: Original_Dataset
-  gordon_filter: 4
-  compare_settings:
-    lower_case: yes
-    remove_punctuation: yes
-    double_quotes:
-      normalize: yes
-```
-
-### Training Configuration
-```yaml
-is_new: yes
-dataset_name: Training_Example
-username: JohnDoe
-bible_id: ATIWBT
-
-testament:
-  nt: yes
-
-audio_data:
-  bible_brain:
-    mp3_64: yes
-
-text_data:
-  bible_brain:
-    text_usx_edit: yes
-
-training:
-  mms_adapter:
-    batch_mb: 16
-    num_epochs: 100
-    learning_rate: 1e-4
-
-output:
-  directory: /output
-  sqlite: yes
-```
 
 ## Additional Notes
 
