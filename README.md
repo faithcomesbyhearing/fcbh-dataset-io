@@ -201,41 +201,6 @@ user specifies their inputs, the tasks they would like performed, and how their 
 
 The server accepts configuration through YAML request files that specify inputs, processing tasks, and output formats. For comprehensive documentation of all available configuration options, see [yaml.md](yaml.md).
 
-### Quick Start
-
-A basic YAML configuration requires these fields:
-
-```yaml
-is_new: yes                    # Start a new project
-dataset_name: MyProject        # Unique project name
-username: YourName             # Your username
-bible_id: ATIWBT              # Bible identifier (or use language_iso instead)
-
-# Add processing options as needed...
-testament:
-  nt: yes                      # Process New Testament
-
-audio_data:
-  bible_brain:
-    mp3_64: yes                # Use Bible Brain MP3 audio
-
-text_data:
-  bible_brain:
-    text_usx_edit: yes         # Use Bible Brain USX text
-
-output:
-  directory: /output           # Output location
-  csv: yes                     # Generate CSV output
-```
-
-**See [yaml.md](yaml.md) for complete configuration reference including:**
-- All available options and their descriptions
-- Validation rules and dependencies  
-- Default values
-- Example configurations
-- Advanced features like training, audio proofing, and text comparison
-<!--
-
 ## Methodology
 
 Text adapters for handling a variety of formats, and converting them all to a single format for further processing.
