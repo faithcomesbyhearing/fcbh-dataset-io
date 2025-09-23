@@ -199,7 +199,7 @@ user specifies their inputs, the tasks they would like performed, and how their 
 
 ## YAML Configuration
 
-The server accepts configuration through YAML request files that specify inputs, processing tasks, and output formats. For comprehensive documentation of all available configuration options, see [yaml.md](yaml.md).
+The server accepts configuration through YAML request files that specify inputs, processing tasks, and output formats. For comprehensive documentation of all available configuration options, see [README_YAML.md](yaml.md).
 
 ## Methodology
 
