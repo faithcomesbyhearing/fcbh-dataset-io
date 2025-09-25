@@ -64,10 +64,13 @@ timestamps: # If timestamps are needed, mark Yes by source
 
 training: # Include if training in a language is required
   mms_adapter: # Do training using the MMS language adapter method
-    batch_mb: 32 # Max size of batch in MB
-    num_epochs: 50 # Num epochs to run (i.e. num iterations of dataset to use in training)
-  no_training:  # if training is not needed
-# Default: no_training
+    batch_mb: 4 # Max size of batch in MB
+    num_epochs: 16 # Num epochs to run (i.e. num iterations of dataset to use in training)
+    learning_rate: 1e-3 # learning rate
+    warmup_pct: 12.0 # pct to use for warmup of learning rate
+    grad_norm_max: 0.4 #
+  no_training:
+# Default no_training
 
 speech_to_text: # If STT is source Yes by desired type
   mms_asr: # This is Meta's MMS Speech to Text model

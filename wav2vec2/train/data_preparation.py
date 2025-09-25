@@ -87,6 +87,7 @@ def prepareDataset(scriptsDB, samplesDB, audioDir, processor):
 
 
 def identifyBatches(database, maxBatchSize, targetMemoryMB):
+    minAudioSampleMB = computeMimSampleSize(2.0)
     database.execute('DROP TABLE IF EXISTS batches', ())
     batches = """CREATE TABLE batches (idx INTEGER PRIMARY KEY, num_samples INTEGER, memory_mb FLOAT,
                 padded_mb FLOAT, indexes BLOB)"""
@@ -99,6 +100,7 @@ def identifyBatches(database, maxBatchSize, targetMemoryMB):
     unpaddedSize = 0.0
     paddedSize = 0.0
     for (index, inputValues, labels, text, reference, memoryMB) in samples:
+        memoryMB = max(memoryMB, minAudioSampleMB)
         if len(batch) >= maxBatchSize or (memoryMB * (len(batch) + 1)) >= targetMemoryMB:
             database.execute(insert, (batchNum, len(batch), unpaddedSize, paddedSize,
                 ','.join(map(str, batch))))
@@ -114,6 +116,9 @@ def identifyBatches(database, maxBatchSize, targetMemoryMB):
             ','.join(map(str, batch))))
     return batchNum + 1
 
+def computeMimSampleSize(audioSeconds):
+    tensorSizeMb = (audioSeconds * 16000 * 4) / (1024 * 1024)
+    return tensorSizeMb
 
 def prepareBatches(database, processor):
     database.execute('DROP TABLE IF EXISTS tensors', ())
