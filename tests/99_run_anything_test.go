@@ -2,29 +2,39 @@ package tests
 
 import "testing"
 
-const runAnything = `is_new: yes
-dataset_name: 10102401
-language_iso: qqq
-username: vessel
+const runAnything = `is_new: no 
+dataset_name: N2KEUWB4
+bible_id: KEUWB4
+username: GaryNTest 
 notify_ok: [gary@shortsands.com]
 notify_err: [gary@shortsands.com]
 testament:
-  nt: yes
-text_data:
-  aws_s3: s3://dataset-vessel/vessel/10102401_06241918/10102401 Text/XLSX/Chapter Review_10102401_LineBased.xlsx
+  nt_books: [LUK,ROM,1JN]
+#text_data:
+#  aws_s3: s3://pretest-audio/N2KEUWB4 Akebu (BOV)/N2KEUWBT Text/USX/*.usx
 audio_data:
-  aws_s3: s3://dataset-vessel/vessel/10102401_06241918/10102401 Line VOX/*.wav
+  aws_s3: s3://pretest-audio/N2KEUWB4 Akebu (BOV)/N2KEUWBT Chapter VOX/*.mp3
+#timestamps:
+#  mms_align: yes
+#training:
+#  wav2vec2:
+#    batch_mb: 4
+#    num_epochs: 1 
+#    learning_rate: 7.5e-5 # 5e-5 to 1e-4 suggested
+#    warmup_pct: 12.0 # 10-15
+#    grad_norm_max: 3.0 # 1-5
 speech_to_text:
-  mms_asr: yes
+  wav2vec2_asr: yes
 compare:
   html_report: yes
-  compare_settings:
+  gordon_filter: 4
+  compare_settings: 
     lower_case: y
     remove_prompt_chars: y
     remove_punctuation: y
-    double_quotes:
+    double_quotes: 
       remove: y
-    apostrophe:
+    apostrophe: 
       remove: y
     hyphen:
       remove: y

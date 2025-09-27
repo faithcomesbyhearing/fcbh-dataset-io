@@ -14,6 +14,7 @@ from sqlite_utility import *
 from data_preparation import *
 from dataset import *
 from debug import *
+from model import getWav2Vec2ForCTCModel
 #from safetensors.torch import save_file as safe_save_file
 #from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
 
@@ -74,8 +75,8 @@ def train_wav2vec2(model, dataset, num_epochs=3, lr=5e-5,
                     f"{step_label}: Loss = {loss.item():.4f}, "
                     f"Avg Loss = {avg_loss:.4f}, LR = {current_lr:.2e}"
                 )
-                memoryStatistics(logger, step_label)
-                modelMemoryStatistics(logger, model, step_label)
+                #memoryStatistics(logger, step_label)
+                #modelMemoryStatistics(logger, model, step_label)
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
                     logger.warn("Cleared CUDA cache due to fragmentation")
@@ -125,16 +126,17 @@ processor = Wav2Vec2Processor(
 sampleDB = dataPreparation(database, databasePath, audioDirectory, processor, 512, batchSizeMB)
 database.close()
 
-model = Wav2Vec2ForCTC.from_pretrained(
-    "facebook/wav2vec2-base",  # or "facebook/wav2vec2-large" for better performance
-    ctc_loss_reduction="mean",
-    pad_token_id=processor.tokenizer.pad_token_id,
-    vocab_size=len(processor.tokenizer),
-    ignore_mismatched_sizes = True,   # accept tokenizer of different size (required)
-    mask_time_prob = 0.01,         # Reduce masking probability 0.01 to 0.02
-    mask_time_length = 2,          # Shorter mask length
-    mask_feature_prob = 0.0,       # Disable feature masking
-)
+model = getWav2Vec2ForCTCModel(processor)
+#model = Wav2Vec2ForCTC.from_pretrained(
+#    "facebook/wav2vec2-base",  # or "facebook/wav2vec2-large" for better performance
+#    ctc_loss_reduction="mean",
+#    pad_token_id=processor.tokenizer.pad_token_id,
+#    vocab_size=len(processor.tokenizer),
+#    ignore_mismatched_sizes = True,   # accept tokenizer of different size (required)
+#    mask_time_prob = 0.01,         # Reduce masking probability 0.01 to 0.02
+#    mask_time_length = 2,          # Shorter mask length
+#    mask_feature_prob = 0.0,       # Disable feature masking
+#)
 
 if torch.backends.mps.is_available():
     device = torch.device("cpu")

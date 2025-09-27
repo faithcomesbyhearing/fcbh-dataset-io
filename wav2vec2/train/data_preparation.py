@@ -11,6 +11,9 @@ import time
 
 
 def dataPreparation(scriptsDB, scriptsDBPath, audioDir, processor, maxBatchSize, targetMemoryMB):
+    minAudioSec = 0.5
+    (minTensorLength, minTensorMB) = calcMinTensor(minAudioSec, torch.float32)
+    print("minAudioSec:", minAudioSec, "minTensorLength:", minTensorLength, "minTensorMB:", minTensorMB)
     dataPruner(scriptsDB)
     scriptsDBName = os.path.basename(scriptsDBPath)
     samplesDBPath = os.path.join(os.getenv('FCBH_DATASET_TMP'), scriptsDBName)
@@ -19,11 +22,18 @@ def dataPreparation(scriptsDB, scriptsDBPath, audioDir, processor, maxBatchSize,
     samplesDB = SqliteUtility(samplesDBPath)
     numSamples = prepareDataset(scriptsDB, samplesDB, audioDir, processor) # 22 sec
     print("numSamples", numSamples)
-    numBatches = identifyBatches(samplesDB, maxBatchSize, targetMemoryMB) # 3.8 sec
+    numBatches = identifyBatches(samplesDB, maxBatchSize, targetMemoryMB, minTensorMB) # 3.8 sec
     print("numBatches", numBatches)
-    numTensors = prepareBatches(samplesDB, processor)
+    numTensors = prepareBatches(samplesDB, processor, minTensorLength)
     print("numTensors", numTensors)
     return samplesDB
+
+
+def calcMinTensor(minAudioSec, dtype):
+    minTensorLength = minAudioSec * 16000
+    bytesPerElement = torch.finfo(dtype).bits // 8
+    minTensorMB = (minTensorLength * bytesPerElement) / (1024 * 1024)
+    return (int(minTensorLength), minTensorMB)
 
 
 def prepareDataset(scriptsDB, samplesDB, audioDir, processor):
@@ -86,8 +96,7 @@ def prepareDataset(scriptsDB, samplesDB, audioDir, processor):
     return index + 1
 
 
-def identifyBatches(database, maxBatchSize, targetMemoryMB):
-    minAudioSampleMB = computeMimSampleSize(2.0)
+def identifyBatches(database, maxBatchSize, targetMemoryMB, minTensorMB):
     database.execute('DROP TABLE IF EXISTS batches', ())
     batches = """CREATE TABLE batches (idx INTEGER PRIMARY KEY, num_samples INTEGER, memory_mb FLOAT,
                 padded_mb FLOAT, indexes BLOB)"""
@@ -100,7 +109,7 @@ def identifyBatches(database, maxBatchSize, targetMemoryMB):
     unpaddedSize = 0.0
     paddedSize = 0.0
     for (index, inputValues, labels, text, reference, memoryMB) in samples:
-        memoryMB = max(memoryMB, minAudioSampleMB)
+        memoryMB = max(memoryMB, minTensorMB)
         if len(batch) >= maxBatchSize or (memoryMB * (len(batch) + 1)) >= targetMemoryMB:
             database.execute(insert, (batchNum, len(batch), unpaddedSize, paddedSize,
                 ','.join(map(str, batch))))
@@ -116,11 +125,8 @@ def identifyBatches(database, maxBatchSize, targetMemoryMB):
             ','.join(map(str, batch))))
     return batchNum + 1
 
-def computeMimSampleSize(audioSeconds):
-    tensorSizeMb = (audioSeconds * 16000 * 4) / (1024 * 1024)
-    return tensorSizeMb
 
-def prepareBatches(database, processor):
+def prepareBatches(database, processor, minTensorLength):
     database.execute('DROP TABLE IF EXISTS tensors', ())
     padding: Union[bool, str] = True
     table = """CREATE TABLE tensors (idx INTEGER PRIMARY KEY, num_samples INTEGER, memory_mb FLOAT,
@@ -138,6 +144,7 @@ def prepareBatches(database, processor):
             (sampleIdx, inputValues, labels, text, reference, memoryMB) = database.selectOne(sampleQuery, (int(s),))
             buffer = BytesIO(inputValues)
             inputTensor = torch.load(buffer)
+            inputTensor = ensureMinimumTensorSize(inputTensor, minTensorLength, 0)
             inputFeatures.append({"input_values": inputTensor})
             buffer = BytesIO(labels)
             labelsTensor = torch.load(buffer)
@@ -165,6 +172,14 @@ def prepareBatches(database, processor):
         database.execute(insert, (index, numSamples, paddedMB, inputValuesBuffer.getvalue(),
                 attentionMaskBuffer.getvalue(), labelsBuffer.getvalue()))
     return len(batches)
+
+
+def ensureMinimumTensorSize(tensor, minTensorLength, padValue):
+    currentLength = tensor.shape[-1]
+    if currentLength < minTensorLength:
+        paddingNeeded = minTensorLength - currentLength
+        tensor = torch.nn.functional.pad(tensor, (0, paddingNeeded), mode='constant', value=padValue)
+    return tensor
 
 
 def displaySamples(database):

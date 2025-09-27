@@ -5,23 +5,7 @@ from transformers import Wav2Vec2ForCTC
 from transformers import Wav2Vec2Processor
 from transformers import AutoProcessor
 import torch
-#import psutil #probably not used
-#from safetensors.torch import load_file as safe_load_file
-#from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
-#from safetensors.torch import load_file
 
-
-## Documentation used to write this program
-## https://huggingface.co/docs/transformers/main/en/model_doc/mms
-## This program is NOT reentrant because of torch.cuda.empty_cache()
-
-#def isSupportedLanguage(modelId:str, lang:str):
-#    processor = AutoProcessor.from_pretrained(modelId)
-#    dict = processor.tokenizer.vocab.keys()
-#    for l in dict:
-#        if l == lang:
-#            return True
-#    return False
 
 if len(sys.argv) < 2:
     print("Usage: mms_asr.py  {iso639-3}", file=sys.stderr)
@@ -32,7 +16,7 @@ if torch.cuda.is_available():
     device = 'cuda'
 else:
     device = 'cpu'
-modelId = "facebook/wav2vec2-base"
+#modelId = "facebook/wav2vec2-base"
 modelDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'wav2vec2_models', targetLang)
 processor = AutoProcessor.from_pretrained(modelDir)
 model = Wav2Vec2ForCTC.from_pretrained(modelDir)
