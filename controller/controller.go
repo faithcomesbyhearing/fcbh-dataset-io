@@ -21,6 +21,7 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/read"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/speech_to_text"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/timestamp"
+	asr2 "github.com/faithcomesbyhearing/fcbh-dataset-io/wav2vec2/asr"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/wav2vec2/train"
 	"os"
 	"path/filepath"
@@ -449,6 +450,10 @@ func (c *Controller) speechToText(audioFiles []input.InputFile) *log.Status {
 	} else if c.req.SpeechToText.MMSAdapter {
 		var asr mms_asr.MMSASR
 		asr = mms_asr.NewMMSASR(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage, true)
+		status = asr.ProcessFiles(audioFiles)
+	} else if c.req.SpeechToText.Wav2Vec2ASR {
+		var asr asr2.Wav2Vec2ASR
+		asr = asr2.NewWav2Vec2ASR(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage)
 		status = asr.ProcessFiles(audioFiles)
 	} else {
 		var whisperModel = c.req.SpeechToText.Whisper.Model.String()

@@ -209,6 +209,7 @@ type Wav2Vec2 struct {
 type SpeechToText struct {
 	MMS            bool    `yaml:"mms_asr,omitempty"`
 	MMSAdapter     bool    `yaml:"adapter_asr,omitempty"`
+	Wav2Vec2ASR    bool    `yaml:"wav2vec2_asr,omitempty"`
 	Whisper        Whisper `yaml:"whisper,omitempty"`
 	NoSpeechToText bool    `yaml:"no_speech_to_text,omitempty"`
 }

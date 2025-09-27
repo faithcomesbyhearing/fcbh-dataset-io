@@ -11,13 +11,11 @@ if len(sys.argv) < 2:
     print("Usage: mms_asr.py  {iso639-3}", file=sys.stderr)
     sys.exit(1)
 lang = sys.argv[1]
-#adapter = len(sys.argv) > 2 and sys.argv[2].lower() == "adapter"
 if torch.cuda.is_available():
     device = 'cuda'
 else:
     device = 'cpu'
-#modelId = "facebook/wav2vec2-base"
-modelDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'wav2vec2_models', targetLang)
+modelDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'wav2vec2_models', lang)
 processor = AutoProcessor.from_pretrained(modelDir)
 model = Wav2Vec2ForCTC.from_pretrained(modelDir)
 
