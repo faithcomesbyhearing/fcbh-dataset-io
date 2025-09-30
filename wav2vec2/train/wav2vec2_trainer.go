@@ -56,6 +56,7 @@ func (t *Wav2Vec2Trainer) Train(files []input.InputFile) *log.Status {
 		strconv.Itoa(t.args.NumEpochs),
 		strconv.FormatFloat(t.args.LearningRate, 'e', -1, 64),
 		strconv.FormatFloat(t.args.WarmupPct, 'f', -1, 64),
-		strconv.FormatFloat(t.args.GradNormMax, 'f', -1, 64))
+		strconv.FormatFloat(t.args.GradNormMax, 'f', -1, 64),
+		strconv.FormatFloat(t.args.MinAudioSec, 'f', -1, 64))
 	return status
 }

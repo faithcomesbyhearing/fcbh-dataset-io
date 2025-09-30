@@ -16,13 +16,14 @@ audio_data:
   aws_s3: s3://pretest-audio/N2KEUWB4 Akebu (BOV)/N2KEUWBT Chapter VOX/*.mp3
 #timestamps:
 #  mms_align: yes
-#training:
-#  wav2vec2:
-#    batch_mb: 4
-#    num_epochs: 1 
-#    learning_rate: 7.5e-5 # 5e-5 to 1e-4 suggested
-#    warmup_pct: 12.0 # 10-15
-#    grad_norm_max: 3.0 # 1-5
+training:
+  wav2vec2:
+    batch_mb: 4
+    num_epochs: 1 
+    learning_rate: 7.5e-5 # 5e-5 to 1e-4 suggested
+    warmup_pct: 12.0 # 10-15
+    grad_norm_max: 3.0 # 1-5
+    min_audio_sec: 0.5
 speech_to_text:
   wav2vec2_asr: yes
 compare:

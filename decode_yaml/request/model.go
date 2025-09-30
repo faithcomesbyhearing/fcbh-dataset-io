@@ -203,6 +203,7 @@ type Wav2Vec2 struct {
 	LearningRate float64 `yaml:"learning_rate,omitempty"`
 	WarmupPct    float64 `yaml:"warmup_pct,omitempty"`
 	GradNormMax  float64 `yaml:"grad_norm_max,omitempty"`
+	MinAudioSec  float64 `yaml:"min_audio_sec,omitempty"`
 	LoggingSteps int     `yaml:"logging_steps,omitempty"`
 }
 

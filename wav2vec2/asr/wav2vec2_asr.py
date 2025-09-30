@@ -7,8 +7,8 @@ from transformers import AutoProcessor
 import torch
 
 
-if len(sys.argv) < 2:
-    print("Usage: mms_asr.py  {iso639-3}", file=sys.stderr)
+if len(sys.argv) < 1:
+    print("Usage: wav2vec2_asr.py  {iso639-3}", file=sys.stderr)
     sys.exit(1)
 lang = sys.argv[1]
 if torch.cuda.is_available():
@@ -16,8 +16,9 @@ if torch.cuda.is_available():
 else:
     device = 'cpu'
 modelDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'wav2vec2_models', lang)
-processor = AutoProcessor.from_pretrained(modelDir)
+processor = Wav2Vec2Processor.from_pretrained(modelDir)
 model = Wav2Vec2ForCTC.from_pretrained(modelDir)
+model.eval()
 
 model = model.to(device)
 for line in sys.stdin:

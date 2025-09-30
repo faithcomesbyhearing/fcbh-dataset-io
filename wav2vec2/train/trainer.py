@@ -90,9 +90,9 @@ def train_wav2vec2(model, dataset, num_epochs=3, lr=5e-5,
     return model
 
 
-if len(sys.argv) < 9:
+if len(sys.argv) < 10:
     usage = """Usage: python train_adapter.py {iso639-3} {databasePath} {audioDirectory}
-                    {batchMB} {numEpochs} {learningRage} {warmupPct} {gradNormMax}"""
+                    {batchMB} {numEpochs} {learningRage} {warmupPct} {gradNormMax} {minAudioSec}"""
     print(usage, file=sys.stderr)
     sys.exit(1)
 targetLang = sys.argv[1]
@@ -103,9 +103,10 @@ numEpochs = int(sys.argv[5])
 learningRate = float(sys.argv[6])
 warmupPct = float(sys.argv[7])
 gradNormMax = float(sys.argv[8])
+minAudioSec = float(sys.argv[9])
 
 print("BatchSizeMB", batchSizeMB, "NumEpochs", numEpochs, "learningRate", learningRate,
-    "warmupPct", warmupPct, "gradNormMax", gradNormMax)
+    "warmupPct", warmupPct, "gradNormMax", gradNormMax, "minAudioSec", minAudioSec)
 
 database = SqliteUtility(databasePath)
 tokenizer = createTokenizer(database, targetLang)
@@ -123,7 +124,7 @@ processor = Wav2Vec2Processor(
     tokenizer=tokenizer
 )
 
-sampleDB = dataPreparation(database, databasePath, audioDirectory, processor, 512, batchSizeMB)
+sampleDB = dataPreparation(database, databasePath, audioDirectory, processor, 512, batchSizeMB, minAudioSec)
 database.close()
 
 model = getWav2Vec2ForCTCModel(processor)
