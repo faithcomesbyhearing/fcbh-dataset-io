@@ -11,7 +11,7 @@ import time
 
 
 def dataPreparation(scriptsDB, scriptsDBPath, audioDir, processor, maxBatchSize, targetMemoryMB):
-    minAudioSec = 0.2
+    minAudioSec = 1.0
     (minTensorLength, minTensorMB) = calcMinTensor(minAudioSec, torch.float32)
     print("minAudioSec:", minAudioSec, "minTensorLength:", minTensorLength, "minTensorMB:", minTensorMB)
     dataPruner(scriptsDB)
