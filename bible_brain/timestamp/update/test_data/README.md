@@ -30,7 +30,7 @@ The test database is designed to:
 - Test insert timestamp functionality
 - Test HLS stream creation and byte-based streaming
 - Provide focused test data for specific books (e.g., John chapters)
-- Work alongside existing `niv.db` timing data
+- Work alongside existing `engnivn1da_timings.db` timing data
 
 ### Files
 
@@ -117,7 +117,7 @@ The default `init.db` contains:
 
 ### Integration with Existing Data
 
-This test database is designed to work alongside your existing `niv.db` which contains:
+This test database is designed to work alongside your existing `engnivn1da_timings.db` which contains:
 - Scripts and idents data
 - Additional timing data for other books
 - Cross-references for validation
