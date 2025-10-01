@@ -173,6 +173,7 @@ audio_data:
     set_type_code: "audio"  # Prefer N1DA (without music) over N2DA (with music)
 ```
 
+
 ### Text Data Sources
 
 Choose one text data source (only one can be selected):
@@ -432,13 +433,30 @@ database:
 
 **Advanced Usage:** These options are **not mutually exclusive**. If both are specified, the S3 database is downloaded to the local file system. Most users can omit this section entirely - the system will automatically create and manage the database locally.
 
-### Update DBP (Planned Feature)
+### Update DBP
 
-**⚠️ This feature is planned but not fully implemented yet**
+Update the DBP database with processed data:
 
 ```yaml
 update_dbp:
-  timestamps: []               # Array of timestamp sources to update in DBP
+  timestamps: ENGNIVN1DA       # Fileset ID to update timestamps for
+  hls: ENGNIVN1SA              # Fileset ID for HLS stream generation
+```
+
+**Fields:**
+- **`timestamps`**: Fileset ID to update timestamp data in DBP
+- **`hls`**: Fileset ID for generating HTTP Live Streaming (HLS) streams
+
+**HLS Stream Generation:**
+- **Purpose**: Generate HLS streams for the specified fileset
+- **Use case**: When you need to create streaming audio content from existing fileset data
+- **Value**: Fileset ID (e.g., `ENGNIVN1SA`, `ENGWEBN2SA`)
+
+**Example:**
+```yaml
+update_dbp:
+  timestamps: ENGNIVN1DA       # Update timestamps for ENGNIVN1DA
+  hls: ENGNIVN1SA              # Generate HLS streams for ENGNIVN1SA
 ```
 
 ## Validation Rules

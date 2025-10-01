@@ -127,3 +127,7 @@ compare: # To do a compare, put the names of the two projects here
       normalize_nfd: # Mark yes here for Normalization Form Decomposition
       normalize_nfkc: # Mark yes here for Normalization Form Compatibility Composition
       normalize_nfkd: # Mark yes here for Normalization Form Compatibility Decomposition
+
+update_dbp: # Update DBP database with processed data
+  timestamps: ENGNIVN1DA # Fileset ID to update timestamps for
+  hls: ENGNIVN1SA # Fileset ID for HLS stream generation

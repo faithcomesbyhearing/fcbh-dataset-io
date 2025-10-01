@@ -58,20 +58,18 @@ func (d *UpdateTimestamps) Process() *log.Status {
 		}
 		if len(timestamps) > 0 {
 			// Only process timestamps if UpdateDBP.Timestamps is present
-			if len(d.req.UpdateDBP.Timestamps) > 0 {
+			if d.req.UpdateDBP.Timestamps != "" {
 				// Round timestamps to 3 decimal places
 				for i := range timestamps {
 					timestamps[i].BeginTS = math.Round(timestamps[i].BeginTS*1000.0) / 1000.0
 					timestamps[i].EndTS = math.Round(timestamps[i].EndTS*1000.0) / 1000.0
 				}
 
-				// Process each fileset in the timestamps list
-				for _, subFilesetId := range d.req.UpdateDBP.Timestamps {
-					log.Info(d.ctx, "Updating timestamps:", subFilesetId, ch.BookId, ch.ChapterNum)
-					status = d.UpdateFileset(subFilesetId, ch.BookId, ch.ChapterNum, timestamps)
-					if status != nil {
-						return status
-					}
+				// Process the fileset for timestamps
+				log.Info(d.ctx, "Updating timestamps:", d.req.UpdateDBP.Timestamps, ch.BookId, ch.ChapterNum)
+				status = d.UpdateFileset(d.req.UpdateDBP.Timestamps, ch.BookId, ch.ChapterNum, timestamps)
+				if status != nil {
+					return status
 				}
 			}
 		}

@@ -291,5 +291,6 @@ type DiacriticalChoice struct {
 }
 
 type UpdateDBP struct {
-	Timestamps []string `yaml:"timestamps,omitempty"`
+	Timestamps string `yaml:"timestamps,omitempty"`
+	HLS        string `yaml:"hls,omitempty"`
 }
