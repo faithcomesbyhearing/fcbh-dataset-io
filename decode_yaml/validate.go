@@ -1,9 +1,10 @@
 package decode_yaml
 
 import (
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	"reflect"
 	"strings"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 )
 
 func (r *RequestDecoder) Validate(req *request.Request) {
@@ -146,26 +147,33 @@ func (r *RequestDecoder) checkForOne(structVal reflect.Value, fieldName string, 
 func (r *RequestDecoder) checkForOneRecursive(sVal reflect.Value, wasSet *[]string, recurse bool) {
 	for i := 0; i < sVal.NumField(); i++ {
 		field := sVal.Field(i)
+		fieldName := sVal.Type().Field(i).Name
+
+		// Skip SetTypeCode as it's a configuration option, not a mutually exclusive choice
+		if fieldName == "SetTypeCode" {
+			continue
+		}
+
 		if field.Kind() == reflect.String {
 			if field.String() != `` {
-				*wasSet = append(*wasSet, sVal.Type().Field(i).Name)
+				*wasSet = append(*wasSet, fieldName)
 			}
 		} else if field.Kind() == reflect.Bool {
 			if field.Bool() {
-				*wasSet = append(*wasSet, sVal.Type().Field(i).Name)
+				*wasSet = append(*wasSet, fieldName)
 			}
 		} else if field.Kind() == reflect.Int {
 			if field.Int() != 0 && len(*wasSet) == 0 {
-				*wasSet = append(*wasSet, sVal.Type().Field(i).Name)
+				*wasSet = append(*wasSet, fieldName)
 			}
 		} else if field.Kind() == reflect.Float64 {
 			if field.Float() != 0 && len(*wasSet) == 0 {
-				*wasSet = append(*wasSet, sVal.Type().Field(i).Name)
+				*wasSet = append(*wasSet, fieldName)
 			}
 		} else if field.Kind() == reflect.Struct {
 			r.checkForOneRecursive(field, wasSet, recurse)
 		} else {
-			msg := sVal.Type().Field(i).Name + ` has unexpected type ` + field.Type().Name()
+			msg := fieldName + ` has unexpected type ` + field.Type().Name()
 			r.errors = append(r.errors, msg)
 		}
 	}

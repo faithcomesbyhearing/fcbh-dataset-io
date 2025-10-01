@@ -142,6 +142,7 @@ audio_data:
     mp3_64: yes                # Mark yes for 64 kbps MP3
     mp3_16: yes                # Mark yes for 16 kbps MP3
     opus: yes                   # Mark yes for OPUS format
+    set_type_code: "audio"     # Optional: prefer specific fileset type ("audio" or "audio_drama")
   file: /directory/{mediaId}/*.wav          # Local file path (include twice for OT and NT)
   aws_s3: s3://bucket/audio/{bibleId}/{mediaId}/*.mp3  # S3 path (include twice for OT and NT)
   post: {mediaId}_{A/Bseq}_{book}_{chapter}_{verse}-{chapter_end}_{verse_end}  # File path pattern for multipart uploads (see [Multipart Uploads](#multipart-uploads) section)
@@ -151,6 +152,26 @@ audio_data:
 **Default:** `no_audio: yes`
 
 **Note:** If multiple Bible Brain options are specified, the system uses the first one given (in the order listed above).
+
+**Fileset Type Selection (`set_type_code`):**
+
+When multiple filesets are available for the same Bible (e.g., N1DA and N2DA), you can specify which type to prefer:
+
+- **`"audio"`**: Prefer filesets without background music (e.g., ENGNIVN1DA)
+- **`"audio_drama"`**: Prefer filesets with background music (e.g., ENGNIVN2DA)
+
+**How it works:**
+1. The system first tries to find a fileset matching your specified `set_type_code`
+2. If no match is found, it falls back to the default behavior (audio_drama first, then audio)
+3. This allows you to explicitly choose between N1DA vs N2DA variants when both are available
+
+**Example:**
+```yaml
+audio_data:
+  bible_brain:
+    mp3_64: yes
+    set_type_code: "audio"  # Prefer N1DA (without music) over N2DA (with music)
+```
 
 ### Text Data Sources
 

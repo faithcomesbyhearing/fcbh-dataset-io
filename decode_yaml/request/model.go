@@ -99,9 +99,10 @@ func (a AudioData) AnyBibleBrain() bool {
 }
 
 type BibleBrainAudio struct {
-	MP3_64 bool `yaml:"mp3_64,omitempty"`
-	MP3_16 bool `yaml:"mp3_16,omitempty"`
-	OPUS   bool `yaml:"opus,omitempty"`
+	MP3_64      bool   `yaml:"mp3_64,omitempty"`
+	MP3_16      bool   `yaml:"mp3_16,omitempty"`
+	OPUS        bool   `yaml:"opus,omitempty"`
+	SetTypeCode string `yaml:"set_type_code,omitempty"`
 }
 
 func (b BibleBrainAudio) AudioType() (string, string) {

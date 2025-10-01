@@ -3,11 +3,12 @@ package fetch
 import (
 	"context"
 	"encoding/json"
+	"strconv"
+	"strings"
+
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
-	"strconv"
-	"strings"
 )
 
 type APIDBPClient struct {
@@ -93,20 +94,12 @@ func (d *APIDBPClient) FindFilesets(info *BibleInfoType, audio request.BibleBrai
 	if testament.OT || len(testament.OTBooks) > 0 {
 		info.TextOTPlainFileset = d.searchPlainText(info, `OT`, textType)
 		info.TextOTUSXFileset = d.searchUSXText(info, `OT`, textType)
-		info.AudioOTFileset = d.searchAudio(info, `OT`, `audio_drama`, codec, bitrate)
-		tmpAudio := d.searchAudio(info, `OT`, `audio`, codec, bitrate)
-		if tmpAudio.Id != `` {
-			info.AudioOTFileset = tmpAudio
-		}
+		info.AudioOTFileset = d.searchAudioWithTypePreference(info, `OT`, codec, bitrate, audio.SetTypeCode)
 	}
 	if testament.NT || len(testament.NTBooks) > 0 {
 		info.TextNTPlainFileset = d.searchPlainText(info, `NT`, textType)
 		info.TextNTUSXFileset = d.searchUSXText(info, `NT`, textType)
-		info.AudioNTFileset = d.searchAudio(info, `NT`, `audio_drama`, codec, bitrate)
-		tmpAudio := d.searchAudio(info, `NT`, `audio`, codec, bitrate)
-		if tmpAudio.Id != `` {
-			info.AudioNTFileset = tmpAudio
-		}
+		info.AudioNTFileset = d.searchAudioWithTypePreference(info, `NT`, codec, bitrate, audio.SetTypeCode)
 	}
 }
 
@@ -130,6 +123,24 @@ func (d *APIDBPClient) searchUSXText(info *BibleInfoType, size string, textType 
 		}
 	}
 	return FilesetType{}
+}
+
+func (d *APIDBPClient) searchAudioWithTypePreference(info *BibleInfoType, size string, codec string, bitrate string, preferredType string) FilesetType {
+	// If a specific type is preferred, try that first
+	if preferredType != "" {
+		result := d.searchAudio(info, size, preferredType, codec, bitrate)
+		if result.Id != "" {
+			return result
+		}
+	}
+
+	// Fall back to original logic: audio_drama first, then audio
+	result := d.searchAudio(info, size, `audio_drama`, codec, bitrate)
+	if result.Id != "" {
+		return result
+	}
+
+	return d.searchAudio(info, size, `audio`, codec, bitrate)
 }
 
 func (d *APIDBPClient) searchAudio(info *BibleInfoType, size string, audioType string, codec string, bitrate string) FilesetType {
