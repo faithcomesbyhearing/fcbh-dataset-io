@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
+
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
-	"strings"
 )
 
 func updateValidation(ctx context.Context, apAdapter db.DBAdapter, dbpAdapter DBPAdapter) *log.Status {
@@ -54,13 +55,31 @@ type stats struct {
 }
 
 func getStats(ctx context.Context, conn *sql.DB) (stats, *log.Status) {
-	query := `SELECT count(script_begin_ts), count(script_end_ts), sum(script_begin_ts), sum(script_end_ts)
-			FROM scripts`
+	// Try to determine if this is SQLite or MySQL by checking if scripts table exists
+	var query string
+	var tableName string
+
+	// Check if scripts table exists (SQLite database)
+	checkQuery := `SELECT name FROM sqlite_master WHERE type='table' AND name='scripts'`
+	var tableExists bool
+	err := conn.QueryRow(checkQuery).Scan(&tableExists)
+	if err == nil && tableExists {
+		// This is SQLite with scripts table
+		tableName = "scripts"
+		query = `SELECT count(script_begin_ts), count(script_end_ts), sum(script_begin_ts), sum(script_end_ts)
+				FROM scripts`
+	} else {
+		// This is MySQL with bible_file_timestamps table
+		tableName = "bible_file_timestamps"
+		query = `SELECT count(begin_ts), count(end_ts), sum(begin_ts), sum(end_ts)
+				FROM bible_file_timestamps`
+	}
+
 	row := conn.QueryRow(query)
 	var st stats
-	err := row.Scan(&st.beginTSCount, &st.endTSCount, &st.beginTSSum, &st.endTSSum)
+	err = row.Scan(&st.beginTSCount, &st.endTSCount, &st.beginTSSum, &st.endTSSum)
 	if err != nil {
-		return st, log.Error(ctx, 500, err, `Error in getStats`)
+		return st, log.Error(ctx, 500, err, `Error in getStats querying `+tableName)
 	}
 	return st, nil
 }

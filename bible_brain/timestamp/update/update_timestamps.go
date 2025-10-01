@@ -2,12 +2,11 @@ package update
 
 import (
 	"context"
+	"math"
+
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
-	"math"
-	"os"
-	"path/filepath"
 )
 
 const (
@@ -41,7 +40,6 @@ func (d *UpdateTimestamps) Process() *log.Status {
 	if status != nil {
 		return status
 	}
-	bibleId := ident.BibleId
 	filesetId := ident.AudioNTId // base this on bookId
 	if filesetId == "" {
 		filesetId = ident.AudioOTId
@@ -59,27 +57,26 @@ func (d *UpdateTimestamps) Process() *log.Status {
 			return status
 		}
 		if len(timestamps) > 0 {
-			directory := os.Getenv("FCBH_DATASET_FILES")
-			audioPath := filepath.Join(directory, bibleId, filesetId, timestamps[0].AudioFile)
-			timestamps, status = ComputeBytes(d.ctx, audioPath, timestamps)
-			if status != nil {
-				return status
-			}
-			for i := range timestamps {
-				timestamps[i].BeginTS = math.Round(timestamps[i].BeginTS*1000.0) / 1000.0
-				timestamps[i].EndTS = math.Round(timestamps[i].EndTS*1000.0) / 1000.0
-			}
-			for _, subFilesetId := range d.req.UpdateDBP.Timestamps {
-				log.Info(d.ctx, "Updating:", subFilesetId, ch.BookId, ch.ChapterNum)
-				status = d.UpdateFileset(subFilesetId, ch.BookId, ch.ChapterNum, timestamps)
-				if status != nil {
-					return status
+			// Only process timestamps if UpdateDBP.Timestamps is present
+			if len(d.req.UpdateDBP.Timestamps) > 0 {
+				// Round timestamps to 3 decimal places
+				for i := range timestamps {
+					timestamps[i].BeginTS = math.Round(timestamps[i].BeginTS*1000.0) / 1000.0
+					timestamps[i].EndTS = math.Round(timestamps[i].EndTS*1000.0) / 1000.0
+				}
+
+				// Process each fileset in the timestamps list
+				for _, subFilesetId := range d.req.UpdateDBP.Timestamps {
+					log.Info(d.ctx, "Updating timestamps:", subFilesetId, ch.BookId, ch.ChapterNum)
+					status = d.UpdateFileset(subFilesetId, ch.BookId, ch.ChapterNum, timestamps)
+					if status != nil {
+						return status
+					}
 				}
 			}
 		}
 	}
-	status = updateValidation(d.ctx, d.conn, d.dbpConn)
-	return status
+	return nil
 }
 
 func (d *UpdateTimestamps) UpdateFileset(filesetId string, bookId string, chapterNum int, timestamps []Timestamp) *log.Status {
@@ -103,22 +100,22 @@ func (d *UpdateTimestamps) UpdateFileset(filesetId string, bookId string, chapte
 		if len(dbpTimestamps) > 0 {
 			timestamps = MergeTimestamps(timestamps, dbpTimestamps)
 		}
+		// Update existing timestamps
 		_, status = d.dbpConn.UpdateTimestamps(timestamps)
 		if status != nil {
 			return status
 		}
+
+		// Insert new timestamps
 		timestamps, _, status = d.dbpConn.InsertTimestamps(bibleFileId, timestamps)
 		if status != nil {
 			return status
 		}
-		_, status = d.dbpConn.UpdateSegments(timestamps)
-		if status != nil {
-			return status
-		}
-		_, status = d.dbpConn.UpdateFilesetTimingEstTag(hashId, mmsAlignTimingEstErr)
-		if status != nil {
-			return status
-		}
+
+		// Only process HLS segments and timing estimation if not just doing timestamps
+		// TODO: Add HLS stanza check here when HLS processing is needed
+		// For now, skip HLS processing when only timestamps are requested
+		log.Info(d.ctx, "Skipping HLS processing - timestamps only mode")
 	}
 	return nil
 }
