@@ -2,7 +2,10 @@ package update
 
 import (
 	"context"
+	"crypto/md5"
+	"fmt"
 	"math"
+	"time"
 
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
@@ -74,6 +77,16 @@ func (d *UpdateTimestamps) Process() *log.Status {
 			}
 		}
 	}
+
+	// Process HLS if requested
+	if d.req.UpdateDBP.HLS != "" {
+		log.Info(d.ctx, "Processing HLS for fileset:", d.req.UpdateDBP.HLS)
+		status = d.ProcessHLS(d.req.UpdateDBP.HLS, d.req.BibleId)
+		if status != nil {
+			return status
+		}
+	}
+
 	return nil
 }
 
@@ -154,4 +167,98 @@ func MergeTimestamps(timestamps []Timestamp, dbpTimestamps []Timestamp) []Timest
 		}
 	}
 	return timestamps
+}
+
+func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status {
+	// Initialize DBP connection if not already done
+	if d.dbpConn.conn == nil {
+		var status *log.Status
+		d.dbpConn, status = NewDBPAdapter(d.ctx)
+		if status != nil {
+			return status
+		}
+	}
+	defer d.dbpConn.Close()
+
+	// Get the timestamps fileset ID from the request
+	timestampsFilesetID := d.req.UpdateDBP.Timestamps
+	if timestampsFilesetID == "" {
+		return log.ErrorNoErr(d.ctx, 400, "Timestamps fileset ID required for HLS processing")
+	}
+
+	// Create HLS processor
+	processor := NewLocalHLSProcessor(d.ctx, bibleID, timestampsFilesetID)
+
+	// Get all chapters that have timestamps
+	chapters, status := d.conn.SelectBookChapter()
+	if status != nil {
+		return status
+	}
+
+	// Collect all HLS data
+	var hlsData HLSData
+	now := time.Now().Format("2006-01-02 15:04:05")
+	hlsData.Fileset = HLSFileset{
+		ID:          hlsFilesetID,
+		SetTypeCode: "audio_stream",                               // Default to audio_stream, could be made configurable
+		SetSizeCode: "NT",                                         // Default to NT, could be made configurable
+		HashID:      generateHashID(hlsFilesetID, "audio_stream"), // Generate a unique hash ID
+		BibleID:     bibleID,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+
+	// Process each chapter
+	for _, ch := range chapters {
+		// Get timestamps for this chapter
+		timestamps, status := d.SelectFATimestamps(ch.BookId, ch.ChapterNum)
+		if status != nil {
+			return status
+		}
+
+		if len(timestamps) > 0 {
+			// Find the audio file for this chapter
+			audioFile := timestamps[0].AudioFile
+			if audioFile == "" {
+				log.Info(d.ctx, "No audio file found for chapter:", ch.BookId, ch.ChapterNum)
+				continue
+			}
+
+			// Process the file with HLS processor
+			fileData, err := processor.ProcessFile(audioFile, timestamps)
+			if err != nil {
+				return log.Error(d.ctx, 500, err, "Failed to process HLS file: "+audioFile)
+			}
+
+			// Set file metadata
+			fileData.File.BookID = ch.BookId
+			fileData.File.ChapterNum = ch.ChapterNum
+
+			// Add to HLS data
+			hlsData.Files = append(hlsData.Files, fileData.File)
+			hlsData.Bandwidths = append(hlsData.Bandwidths, fileData.Bandwidths...)
+			hlsData.Bytes = append(hlsData.Bytes, fileData.Bytes...)
+		}
+	}
+
+	// Insert all HLS data atomically
+	status = d.dbpConn.InsertHLSData(hlsData)
+	if status != nil {
+		return status
+	}
+
+	log.Info(d.ctx, "Successfully processed HLS for fileset:", hlsFilesetID)
+	return nil
+}
+
+func generateHashID(filesetID, setTypeCode string) string {
+	// Generate hash_id using the same method as DBP: MD5(filesetID + bucket + setTypeCode)[:12]
+	// bucket is typically "dbp-prod"
+	bucket := "dbp-prod"
+
+	// Create MD5 hash
+	hash := md5.Sum([]byte(filesetID + bucket + setTypeCode))
+
+	// Convert to hex string and truncate to 12 characters
+	return fmt.Sprintf("%x", hash)[:12]
 }

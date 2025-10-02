@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"os"
+
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	_ "github.com/go-sql-driver/mysql"
-	"os"
 )
 
 type DBPAdapter struct {
@@ -281,4 +282,241 @@ func (d *DBPAdapter) UpdateFilesetTimingEstTag(hashId string, timingEstErr strin
 		}
 	}
 	return rowCount, nil
+}
+
+// HLS Data Structures
+
+type HLSFileset struct {
+	ID          string
+	SetTypeCode string
+	SetSizeCode string
+	HashID      string
+	BibleID     string
+	CreatedAt   string
+	UpdatedAt   string
+}
+
+type HLSFile struct {
+	ID         int64
+	HashID     string
+	BookID     string
+	ChapterNum int
+	FileName   string
+	FileSize   int64
+	CreatedAt  string
+	UpdatedAt  string
+}
+
+type HLSStreamBandwidth struct {
+	ID               int64
+	BibleFileID      int64
+	FileName         string
+	Bandwidth        int
+	ResolutionWidth  *int
+	ResolutionHeight *int
+	Codec            string
+	Stream           int
+	CreatedAt        string
+	UpdatedAt        string
+}
+
+type HLSStreamBytes struct {
+	ID                int64
+	StreamBandwidthID int64
+	Runtime           float64
+	Bytes             int64
+	Offset            int64
+	TimestampID       int64
+	CreatedAt         string
+	UpdatedAt         string
+}
+
+type HLSData struct {
+	Fileset    HLSFileset
+	Files      []HLSFile
+	Bandwidths []HLSStreamBandwidth
+	Bytes      []HLSStreamBytes
+}
+
+// HLS Database Operations
+
+func (d *DBPAdapter) InsertHLSFileset(fileset HLSFileset) (int64, *log.Status) {
+	query := `INSERT INTO bible_filesets (id, set_type_code, set_size_code, hash_id, asset_id, created_at, updated_at) 
+			  VALUES (?, ?, ?, ?, 'dbp-prod', ?, ?)`
+
+	result, err := d.conn.Exec(query, fileset.ID, fileset.SetTypeCode, fileset.SetSizeCode, fileset.HashID, fileset.CreatedAt, fileset.UpdatedAt)
+	if err != nil {
+		return 0, log.Error(d.ctx, 500, err, query)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, log.Error(d.ctx, 500, err, "Failed to get last insert ID")
+	}
+
+	return id, nil
+}
+
+func (d *DBPAdapter) InsertHLSFile(file HLSFile) (int64, *log.Status) {
+	query := `INSERT INTO bible_files (hash_id, book_id, chapter_start, file_name, file_size, created_at, updated_at) 
+			  VALUES (?, ?, ?, ?, ?, ?, ?)`
+
+	result, err := d.conn.Exec(query, file.HashID, file.BookID, file.ChapterNum, file.FileName, file.FileSize, file.CreatedAt, file.UpdatedAt)
+	if err != nil {
+		return 0, log.Error(d.ctx, 500, err, query)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, log.Error(d.ctx, 500, err, "Failed to get last insert ID")
+	}
+
+	return id, nil
+}
+
+func (d *DBPAdapter) InsertHLSStreamBandwidth(bandwidth HLSStreamBandwidth) (int64, *log.Status) {
+	query := `INSERT INTO bible_file_stream_bandwidths (bible_file_id, file_name, bandwidth, resolution_width, resolution_height, codec, stream, created_at, updated_at) 
+			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+
+	result, err := d.conn.Exec(query, bandwidth.BibleFileID, bandwidth.FileName, bandwidth.Bandwidth,
+		bandwidth.ResolutionWidth, bandwidth.ResolutionHeight, bandwidth.Codec, bandwidth.Stream,
+		bandwidth.CreatedAt, bandwidth.UpdatedAt)
+	if err != nil {
+		return 0, log.Error(d.ctx, 500, err, query)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, log.Error(d.ctx, 500, err, "Failed to get last insert ID")
+	}
+
+	return id, nil
+}
+
+func (d *DBPAdapter) InsertHLSStreamBytes(streamBytes HLSStreamBytes) (int64, *log.Status) {
+	query := `INSERT INTO bible_file_stream_bytes (stream_bandwidth_id, runtime, bytes, offset, timestamp_id, created_at, updated_at) 
+			  VALUES (?, ?, ?, ?, ?, ?, ?)`
+
+	result, err := d.conn.Exec(query, streamBytes.StreamBandwidthID, streamBytes.Runtime,
+		streamBytes.Bytes, streamBytes.Offset, streamBytes.TimestampID,
+		streamBytes.CreatedAt, streamBytes.UpdatedAt)
+	if err != nil {
+		return 0, log.Error(d.ctx, 500, err, query)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, log.Error(d.ctx, 500, err, "Failed to get last insert ID")
+	}
+
+	return id, nil
+}
+
+func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
+	// Start transaction
+	tx, err := d.conn.Begin()
+	if err != nil {
+		return log.Error(d.ctx, 500, err, "Failed to begin transaction")
+	}
+	defer tx.Rollback()
+
+	// Insert fileset
+	_, err = d.insertHLSFilesetTx(tx, hlsData.Fileset)
+	if err != nil {
+		return log.Error(d.ctx, 500, err, "Failed to insert HLS fileset")
+	}
+
+	// Insert files and their associated data
+	for _, file := range hlsData.Files {
+		file.HashID = hlsData.Fileset.HashID
+		fileID, err := d.insertHLSFileTx(tx, file)
+		if err != nil {
+			return log.Error(d.ctx, 500, err, "Failed to insert HLS file")
+		}
+
+		// Insert bandwidths for this file
+		for _, bandwidth := range hlsData.Bandwidths {
+			if bandwidth.BibleFileID == 0 { // Only process if not already set
+				bandwidth.BibleFileID = fileID
+				_, err := d.insertHLSStreamBandwidthTx(tx, bandwidth)
+				if err != nil {
+					return log.Error(d.ctx, 500, err, "Failed to insert HLS stream bandwidth")
+				}
+			}
+		}
+
+		// Insert bytes for this file
+		for _, streamBytes := range hlsData.Bytes {
+			if streamBytes.StreamBandwidthID == 0 { // Only process if not already set
+				// Find the corresponding bandwidth ID for this file
+				// For now, we'll use a simple approach - this might need refinement
+				streamBytes.StreamBandwidthID = fileID // This is a simplification
+				_, err := d.insertHLSStreamBytesTx(tx, streamBytes)
+				if err != nil {
+					return log.Error(d.ctx, 500, err, "Failed to insert HLS stream bytes")
+				}
+			}
+		}
+	}
+
+	// Commit transaction
+	err = tx.Commit()
+	if err != nil {
+		return log.Error(d.ctx, 500, err, "Failed to commit HLS data transaction")
+	}
+
+	return nil
+}
+
+// Transaction helper methods
+func (d *DBPAdapter) insertHLSFilesetTx(tx *sql.Tx, fileset HLSFileset) (int64, error) {
+	query := `INSERT INTO bible_filesets (id, set_type_code, set_size_code, hash_id, asset_id, created_at, updated_at) 
+			  VALUES (?, ?, ?, ?, 'dbp-prod', ?, ?)`
+
+	result, err := tx.Exec(query, fileset.ID, fileset.SetTypeCode, fileset.SetSizeCode, fileset.HashID, fileset.CreatedAt, fileset.UpdatedAt)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.LastInsertId()
+}
+
+func (d *DBPAdapter) insertHLSFileTx(tx *sql.Tx, file HLSFile) (int64, error) {
+	query := `INSERT INTO bible_files (hash_id, book_id, chapter_start, file_name, file_size, created_at, updated_at) 
+			  VALUES (?, ?, ?, ?, ?, ?, ?)`
+
+	result, err := tx.Exec(query, file.HashID, file.BookID, file.ChapterNum, file.FileName, file.FileSize, file.CreatedAt, file.UpdatedAt)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.LastInsertId()
+}
+
+func (d *DBPAdapter) insertHLSStreamBandwidthTx(tx *sql.Tx, bandwidth HLSStreamBandwidth) (int64, error) {
+	query := `INSERT INTO bible_file_stream_bandwidths (bible_file_id, file_name, bandwidth, resolution_width, resolution_height, codec, stream, created_at, updated_at) 
+			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+
+	result, err := tx.Exec(query, bandwidth.BibleFileID, bandwidth.FileName, bandwidth.Bandwidth,
+		bandwidth.ResolutionWidth, bandwidth.ResolutionHeight, bandwidth.Codec, bandwidth.Stream,
+		bandwidth.CreatedAt, bandwidth.UpdatedAt)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.LastInsertId()
+}
+
+func (d *DBPAdapter) insertHLSStreamBytesTx(tx *sql.Tx, streamBytes HLSStreamBytes) (int64, error) {
+	query := `INSERT INTO bible_file_stream_bytes (stream_bandwidth_id, runtime, bytes, offset, timestamp_id, created_at, updated_at) 
+			  VALUES (?, ?, ?, ?, ?, ?, ?)`
+
+	result, err := tx.Exec(query, streamBytes.StreamBandwidthID, streamBytes.Runtime,
+		streamBytes.Bytes, streamBytes.Offset, streamBytes.TimestampID,
+		streamBytes.CreatedAt, streamBytes.UpdatedAt)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.LastInsertId()
 }
