@@ -118,7 +118,7 @@ func (d *UpdateTimestamps) UpdateFileset(filesetId string, bookId string, chapte
 		}
 
 		// Insert new timestamps
-		timestamps, _, status = d.dbpConn.InsertTimestamps(bibleFileId, timestamps)
+		_, _, status = d.dbpConn.InsertTimestamps(bibleFileId, timestamps)
 		if status != nil {
 			return status
 		}
@@ -208,7 +208,7 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status 
 		UpdatedAt:   now,
 	}
 
-	// Process each chapter
+	// Process each chapter and create file groups
 	for _, ch := range chapters {
 		// Get timestamps for this chapter
 		timestamps, status := d.SelectFATimestamps(ch.BookId, ch.ChapterNum)
@@ -230,14 +230,22 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status 
 				return log.Error(d.ctx, 500, err, "Failed to process HLS file: "+audioFile)
 			}
 
-			// Set file metadata
-			fileData.File.BookID = ch.BookId
-			fileData.File.ChapterNum = ch.ChapterNum
+			// Create file group for this chapter
+			fileGroup := HLSFileGroup{
+				File: HLSFile{
+					BookID:     ch.BookId,
+					ChapterNum: ch.ChapterNum,
+					FileName:   fileData.File.FileName,
+					FileSize:   fileData.File.FileSize,
+					CreatedAt:  now,
+					UpdatedAt:  now,
+				},
+				Bandwidths: fileData.Bandwidths,
+				Bytes:      fileData.Bytes,
+			}
 
-			// Add to HLS data
-			hlsData.Files = append(hlsData.Files, fileData.File)
-			hlsData.Bandwidths = append(hlsData.Bandwidths, fileData.Bandwidths...)
-			hlsData.Bytes = append(hlsData.Bytes, fileData.Bytes...)
+			// Add file group to HLS data
+			hlsData.FileGroups = append(hlsData.FileGroups, fileGroup)
 		}
 	}
 

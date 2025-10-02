@@ -333,7 +333,11 @@ type HLSStreamBytes struct {
 
 type HLSData struct {
 	Fileset    HLSFileset
-	Files      []HLSFile
+	FileGroups []HLSFileGroup
+}
+
+type HLSFileGroup struct {
+	File       HLSFile
 	Bandwidths []HLSStreamBandwidth
 	Bytes      []HLSStreamBytes
 }
@@ -426,35 +430,38 @@ func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
 		return log.Error(d.ctx, 500, err, "Failed to insert HLS fileset")
 	}
 
-	// Insert files and their associated data
-	for _, file := range hlsData.Files {
-		file.HashID = hlsData.Fileset.HashID
-		fileID, err := d.insertHLSFileTx(tx, file)
+	// Process each file group individually with proper ID tracking
+	for _, fileGroup := range hlsData.FileGroups {
+		// Set hash ID for file
+		fileGroup.File.HashID = hlsData.Fileset.HashID
+
+		// 1. Insert file → get fileID
+		fileID, err := d.insertHLSFileTx(tx, fileGroup.File)
 		if err != nil {
 			return log.Error(d.ctx, 500, err, "Failed to insert HLS file")
 		}
 
-		// Insert bandwidths for this file
-		for _, bandwidth := range hlsData.Bandwidths {
-			if bandwidth.BibleFileID == 0 { // Only process if not already set
-				bandwidth.BibleFileID = fileID
-				_, err := d.insertHLSStreamBandwidthTx(tx, bandwidth)
-				if err != nil {
-					return log.Error(d.ctx, 500, err, "Failed to insert HLS stream bandwidth")
-				}
+		// 2. Insert bandwidths for this file → collect bandwidthIDs
+		bandwidthIDs := make([]int64, 0)
+		for _, bandwidth := range fileGroup.Bandwidths {
+			bandwidth.BibleFileID = fileID
+			bandwidthID, err := d.insertHLSStreamBandwidthTx(tx, bandwidth)
+			if err != nil {
+				return log.Error(d.ctx, 500, err, "Failed to insert HLS stream bandwidth")
 			}
+			bandwidthIDs = append(bandwidthIDs, bandwidthID)
 		}
 
-		// Insert bytes for this file
-		for _, streamBytes := range hlsData.Bytes {
-			if streamBytes.StreamBandwidthID == 0 { // Only process if not already set
-				// Find the corresponding bandwidth ID for this file
-				// For now, we'll use a simple approach - this might need refinement
-				streamBytes.StreamBandwidthID = fileID // This is a simplification
-				_, err := d.insertHLSStreamBytesTx(tx, streamBytes)
-				if err != nil {
-					return log.Error(d.ctx, 500, err, "Failed to insert HLS stream bytes")
-				}
+		// 3. Insert bytes for this file → use correct bandwidthID
+		for _, streamByte := range fileGroup.Bytes {
+			if len(bandwidthIDs) > 0 {
+				// For single bandwidth (current audio streams), use the first (and only) bandwidth
+				// For future multi-bandwidth support, we'd need more sophisticated mapping
+				streamByte.StreamBandwidthID = bandwidthIDs[0]
+			}
+			_, err := d.insertHLSStreamBytesTx(tx, streamByte)
+			if err != nil {
+				return log.Error(d.ctx, 500, err, "Failed to insert HLS stream bytes")
 			}
 		}
 	}
