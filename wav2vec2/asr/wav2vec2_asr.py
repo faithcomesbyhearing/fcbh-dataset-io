@@ -45,7 +45,6 @@ while True:
     inputTensor = ensureMinimumTensorSize(inputTensor, minTensorLength, 0)
     inputTensor = inputTensor.to(device)
     inputs = {"input_values": inputTensor.unsqueeze(0)}
-    print("inputs shape", inputs["input_values"].shape, file=sys.stderr)
     with torch.no_grad():
         outputs = model(**inputs).logits
     ids = torch.argmax(outputs, dim=-1)[0]
