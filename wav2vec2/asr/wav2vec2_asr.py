@@ -31,6 +31,7 @@ model = Wav2Vec2ForCTC.from_pretrained(modelDir)
 model = model.to(device)
 model.eval()
 minTensorLength = 8000 # 0.5 sec
+sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', buffering=0)
 
 while True:
     length_bytes = sys.stdin.buffer.read(4)
