@@ -195,17 +195,26 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status 
 		return status
 	}
 
+	// Get mode_id and license info from the source timestamps fileset
+	modeID, licenseGroupID, publishedSNM, status := d.dbpConn.SelectFilesetLicenseInfo(timestampsFilesetID)
+	if status != nil {
+		return status
+	}
+
 	// Collect all HLS data
 	var hlsData HLSData
 	now := time.Now().Format("2006-01-02 15:04:05")
 	hlsData.Fileset = HLSFileset{
-		ID:          hlsFilesetID,
-		SetTypeCode: "audio_stream",                               // Default to audio_stream, could be made configurable
-		SetSizeCode: "NT",                                         // Default to NT, could be made configurable
-		HashID:      generateHashID(hlsFilesetID, "audio_stream"), // Generate a unique hash ID
-		BibleID:     bibleID,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:             hlsFilesetID,
+		SetTypeCode:    "audio_stream",                               // Default to audio_stream, could be made configurable
+		SetSizeCode:    "NT",                                         // Default to NT, could be made configurable
+		ModeID:         modeID,                                       // Copy from source timestamps fileset
+		HashID:         generateHashID(hlsFilesetID, "audio_stream"), // Generate a unique hash ID
+		BibleID:        bibleID,
+		LicenseGroupID: licenseGroupID, // Copy from source timestamps fileset
+		PublishedSNM:   publishedSNM,   // Copy from source timestamps fileset
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 
 	// Process each chapter and create file groups

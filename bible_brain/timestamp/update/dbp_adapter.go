@@ -287,13 +287,16 @@ func (d *DBPAdapter) UpdateFilesetTimingEstTag(hashId string, timingEstErr strin
 // HLS Data Structures
 
 type HLSFileset struct {
-	ID          string
-	SetTypeCode string
-	SetSizeCode string
-	HashID      string
-	BibleID     string
-	CreatedAt   string
-	UpdatedAt   string
+	ID             string
+	SetTypeCode    string
+	SetSizeCode    string
+	ModeID         int
+	HashID         string
+	BibleID        string
+	LicenseGroupID *int
+	PublishedSNM   bool
+	CreatedAt      string
+	UpdatedAt      string
 }
 
 type HLSFile struct {
@@ -448,6 +451,25 @@ func (d *DBPAdapter) SelectFATimestampsFromDBP(bookId string, chapter int, files
 	return timestamps, nil
 }
 
+// SelectFilesetLicenseInfo gets mode_id, license_group_id and published_snm from a fileset
+func (d *DBPAdapter) SelectFilesetLicenseInfo(filesetId string) (int, *int, bool, *log.Status) {
+	query := `SELECT mode_id, license_group_id, published_snm FROM bible_filesets WHERE id = ?`
+
+	var modeID int
+	var licenseGroupID *int
+	var publishedSNM bool
+
+	err := d.conn.QueryRow(query, filesetId).Scan(&modeID, &licenseGroupID, &publishedSNM)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, nil, false, log.ErrorNoErr(d.ctx, 404, "Fileset not found: "+filesetId)
+		}
+		return 0, nil, false, log.Error(d.ctx, 500, err, "Failed to query fileset license info")
+	}
+
+	return modeID, licenseGroupID, publishedSNM, nil
+}
+
 func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
 	// Start transaction
 	tx, err := d.conn.Begin()
@@ -509,10 +531,10 @@ func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
 
 // Transaction helper methods
 func (d *DBPAdapter) insertHLSFilesetTx(tx *sql.Tx, fileset HLSFileset) (int64, error) {
-	query := `INSERT INTO bible_filesets (id, set_type_code, set_size_code, hash_id, asset_id, created_at, updated_at) 
-			  VALUES (?, ?, ?, ?, 'dbp-prod', ?, ?)`
+	query := `INSERT INTO bible_filesets (id, set_type_code, set_size_code, mode_id, hash_id, asset_id, license_group_id, published_snm, created_at, updated_at) 
+			  VALUES (?, ?, ?, ?, ?, 'dbp-prod', ?, ?, ?, ?)`
 
-	result, err := tx.Exec(query, fileset.ID, fileset.SetTypeCode, fileset.SetSizeCode, fileset.HashID, fileset.CreatedAt, fileset.UpdatedAt)
+	result, err := tx.Exec(query, fileset.ID, fileset.SetTypeCode, fileset.SetSizeCode, fileset.ModeID, fileset.HashID, fileset.LicenseGroupID, fileset.PublishedSNM, fileset.CreatedAt, fileset.UpdatedAt)
 	if err != nil {
 		return 0, err
 	}
