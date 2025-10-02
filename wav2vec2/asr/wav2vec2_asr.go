@@ -2,7 +2,6 @@ package asr
 
 import (
 	"context"
-	"fmt"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
@@ -68,7 +67,7 @@ func (a *Wav2Vec2ASR) ProcessFiles(files []input.InputFile) *log.Status {
 	sampleDBPath := filepath.Join(os.Getenv(`FCBH_DATASET_TMP`), project+`.db`)
 	sampleDB := db.NewDBAdapter(a.ctx, sampleDBPath)
 	for _, file := range files {
-		log.Info(a.ctx, "MMS ASR", file.BookId, file.Chapter)
+		log.Info(a.ctx, "Wav2Vec2 ASR", file.BookId, file.Chapter)
 		status = a.processFile(file, sampleDB)
 		if status != nil {
 			return status
@@ -104,7 +103,7 @@ func (a *Wav2Vec2ASR) processFile(file input.InputFile, sampleDB db.DBAdapter) *
 			if status1 != nil {
 				return status1
 			}
-			fmt.Println(file.BookId, file.Chapter, verse.verseStr, word.wordNum, response)
+			log.Info(a.ctx, file.BookId, file.Chapter, verse.verseStr, word.wordNum, response)
 			wordList = append(wordList, response)
 		}
 		verseStr := strings.Join(wordList, " ")

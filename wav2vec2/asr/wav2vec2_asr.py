@@ -52,5 +52,6 @@ while True:
     sys.stdout.write(transcription)
     sys.stdout.write("\n")
     sys.stdout.flush()
+    print("\t", transcription, file=sys.stderr)
 
 
