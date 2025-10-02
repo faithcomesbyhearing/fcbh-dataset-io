@@ -50,7 +50,8 @@ func (a *Wav2Vec2ASR) ProcessFiles(files []input.InputFile) *log.Status {
 		return status
 	}
 	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "wav2vec2/asr/wav2vec2_asr.py")
-	a.asrPy, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_ASR_PYTHON`), pythonScript, lang)
+	// The -u option ensures the stdio is unbuffered.
+	a.asrPy, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_ASR_PYTHON`), pythonScript, "-u", lang)
 	if status != nil {
 		return status
 	}
