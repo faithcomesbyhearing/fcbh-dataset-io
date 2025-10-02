@@ -31,7 +31,6 @@ model = Wav2Vec2ForCTC.from_pretrained(modelDir)
 model = model.to(device)
 model.eval()
 minTensorLength = 8000 # 0.5 sec
-sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', buffering=0)
 
 while True:
     length_bytes = sys.stdin.buffer.read(4)
@@ -50,9 +49,10 @@ while True:
         outputs = model(**inputs).logits
     ids = torch.argmax(outputs, dim=-1)[0]
     transcription = processor.decode(ids)
-    sys.stdout.write(transcription)
-    sys.stdout.write("\n")
-    sys.stdout.flush()
+    print(transcription, flush=True)
+    #sys.stdout.write(transcription)
+    #sys.stdout.write("\n")
+    #sys.stdout.flush()
     print("\t", transcription, file=sys.stderr)
 
 
