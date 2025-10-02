@@ -1,5 +1,7 @@
 import os
 import sys
+import struct
+import io
 from datasets import Dataset, Audio
 from transformers import Wav2Vec2ForCTC
 from transformers import Wav2Vec2Processor
@@ -7,7 +9,15 @@ from transformers import AutoProcessor
 import torch
 
 
-if len(sys.argv) < 1:
+def ensureMinimumTensorSize(tensor, minTensorLength, padValue):
+    currentLength = tensor.shape[-1]
+    if currentLength < minTensorLength:
+        paddingNeeded = minTensorLength - currentLength
+        tensor = torch.nn.functional.pad(tensor, (0, paddingNeeded), mode='constant', value=padValue)
+    return tensor
+
+
+if len(sys.argv) < 2:
     print("Usage: wav2vec2_asr.py  {iso639-3}", file=sys.stderr)
     sys.exit(1)
 lang = sys.argv[1]
@@ -18,18 +28,24 @@ else:
 modelDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'wav2vec2_models', lang)
 processor = Wav2Vec2Processor.from_pretrained(modelDir)
 model = Wav2Vec2ForCTC.from_pretrained(modelDir)
-model.eval()
-
 model = model.to(device)
-for line in sys.stdin:
-    torch.cuda.empty_cache() # This will not be OK for concurrent processes
-    audioFile = line.strip()
-    fromDict = Dataset.from_dict({"audio": [audioFile]})
-    streamData = fromDict.cast_column("audio", Audio(sampling_rate=16000))
-    sample = next(iter(streamData))["audio"]["array"]
+model.eval()
+minTensorLength = 8000 # 0.5 sec
 
-    inputs = processor(sample, sampling_rate=16_000, return_tensors="pt")
-    inputs = {name: tensor.to(device) for name, tensor in inputs.items()}
+while True:
+    length_bytes = sys.stdin.buffer.read(4)
+    if len(length_bytes) < 4:
+        break
+    length = struct.unpack('>I', length_bytes)[0]
+    blob_data = sys.stdin.buffer.read(length)
+    if len(blob_data) < length:
+        break  # Incomplete read
+    buffer = io.BytesIO(blob_data)
+    inputTensor = torch.load(buffer)
+    inputTensor = ensureMinimumTensorSize(inputTensor, minTensorLength, 0)
+    inputTensor = inputTensor.to(device)
+    inputs = {"input_values": inputTensor.unsqueeze(0)}
+    print("inputs shape", inputs["input_values"].shape, file=sys.stderr)
     with torch.no_grad():
         outputs = model(**inputs).logits
     ids = torch.argmax(outputs, dim=-1)[0]
@@ -37,14 +53,5 @@ for line in sys.stdin:
     sys.stdout.write(transcription)
     sys.stdout.write("\n")
     sys.stdout.flush()
-
-
-
-## Testing
-## cd Documents/go2/dataset/mms
-## conda activate mms_asr
-## python mms_asr.py eng
-## /Users/gary/FCBH2024/download/ENGWEB/ENGWEBN2DA-mp3-64/B02___01_Mark________ENGWEBN2DA.wav
-
 
 

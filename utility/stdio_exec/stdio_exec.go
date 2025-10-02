@@ -3,6 +3,7 @@ package stdio_exec
 import (
 	"bufio"
 	"context"
+	"encoding/binary"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"io"
 	"os/exec"
@@ -68,6 +69,30 @@ func handleStderr(ctx context.Context, stderr io.ReadCloser) {
 func (s *StdioExec) Process(input string) (string, *log.Status) {
 	var result string
 	_, err := s.writer.WriteString(input + "\n")
+	if err != nil {
+		return result, log.Error(s.ctx, 500, err, "Error writing to", s.command)
+	}
+	err = s.writer.Flush()
+	if err != nil {
+		return result, log.Error(s.ctx, 500, err, "Error flush to", s.command)
+	}
+	result, err = s.reader.ReadString('\n')
+	if err != nil {
+		return result, log.Error(s.ctx, 500, err, `Error reading response from`, s.command)
+	}
+	result = strings.TrimRight(result, "\n")
+	return result, nil
+}
+
+func (s *StdioExec) ProcessBytes(input []byte) (string, *log.Status) {
+	var result string
+	lengthBuf := make([]byte, 4)
+	binary.BigEndian.PutUint32(lengthBuf, uint32(len(input)))
+	_, err := s.writer.Write(lengthBuf)
+	if err != nil {
+		return result, log.Error(s.ctx, 500, err, "Error writing length to", s.command)
+	}
+	_, err = s.writer.Write(input)
 	if err != nil {
 		return result, log.Error(s.ctx, 500, err, "Error writing to", s.command)
 	}

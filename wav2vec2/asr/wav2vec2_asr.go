@@ -6,11 +6,13 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/ffmpeg"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
 )
 
 type Wav2Vec2ASR struct {
@@ -44,21 +46,11 @@ func (a *Wav2Vec2ASR) ProcessFiles(files []input.InputFile) *log.Status {
 	if a.sttLang != "" {
 		lang = a.sttLang
 	}
-	//if !a.adapter {
-	//	lang, status = mms.CheckLanguage(a.ctx, a.lang, a.sttLang, "mms_asr")
-	//	if status != nil {
-	//		return status
-	//	}
-	//}
 	status = a.conn.UpdateASRLanguage(lang)
 	if status != nil {
 		return status
 	}
 	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "wav2vec2/asr/wav2vec2_asr.py")
-	//var useAdapter string
-	//if a.adapter {
-	//	useAdapter = "adapter"
-	//}
 	a.asrPy, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_ASR_PYTHON`), pythonScript, lang)
 	if status != nil {
 		return status
@@ -69,9 +61,15 @@ func (a *Wav2Vec2ASR) ProcessFiles(files []input.InputFile) *log.Status {
 		return status
 	}
 	defer a.uroman.Close()
+	project := a.conn.Project
+	if strings.HasSuffix(project, "_audio") {
+		project = project[:len(project)-len("_audio")]
+	}
+	sampleDBPath := filepath.Join(os.Getenv(`FCBH_DATASET_TMP`), project+`.db`)
+	sampleDB := db.NewDBAdapter(a.ctx, sampleDBPath)
 	for _, file := range files {
 		log.Info(a.ctx, "MMS ASR", file.BookId, file.Chapter)
-		status = a.processFile(file, tempDir)
+		status = a.processFile(file, sampleDB)
 		if status != nil {
 			return status
 		}
@@ -79,43 +77,46 @@ func (a *Wav2Vec2ASR) ProcessFiles(files []input.InputFile) *log.Status {
 	return status
 }
 
-// processFile
-func (a *Wav2Vec2ASR) processFile(file input.InputFile, tempDir string) *log.Status {
-	var status *log.Status
-	wavFile, status := ffmpeg.ConvertMp3ToWav(a.ctx, tempDir, file.FilePath())
+type verseRec struct {
+	scriptId int64
+	verseStr string
+	verseNum int //(abc problems)
+	words    []wordRec
+}
+type wordRec struct {
+	wordId  int64
+	wordNum int
+	text    string
+	input   []byte
+	idx     int
+}
+
+func (a *Wav2Vec2ASR) processFile(file input.InputFile, sampleDB db.DBAdapter) *log.Status {
+	var audioFiles []db.Audio
+	verses, status := a.selectSample(sampleDB, file.BookId, file.Chapter)
 	if status != nil {
 		return status
 	}
-	var audioFiles []db.Audio
-	if file.ScriptLine != "" {
+	for _, verse := range verses {
+		var wordList []string
+		for _, word := range verse.words {
+			response, status1 := a.asrPy.ProcessBytes(word.input)
+			if status1 != nil {
+				return status1
+			}
+			fmt.Println(file.BookId, file.Chapter, verse.verseStr, word.wordNum, response)
+			wordList = append(wordList, response)
+		}
+		verseStr := strings.Join(wordList, " ")
 		var audioFile db.Audio
-		audioFile, status = a.selectScriptLine(file.ScriptLine)
-		if status != nil {
-			return status
-		}
-		audioFile.AudioVerseWav = wavFile
-		audioFiles = append(audioFiles, audioFile)
-	} else {
-		audioFiles, status = a.conn.SelectFAScriptTimestamps(file.BookId, file.Chapter)
-		if status != nil {
-			return status
-		}
-		audioFiles, status = ffmpeg.ChopByTimestamp(a.ctx, tempDir, wavFile, audioFiles)
-	}
-	for i, ts := range audioFiles {
-		audioFiles[i].AudioFile = file.Filename
-		audioFiles[i].AudioChapterWav = wavFile
-		response, status1 := a.asrPy.Process(ts.AudioVerseWav)
-		if status1 != nil {
-			return status1
-		}
-		fmt.Println(ts.BookId, ts.ChapterNum, ts.VerseStr, ts.ScriptId, response)
-		audioFiles[i].Text = response
-		uRoman, status2 := a.uroman.Process(response)
+		audioFile.ScriptId = verse.scriptId
+		audioFile.Text = verseStr
+		uRoman, status2 := a.uroman.Process(verseStr)
 		if status2 != nil {
 			return status2
 		}
-		audioFiles[i].Uroman = uRoman
+		audioFile.Uroman = uRoman
+		audioFiles = append(audioFiles, audioFile)
 	}
 	//log.Debug(a.ctx, "Finished ASR", file.BookId, file.Chapter)
 	var recCount int
@@ -126,13 +127,66 @@ func (a *Wav2Vec2ASR) processFile(file input.InputFile, tempDir string) *log.Sta
 	return status
 }
 
-func (a *Wav2Vec2ASR) selectScriptLine(scriptLine string) (db.Audio, *log.Status) {
-	var rec db.Audio
-	var query = `SELECT script_id, book_id, chapter_num, audio_file FROM scripts WHERE script_num = ?`
-	row := a.conn.DB.QueryRow(query, scriptLine)
-	err := row.Scan(&rec.ScriptId, &rec.BookId, &rec.ChapterNum, &rec.AudioFile)
+func (a *Wav2Vec2ASR) selectSample(db db.DBAdapter, bookId string, chapter int) ([]verseRec, *log.Status) {
+	var verses []verseRec
+	key := bookId + " " + strconv.Itoa(chapter)
+	query := `SELECT idx, script_id, word_id, input_values, text, reference FROM samples WHERE reference like '` + key + `:%'`
+	rows, err := db.DB.Query(query)
 	if err != nil {
-		return rec, log.Error(a.ctx, 500, err, "Error during SelectScriptLine.")
+		return verses, log.Error(a.ctx, 500, err, `Error reading rows in selectSample`)
 	}
-	return rec, nil
+	defer rows.Close()
+	verseMap := make(map[string]*verseRec)
+	verseOrder := []string{} // Track order of verses
+	for rows.Next() {
+		var word wordRec
+		var reference string
+		var scriptId int64
+		err = rows.Scan(&word.idx, &scriptId, &word.wordId, &word.input, &word.text, &reference)
+		if err != nil {
+			return verses, log.Error(a.ctx, 500, err, `Error scanning in selectSample`)
+		}
+		parts := strings.Split(reference, ":")
+		if len(parts) != 2 {
+			return verses, log.Error(a.ctx, 500, err, `Error scanning in selectSample`)
+		}
+		pieces := strings.Split(parts[1], ".")
+		if len(pieces) != 2 {
+			return verses, log.Error(a.ctx, 500, err, `Error scanning in selectSample`)
+		}
+		verseStr := pieces[0]
+		word.wordNum, err = strconv.Atoi(pieces[1])
+		if err != nil {
+			return verses, log.Error(a.ctx, 500, err, `Error scanning in selectSample`)
+		}
+		verse, exists := verseMap[verseStr]
+		if !exists {
+			verse = &verseRec{
+				scriptId: scriptId,
+				verseStr: verseStr,
+				words:    []wordRec{},
+			}
+			verseMap[verseStr] = verse
+			verseOrder = append(verseOrder, verseStr) // Track order
+		}
+		verse.words = append(verse.words, word)
+	}
+	err = rows.Err()
+	if err != nil {
+		return verses, log.Error(a.ctx, 500, err, `Error at end of rows in ReadingScriptByChapter`)
+	}
+	verses = make([]verseRec, 0, len(verseMap))
+	for _, verseStr := range verseOrder {
+		verse := verseMap[verseStr]
+		sort.Slice(verse.words, func(i, j int) bool {
+			return verse.words[i].wordNum < verse.words[j].wordNum
+		})
+		verses = append(verses, *verse)
+	}
+	sort.Slice(verses, func(i, j int) bool {
+		numI, _ := strconv.Atoi(verses[i].verseStr)
+		numJ, _ := strconv.Atoi(verses[j].verseStr)
+		return numI < numJ
+	})
+	return verses, nil
 }

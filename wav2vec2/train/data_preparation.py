@@ -37,10 +37,11 @@ def calcMinTensor(minAudioSec, dtype):
 
 def prepareDataset(scriptsDB, samplesDB, audioDir, processor):
     samplesDB.execute('DROP TABLE IF EXISTS samples', ())
-    samples = 'CREATE TABLE samples (idx INTEGER PRIMARY KEY, input_values BLOB, labels BLOB, text TEXT, reference TEXT, memory_mb FLOAT)'
+    samples = """CREATE TABLE samples (idx INTEGER PRIMARY KEY, script_id INTEGER, word_id INTEGER,
+            input_values BLOB, labels BLOB, text TEXT, reference TEXT, memory_mb FLOAT)"""
     samplesDB.execute(samples,())
     query = """
-        SELECT s.book_id || ' ' || s.chapter_num || ':' || s.verse_str || '.' || w.word_seq as ref,
+        SELECT s.script_id, w.word_id, s.book_id || ' ' || s.chapter_num || ':' || s.verse_str || '.' || w.word_seq as ref,
                 s.audio_file, w.word_begin_ts, w.word_end_ts, w.word AS text
         FROM scripts s
         JOIN words w ON w.script_id = s.script_id
@@ -50,7 +51,7 @@ def prepareDataset(scriptsDB, samplesDB, audioDir, processor):
         """
     index = -1
     data = scriptsDB.select(query,())
-    for (reference, audioFile, beginTS, endTS, text) in data:
+    for (scriptId, wordId, reference, audioFile, beginTS, endTS, text) in data:
         index += 1
         audioFile = audioFile.replace(".mp3", ".wav")
         audioPath = os.path.join(audioDir, audioFile)
@@ -90,8 +91,8 @@ def prepareDataset(scriptsDB, samplesDB, audioDir, processor):
         buffer = BytesIO()
         torch.save(labelsTensor, buffer)
         labelsBlob = buffer.getvalue()
-        insert = 'INSERT INTO samples (idx, input_values, labels, text, reference, memory_mb) VALUES (?,?,?,?,?,?)'
-        samplesDB.execute(insert, (index, inputValuesBlob, labelsBlob, text, reference, memoryMB))
+        insert = 'INSERT INTO samples (idx, script_id, word_id, input_values, labels, text, reference, memory_mb) VALUES (?,?,?,?,?,?,?,?)'
+        samplesDB.execute(insert, (index, scriptId, wordId, inputValuesBlob, labelsBlob, text, reference, memoryMB))
     return index + 1
 
 
