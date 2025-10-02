@@ -210,8 +210,8 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status 
 
 	// Process each chapter and create file groups
 	for _, ch := range chapters {
-		// Get timestamps for this chapter
-		timestamps, status := d.SelectFATimestamps(ch.BookId, ch.ChapterNum)
+		// Get timestamps for this chapter from MySQL (not SQLite)
+		timestamps, status := d.dbpConn.SelectFATimestampsFromDBP(ch.BookId, ch.ChapterNum, timestampsFilesetID)
 		if status != nil {
 			return status
 		}

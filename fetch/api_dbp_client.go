@@ -134,13 +134,13 @@ func (d *APIDBPClient) searchAudioWithTypePreference(info *BibleInfoType, size s
 		}
 	}
 
-	// Fall back to original logic: audio_drama first, then audio
-	result := d.searchAudio(info, size, `audio_drama`, codec, bitrate)
+	// Fall back to original logic: audio first, then audio_drama
+	result := d.searchAudio(info, size, `audio`, codec, bitrate)
 	if result.Id != "" {
 		return result
 	}
 
-	return d.searchAudio(info, size, `audio`, codec, bitrate)
+	return d.searchAudio(info, size, `audio_drama`, codec, bitrate)
 }
 
 func (d *APIDBPClient) searchAudio(info *BibleInfoType, size string, audioType string, codec string, bitrate string) FilesetType {

@@ -416,6 +416,38 @@ func (d *DBPAdapter) InsertHLSStreamBytes(streamBytes HLSStreamBytes) (int64, *l
 	return id, nil
 }
 
+// SelectFATimestampsFromDBP gets timestamps from MySQL database with actual timestamp IDs
+func (d *DBPAdapter) SelectFATimestampsFromDBP(bookId string, chapter int, filesetId string) ([]Timestamp, *log.Status) {
+	// Get the hash_id for the fileset
+	hashId, status := d.SelectHashId(filesetId)
+	if status != nil {
+		return nil, status
+	}
+
+	// Get the file ID and filename for this book/chapter
+	fileId, filename, status := d.SelectFileId(hashId, bookId, chapter)
+	if status != nil {
+		return nil, status
+	}
+
+	if fileId <= 0 {
+		return []Timestamp{}, nil // No file found
+	}
+
+	// Get timestamps for this file
+	timestamps, status := d.SelectTimestamps(fileId)
+	if status != nil {
+		return nil, status
+	}
+
+	// Set the AudioFile for each timestamp
+	for i := range timestamps {
+		timestamps[i].AudioFile = filename
+	}
+
+	return timestamps, nil
+}
+
 func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
 	// Start transaction
 	tx, err := d.conn.Begin()
