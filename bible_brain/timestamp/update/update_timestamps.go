@@ -107,6 +107,7 @@ func (d *UpdateTimestamps) ProcessBothTimestampsAndHLS(chapters []db.Script) *lo
 	}
 
 	// Now process HLS with the newly inserted timestamps
+	log.Info(d.ctx, "Updating biblebrain")
 	status := d.ProcessHLS(d.req.UpdateDBP.HLS, d.req.BibleId)
 	if status != nil {
 		return status
@@ -118,6 +119,7 @@ func (d *UpdateTimestamps) ProcessBothTimestampsAndHLS(chapters []db.Script) *lo
 
 func (d *UpdateTimestamps) ProcessTimestampsOnly(chapters []db.Script) *log.Status {
 	log.Info(d.ctx, "Processing timestamps only")
+	log.Info(d.ctx, "Updating biblebrain")
 
 	for _, ch := range chapters {
 		var timestamps []Timestamp
@@ -148,6 +150,7 @@ func (d *UpdateTimestamps) ProcessHLSOnly() *log.Status {
 	log.Info(d.ctx, "Processing HLS only")
 
 	// Process HLS using the existing ProcessHLS function
+	log.Info(d.ctx, "Updating biblebrain")
 	status := d.ProcessHLS(d.req.UpdateDBP.HLS, d.req.BibleId)
 	if status != nil {
 		return status
