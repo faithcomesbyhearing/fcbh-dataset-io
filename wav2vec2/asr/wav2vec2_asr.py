@@ -17,10 +17,11 @@ def ensureMinimumTensorSize(tensor, minTensorLength, padValue):
     return tensor
 
 
-if len(sys.argv) < 3:
+if len(sys.argv) < 2:
     print("Usage: python -u wav2vec2_asr.py  {iso639-3}", file=sys.stderr)
     sys.exit(1)
-lang = sys.argv[2]
+lang = sys.argv[1]
+print("lang", lang, file=sys.stderr)
 if torch.cuda.is_available():
     device = 'cuda'
 else:
