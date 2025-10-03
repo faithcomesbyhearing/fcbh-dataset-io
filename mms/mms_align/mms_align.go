@@ -3,14 +3,6 @@ package mms_align
 import (
 	"context"
 	"encoding/json"
-	"math"
-	"os"
-	"path/filepath"
-	"regexp"
-	"strconv"
-	"strings"
-	"unicode"
-
 	"github.com/divan/num2words"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/generic"
@@ -20,6 +12,13 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
 	"golang.org/x/text/unicode/norm"
+	"math"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"unicode"
 )
 
 type MMSAlign_Input struct {
@@ -76,7 +75,6 @@ func (m *MMSAlign) ProcessFiles(files []input.InputFile) *log.Status {
 	}
 	defer m.mmsAlign.Close()
 	for _, file := range files {
-		log.Info(m.ctx, "Calculating timestamps for", file.Filename)
 		log.Info(m.ctx, "MMS Align", file.BookId, file.Chapter)
 		status = m.processFile(file)
 		if status != nil {
@@ -256,7 +254,6 @@ func (m *MMSAlign) processPyOutput(file input.InputFile, wordRefs []Word, respon
 	if status != nil {
 		return status
 	}
-	log.Info(m.ctx, "Updating biblebrain")
 	status = m.conn.UpdateScriptFATimestamps(verses)
 	if status != nil {
 		return status
