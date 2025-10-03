@@ -1,0 +1,10 @@
+TO BUILD
+cd project root and go build -o dataset controller/dataset_cli/dataset.go
+
+TO RUN
+source setup_env.sh
+./dataset bible_brain/timestamp/update/engnivn1da_hls_test.yaml
+(or whatever yaml)
+
+TO REMOVE A TEST FILESET
+mysql -u root -p dbp_localtest -e "SET @hash_id = (SELECT hash_id FROM bible_filesets WHERE id = 'ENGNIVN1SA'); DELETE FROM bible_file_stream_bytes WHERE stream_bandwidth_id IN (SELECT id FROM bible_file_stream_bandwidths WHERE bible_file_id IN (SELECT id FROM bible_files WHERE hash_id = @hash_id)); DELETE FROM bible_file_stream_bandwidths WHERE bible_file_id IN (SELECT id FROM bible_files WHERE hash_id = @hash_id); DELETE FROM bible_files WHERE hash_id = @hash_id; DELETE FROM bible_fileset_connections WHERE hash_id = @hash_id; DELETE FROM bible_fileset_tags WHERE hash_id = @hash_id; DELETE FROM bible_filesets WHERE hash_id = @hash_id; SELECT 'Removed ENGNIVN1SA fileset and all HLS data' AS result;"

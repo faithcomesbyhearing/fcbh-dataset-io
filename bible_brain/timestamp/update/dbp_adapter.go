@@ -347,6 +347,16 @@ type HLSFileGroup struct {
 
 // HLS Database Operations
 
+func (d *DBPAdapter) CheckHLSFilesetExists(filesetID string) (bool, *log.Status) {
+	query := `SELECT COUNT(*) FROM bible_filesets WHERE id = ?`
+	var count int
+	err := d.conn.QueryRow(query, filesetID).Scan(&count)
+	if err != nil {
+		return false, log.Error(d.ctx, 500, err, "Failed to check HLS fileset existence")
+	}
+	return count > 0, nil
+}
+
 func (d *DBPAdapter) InsertHLSFileset(fileset HLSFileset) (int64, *log.Status) {
 	query := `INSERT INTO bible_filesets (id, set_type_code, set_size_code, hash_id, asset_id, created_at, updated_at) 
 			  VALUES (?, ?, ?, ?, 'dbp-prod', ?, ?)`
@@ -471,6 +481,15 @@ func (d *DBPAdapter) SelectFilesetLicenseInfo(filesetId string) (int, *int, bool
 }
 
 func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
+	// Check if HLS fileset already exists
+	exists, status := d.CheckHLSFilesetExists(hlsData.Fileset.ID)
+	if status != nil {
+		return status
+	}
+	if exists {
+		return log.ErrorNoErr(d.ctx, 409, "HLS creation was not done because the target fileset '"+hlsData.Fileset.ID+"' already exists. Please remove it and try again when ready.")
+	}
+
 	// Start transaction
 	tx, err := d.conn.Begin()
 	if err != nil {
