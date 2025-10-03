@@ -50,7 +50,7 @@ func (a *Wav2Vec2ASR) ProcessFiles(files []input.InputFile) *log.Status {
 		return status
 	}
 	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "wav2vec2/asr/wav2vec2_asr.py")
-	a.asrPy, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_ASR_PYTHON`), pythonScript, lang)
+	a.asrPy, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_ASR_PYTHON`), "-u", pythonScript, lang)
 	if status != nil {
 		return status
 	}
@@ -93,6 +93,7 @@ type wordRec struct {
 func (a *Wav2Vec2ASR) processFile(file input.InputFile, sampleDB db.DBAdapter) *log.Status {
 	var audioFiles []db.Audio
 	verses, status := a.selectSample(sampleDB, file.BookId, file.Chapter)
+
 	if status != nil {
 		return status
 	}
