@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artie Run Request</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #2b2b2b;
+            color: #ffffff;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #3a3a3a;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .credentials-dropzone {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 200px;
+            height: 80px;
+            border: 2px dashed #666;
+            border-radius: 8px;
+            background-color: #4a4a4a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .credentials-dropzone:hover {
+            border-color: #0066cc;
+            background-color: #5a5a5a;
+        }
+
+        .credentials-dropzone.dragover {
+            border-color: #00cc00;
+            background-color: #2a4a2a;
+        }
+
+        .credentials-dropzone.credentials-loaded {
+            border-color: #00cc00;
+            background-color: #1a4d1a;
+        }
+
+        .credentials-status {
+            font-size: 10px;
+            color: #ccc;
+            margin-top: 5px;
+        }
+
+        .credentials-status.connected {
+            color: #90ee90;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+            gap: 20px;
+        }
+
+        .logo {
+            max-width: 300px;
+            height: auto;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+
+        .subtitle {
+            color: #ffffff;
+            font-size: 32px;
+            font-weight: 400;
+            margin: 0;
+            flex: 1;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .button-group button {
+            position: relative;
+        }
+
+        .button-group button.drag-over {
+            background-color: #0066cc;
+            border-color: #0066cc;
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(0, 102, 204, 0.5);
+        }
+
+        button {
+            background-color: #4a4a4a;
+            color: #ffffff;
+            border: 1px solid #666;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #5a5a5a;
+        }
+
+        button:active {
+            background-color: #3a3a3a;
+        }
+
+        button.primary {
+            background-color: #0066cc;
+            border-color: #0052a3;
+        }
+
+        button.primary:hover {
+            background-color: #0052a3;
+        }
+
+        .separator {
+            height: 1px;
+            background-color: #666;
+            margin: 20px 0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        label {
+            min-width: 120px;
+            font-weight: 500;
+            color: #ffffff;
+        }
+
+        input[type="text"], input[type="number"], select {
+            flex: 1;
+            min-width: 200px;
+            background-color: #4a4a4a;
+            color: #ffffff;
+            border: 1px solid #666;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        select {
+            cursor: pointer;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: #0066cc;
+            box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
+        }
+
+        input[type="text"]::placeholder {
+            color: #999;
+        }
+
+        input[type="text"].optional {
+            background-color: #3a3a3a;
+            border: 1px solid #555;
+            color: #ccc;
+        }
+
+        input[type="text"].optional::placeholder {
+            color: #777;
+            font-style: italic;
+        }
+
+        input[type="text"].optional:focus {
+            background-color: #4a4a4a;
+            border-color: #666;
+        }
+
+        input[type="text"].required-error {
+            border-color: #ff4444;
+            box-shadow: 0 0 0 2px rgba(255, 68, 68, 0.2);
+        }
+
+        .radio-group, .checkbox-group {
+            margin-bottom: 15px;
+        }
+
+        .radio-group label {
+            min-width: auto;
+            margin-right: 15px;
+            font-weight: normal;
+        }
+
+        .radio-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-left: 135px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .radio-option input[type="radio"] {
+            margin-top: 2px;
+        }
+
+        .radio-option label {
+            font-weight: normal;
+            min-width: auto;
+        }
+
+        .checkbox-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .checkbox-option input[type="checkbox"] {
+            margin: 0;
+        }
+
+        .description {
+            color: #ccc;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .status.success {
+            background-color: #1a4d1a;
+            border: 1px solid #2d6b2d;
+            color: #90ee90;
+        }
+
+        .status.error {
+            background-color: #4d1a1a;
+            border: 1px solid #6b2d2d;
+            color: #ffb3b3;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #666;
+            border-top: 2px solid #0066cc;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .file-input {
+            margin-top: 10px;
+        }
+
+        .file-input input[type="file"] {
+            background-color: #4a4a4a;
+            color: #ffffff;
+            border: 1px solid #666;
+            padding: 8px;
+            border-radius: 4px;
+            width: 100%;
+        }
+
+        @media (max-width: 600px) {
+            .header {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+
+            .logo {
+                max-width: 200px;
+            }
+
+            .subtitle {
+                font-size: 24px;
+            }
+
+            .form-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .radio-options {
+                margin-left: 0;
+            }
+
+            label {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="credentials-dropzone" id="credentialsDropzone">
+            <div>🔑 Drop AWS Credentials</div>
+            <div class="credentials-status" id="credentialsStatus">No credentials loaded</div>
+        </div>
+        
+        <div class="header">
+            <img src="arti.png" alt="Artie Logo" class="logo">
+            <h2 class="subtitle">Run Request</h2>
+        </div>
+        
+        <div class="button-group">
+            <button id="openButton" onclick="loadFile()">Open</button>
+            <button onclick="saveFile()">Download</button>
+            <button onclick="clearForm()">Clear</button>
+            <button class="primary" onclick="runRequest()">Download & Run</button>
+            <button onclick="window.close()">Quit</button>
+        </div>
+
+        <div class="separator"></div>
+
+        <form id="requestForm">
+            <div class="form-group">
+                <div class="form-row">
+                    <label for="datasetName">dataset_name:</label>
+                    <input type="text" id="datasetName" placeholder="Enter a unique name for this dataset.">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="form-row">
+                    <label for="username">username:</label>
+                    <input type="text" id="username" placeholder="Enter a unique name for yourself.">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="form-row">
+                    <label for="languageIso">language_iso:</label>
+                    <input type="text" id="languageIso" placeholder="Enter 3-letter ISO code (e.g., eng, spa, fra)" maxlength="3">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="form-row">
+                    <label for="altLanguage">alt_language: <span style="color: #888; font-size: 12px;">(optional)</span></label>
+                    <input type="text" id="altLanguage" class="optional" placeholder="This should be filled only if you wish to force the use of a specific language.">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="form-row">
+                    <label for="textData">text_data:</label>
+                    <input type="text" id="textData" placeholder="s3://bucket-name/path/to/files/*.usx">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="form-row">
+                    <label for="audioData">audio_data:</label>
+                    <input type="text" id="audioData" placeholder="s3://bucket-name/path/to/files/*.wav">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="radio-group">
+                    <label>timestamps:</label>
+                    <div class="radio-options">
+                        <div class="radio-option">
+                            <input type="radio" id="timestamps_mms_align" name="timestamps" value="mms_align" checked>
+                            <label for="timestamps_mms_align">mms_align - most accurate, but uses lots of memory</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="timestamps_mms_fa_verse" name="timestamps" value="mms_fa_verse">
+                            <label for="timestamps_mms_fa_verse">mms_fa_verse - slightly less accurate, but uses less memory</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="timestamps_no_timestamps" name="timestamps" value="no_timestamps">
+                            <label for="timestamps_no_timestamps">no_timestamps</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="radio-group">
+                    <label>training:</label>
+                    <div class="radio-options">
+                        <div class="radio-option">
+                            <input type="radio" id="training_mms_adapter" name="training" value="mms_adapter" checked>
+                            <label for="training_mms_adapter">mms_adapter - training using MMS adapter module</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="training_no_training" name="training" value="no_training">
+                            <label for="training_no_training">no_training</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="radio-group">
+                    <label>speech_to_text:</label>
+                    <div class="radio-options">
+                        <div class="radio-option">
+                            <input type="radio" id="stt_adapter_asr" name="speech_to_text" value="adapter_asr" checked>
+                            <label for="stt_adapter_asr">adapter_asr - speech to text using trained mms_adapter</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="stt_mms_asr" name="speech_to_text" value="mms_asr">
+                            <label for="stt_mms_asr">mms_asr - speech to text using mms</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="stt_no_speech_to_text" name="speech_to_text" value="no_speech_to_text">
+                            <label for="stt_no_speech_to_text">no_speech_to_text</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <div class="checkbox-option">
+                        <input type="checkbox" id="compare" checked>
+                        <label for="compare">compare: html report of comparing two copies of text</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="form-row">
+                    <label for="gordonFilter">gordon_filter:</label>
+                    <input type="number" id="gordonFilter" placeholder="Enter 4 for filter, or zero for no filter." value="4">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="form-row">
+                    <label for="notifyOk">notify_ok: <span style="color: #888; font-size: 12px;">(comma-separated emails)</span></label>
+                    <input type="text" id="notifyOk" value="jbarndt@fcbhmail.org, ezornes@fcbhmail.org, gfiddes@fcbhmail.org, edomschot@fcbhmail.org" placeholder="jbarndt@fcbhmail.org, ezornes@fcbhmail.org, gfiddes@fcbhmail.org, edomschot@fcbhmail.org">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="form-row">
+                    <label for="notifyErr">notify_err: <span style="color: #888; font-size: 12px;">(comma-separated emails)</span></label>
+                    <input type="text" id="notifyErr" value="jbarndt@fcbhmail.org, gary@shortsands.com, ezornes@fcbhmail.org" placeholder="jbarndt@fcbhmail.org, gary@shortsands.com, ezornes@fcbhmail.org">
+                </div>
+            </div>
+
+            <div class="file-input" style="display: none;">
+                <input type="file" id="fileInput" accept=".yaml,.yml" onchange="handleFileLoad()">
+            </div>
+        </form>
+
+        <div class="loading" id="loading"></div>
+        <div class="status" id="status"></div>
+    </div>
+
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1500.0.min.js"></script>
+    <script>
+        // AWS Configuration - loaded from credentials file
+        let AWS_CONFIG = {
+            accessKeyId: null,
+            secretAccessKey: null,
+            region: 'us-west-2'
+        };
+
+        // Auto-detect bucket name from URL when hosted on S3
+        function getBucketName() {
+            const hostname = window.location.hostname;
+            
+            // If hosted on S3 website (e.g., bucket-name.s3-website-region.amazonaws.com)
+            if (hostname.includes('.s3-website-')) {
+                return hostname.split('.s3-website-')[0];
+            }
+            
+            // If hosted on S3 website with different format
+            if (hostname.includes('.s3-website.')) {
+                return hostname.split('.s3-website.')[0];
+            }
+            
+            // If accessed via S3 website endpoint
+            if (hostname.includes('.s3.')) {
+                return hostname.split('.s3.')[0];
+            }
+            
+            // Fallback to hardcoded bucket for local development
+            return 'dataset-queue-dev';
+        }
+
+        const S3_BUCKET = getBucketName();
+
+        // Initialize AWS SDK
+        AWS.config.update(AWS_CONFIG);
+
+        // Credentials management
+        function updateCredentialsStatus(customMessage = null) {
+            const statusDiv = document.getElementById('credentialsStatus');
+            const dropzone = document.getElementById('credentialsDropzone');
+            
+            if (customMessage) {
+                statusDiv.textContent = customMessage;
+                statusDiv.className = 'credentials-status';
+                dropzone.className = 'credentials-dropzone';
+            } else if (AWS_CONFIG.accessKeyId && AWS_CONFIG.secretAccessKey) {
+                statusDiv.textContent = `Connected as ${AWS_CONFIG.accessKeyId.substring(0, 8)}...`;
+                statusDiv.className = 'credentials-status connected';
+                dropzone.className = 'credentials-dropzone credentials-loaded';
+            } else {
+                statusDiv.textContent = 'No credentials loaded';
+                statusDiv.className = 'credentials-status';
+                dropzone.className = 'credentials-dropzone';
+            }
+        }
+
+        function parseCredentialsFile(content) {
+            try {
+                const lines = content.split('\n');
+                const credentials = {};
+                
+                let currentProfile = 'default';
+                let inProfile = false;
+                
+                for (let line of lines) {
+                    line = line.trim();
+                    
+                    // Skip comments and empty lines
+                    if (line.startsWith('#') || line === '') continue;
+                    
+                    // Check for profile section [profile name]
+                    if (line.startsWith('[') && line.endsWith(']')) {
+                        currentProfile = line.slice(1, -1);
+                        inProfile = true;
+                        continue;
+                    }
+                    
+                    // Parse key=value pairs
+                    if (line.includes('=')) {
+                        const [key, value] = line.split('=').map(s => s.trim());
+                        
+                        if (inProfile && currentProfile === 'default') {
+                            credentials[key] = value;
+                        }
+                    }
+                }
+                
+                return credentials;
+            } catch (error) {
+                console.error('Error parsing credentials file:', error);
+                return null;
+            }
+        }
+
+        function loadCredentialsFromFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const credentials = parseCredentialsFile(e.target.result);
+                
+                if (credentials && credentials.aws_access_key_id && credentials.aws_secret_access_key) {
+                    // Update credentials
+                    AWS_CONFIG.accessKeyId = credentials.aws_access_key_id;
+                    AWS_CONFIG.secretAccessKey = credentials.aws_secret_access_key;
+                    AWS.config.update(AWS_CONFIG);
+                    
+                    // Test credentials based on environment
+                    testCredentialsValidity();
+                } else {
+                    showStatus('Invalid credentials file format. Expected aws_access_key_id and aws_secret_access_key.', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        async function testCredentialsValidity() {
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const isFileProtocol = window.location.protocol === 'file:';
+            
+            updateCredentialsStatus('Testing credentials...');
+            showLoading(true);
+            
+            try {
+                if (isFileProtocol || isLocalhost) {
+                    // Local development - basic validation only
+                    await testBasicCredentials();
+                    showStatus('Credentials loaded (local mode - limited testing)', 'success');
+                } else {
+                    // Production - full S3 testing
+                    await testFullS3Access();
+                    showStatus('Credentials validated - full S3 access confirmed!', 'success');
+                }
+            } catch (error) {
+                console.error('Credential validation failed:', error);
+                let errorMsg = 'Credential validation failed: ' + error.message;
+                if (error.code) errorMsg += ' (Code: ' + error.code + ')';
+                if (error.statusCode) errorMsg += ' (HTTP: ' + error.statusCode + ')';
+                showStatus(errorMsg, 'error');
+                
+                // Reset credentials on failure
+                AWS_CONFIG.accessKeyId = null;
+                AWS_CONFIG.secretAccessKey = null;
+                AWS.config.update(AWS_CONFIG);
+            } finally {
+                showLoading(false);
+                updateCredentialsStatus();
+            }
+        }
+
+        async function testBasicCredentials() {
+            // Basic credential format validation
+            if (!AWS_CONFIG.accessKeyId || !AWS_CONFIG.secretAccessKey) {
+                throw new Error('Missing access key or secret key');
+            }
+            
+            // Check access key format (should start with AKIA for long-term credentials)
+            if (!AWS_CONFIG.accessKeyId.startsWith('AKIA') && !AWS_CONFIG.accessKeyId.startsWith('ASIA')) {
+                throw new Error('Invalid access key format');
+            }
+            
+            // Check secret key format (should be 40 characters)
+            if (AWS_CONFIG.secretAccessKey.length !== 40) {
+                throw new Error('Invalid secret key format');
+            }
+            
+            // Try to create STS client to validate credentials (minimal AWS call)
+            const sts = new AWS.STS();
+            await sts.getCallerIdentity().promise();
+            
+            console.log('Basic credential validation passed');
+        }
+
+        async function testFullS3Access() {
+            const s3 = new AWS.S3();
+            const testPrefix = 'credential-test/';
+            
+            // Test 1: List objects (read permission)
+            console.log('Testing S3 read access...');
+            const listParams = {
+                Bucket: S3_BUCKET,
+                MaxKeys: 1
+            };
+            await s3.listObjectsV2(listParams).promise();
+            console.log('✅ S3 read access confirmed');
+            
+            // Test 2: Try to upload a test file to credential-test/ folder (write permission)
+            console.log('Testing S3 write access to credential-test/ folder...');
+            const testKey = `${testPrefix}test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.txt`;
+            const testContent = 'APClient credential test file - safe to delete';
+            
+            const uploadParams = {
+                Bucket: S3_BUCKET,
+                Key: testKey,
+                Body: testContent,
+                ContentType: 'text/plain'
+            };
+            
+            await s3.upload(uploadParams).promise();
+            console.log('✅ S3 write access to credential-test/ folder confirmed');
+            
+            // Test 3: Verify the file was uploaded correctly
+            console.log('Verifying uploaded test file...');
+            const getParams = {
+                Bucket: S3_BUCKET,
+                Key: testKey
+            };
+            
+            const result = await s3.getObject(getParams).promise();
+            const downloadedContent = result.Body.toString();
+            
+            if (downloadedContent !== testContent) {
+                throw new Error('Uploaded file content verification failed');
+            }
+            console.log('✅ File upload verification confirmed');
+            
+            // Test 4: Clean up test file
+            console.log('Cleaning up test file...');
+            const deleteParams = {
+                Bucket: S3_BUCKET,
+                Key: testKey
+            };
+            
+            await s3.deleteObject(deleteParams).promise();
+            console.log('✅ Test file cleaned up');
+            
+            // Test 5: Test upload to the specific input/ path
+            console.log('Testing upload to input/ path...');
+            const inputTestKey = `input/test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.yaml`;
+            const inputTestContent = 'test: true\ncreated_by: APClient_credential_test';
+            
+            const inputUploadParams = {
+                Bucket: S3_BUCKET,
+                Key: inputTestKey,
+                Body: inputTestContent,
+                ContentType: 'text/yaml'
+            };
+            
+            await s3.upload(inputUploadParams).promise();
+            console.log('✅ Input path upload confirmed');
+            
+            // Clean up input test file
+            const inputDeleteParams = {
+                Bucket: S3_BUCKET,
+                Key: inputTestKey
+            };
+            await s3.deleteObject(inputDeleteParams).promise();
+            console.log('✅ Input test file cleaned up');
+            
+            console.log('🎉 Full S3 access validation completed successfully!');
+        }
+
+        // Drag and drop functionality
+        function setupDragAndDrop() {
+            const dropzone = document.getElementById('credentialsDropzone');
+            
+            dropzone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                dropzone.classList.add('dragover');
+            });
+            
+            dropzone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                dropzone.classList.remove('dragover');
+            });
+            
+            dropzone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                dropzone.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    loadCredentialsFromFile(files[0]);
+                }
+            });
+            
+            // Also allow clicking to select file
+            dropzone.addEventListener('click', function() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.txt,.ini,.credentials';
+                input.onchange = function(e) {
+                    if (e.target.files.length > 0) {
+                        loadCredentialsFromFile(e.target.files[0]);
+                    }
+                };
+                input.click();
+            });
+        }
+
+        function setupOpenButtonDragAndDrop() {
+            const openButton = document.getElementById('openButton');
+            
+            openButton.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                openButton.classList.add('drag-over');
+            });
+            
+            openButton.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                openButton.classList.remove('drag-over');
+            });
+            
+            openButton.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                openButton.classList.remove('drag-over');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    // Check if it's a YAML file
+                    if (file.name.toLowerCase().endsWith('.yaml') || file.name.toLowerCase().endsWith('.yml')) {
+                        loadYamlFile(file);
+                    } else {
+                        showStatus('Please drop a YAML file (.yaml or .yml)', 'error');
+                    }
+                }
+            });
+        }
+
+        function loadYamlFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    const data = jsyaml.load(content);
+                    populateForm(data);
+                    showStatus(`✅ Loaded: ${file.name}`, 'success');
+                } catch (error) {
+                    console.error('Error parsing YAML:', error);
+                    showStatus(`Error parsing YAML file: ${error.message}`, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Default configuration values
+        const DEFAULT_CONFIG = {
+            isNew: true,
+            notifyOk: [
+                'jrstear@fcbhmail.org'
+            ],
+            notifyErr: [
+                'jrstear@fcbhmail.org'
+            ],
+            mmsAdapter: {
+                batch_mb: 4,
+                num_epochs: 16,
+                learning_rate: 0.001,
+                warmup_pct: 12,
+                grad_norm_max: 0.4
+            },
+            compareSettings: {
+                lower_case: true,
+                remove_prompt_chars: true,
+                remove_punctuation: true,
+                double_quotes: { remove: true },
+                apostrophe: { remove: true },
+                hyphen: { remove: true },
+                diacritical_marks: { normalize_nfc: true }
+            }
+        };
+
+        function showStatus(message, type = 'success') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = message.replace(/\n/g, '<br>');
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function showLoading(show = true) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function clearForm() {
+            document.getElementById('requestForm').reset();
+            document.getElementById('gordonFilter').value = '4';
+            // Set default radio selections
+            document.getElementById('timestamps_mms_align').checked = true;
+            document.getElementById('training_mms_adapter').checked = true;
+            document.getElementById('stt_adapter_asr').checked = true;
+            document.getElementById('compare').checked = true;
+            // Set default email values
+            document.getElementById('notifyOk').value = 'jbarndt@fcbhmail.org, ezornes@fcbhmail.org, gfiddes@fcbhmail.org, edomschot@fcbhmail.org';
+            document.getElementById('notifyErr').value = 'jbarndt@fcbhmail.org, gary@shortsands.com, ezornes@fcbhmail.org';
+            // Clear loaded config so defaults are used again
+            window.loadedConfig = null;
+        }
+
+        function loadFile() {
+            document.getElementById('fileInput').click();
+        }
+
+        function handleFileLoad() {
+            const file = document.getElementById('fileInput').files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const yamlContent = e.target.result;
+                    const jsYaml = window.jsyaml || window.yaml;
+                    
+                    if (!jsYaml) {
+                        showStatus('YAML parser not loaded. Please include js-yaml library.', 'error');
+                        return;
+                    }
+
+                    const data = jsYaml.load(yamlContent);
+                    populateForm(data);
+                    showStatus('File loaded successfully');
+                } catch (error) {
+                    showStatus('Error loading file: ' + error.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function populateForm(data) {
+            // Store the loaded data globally so we can use it in generateYAML
+            window.loadedConfig = data;
+
+            // Basic form fields
+            if (data.dataset_name) document.getElementById('datasetName').value = data.dataset_name;
+            if (data.username) document.getElementById('username').value = data.username;
+            if (data.language_iso) document.getElementById('languageIso').value = data.language_iso;
+            if (data.alt_language) document.getElementById('altLanguage').value = data.alt_language;
+            if (data.text_data && data.text_data.aws_s3) document.getElementById('textData').value = data.text_data.aws_s3;
+            if (data.audio_data && data.audio_data.aws_s3) document.getElementById('audioData').value = data.audio_data.aws_s3;
+            if (data.compare && data.compare.gordon_filter !== undefined) {
+                document.getElementById('gordonFilter').value = data.compare.gordon_filter;
+            }
+
+            // Handle radio buttons
+            if (data.timestamps) {
+                if (data.timestamps.mms_align) document.getElementById('timestamps_mms_align').checked = true;
+                else if (data.timestamps.mms_fa_verse) document.getElementById('timestamps_mms_fa_verse').checked = true;
+                else document.getElementById('timestamps_no_timestamps').checked = true;
+            }
+
+            if (data.training) {
+                if (data.training.mms_adapter) document.getElementById('training_mms_adapter').checked = true;
+                else document.getElementById('training_no_training').checked = true;
+            }
+
+            if (data.speech_to_text) {
+                if (data.speech_to_text.mms_asr) document.getElementById('stt_mms_asr').checked = true;
+                else if (data.speech_to_text.adapter_asr) document.getElementById('stt_adapter_asr').checked = true;
+                else document.getElementById('stt_no_speech_to_text').checked = true;
+            }
+
+            // Handle checkbox
+            if (data.compare && data.compare.html_report !== undefined) {
+                document.getElementById('compare').checked = data.compare.html_report;
+            }
+
+            // Handle notification emails
+            if (data.notify_ok && Array.isArray(data.notify_ok)) {
+                document.getElementById('notifyOk').value = data.notify_ok.join(', ');
+            }
+            if (data.notify_err && Array.isArray(data.notify_err)) {
+                document.getElementById('notifyErr').value = data.notify_err.join(', ');
+            }
+        }
+
+        function saveFile() {
+            if (!validateForm()) {
+                return;
+            }
+            
+            const yamlData = generateYAML();
+            if (!yamlData) return;
+
+            const datasetName = document.getElementById('datasetName').value;
+            const filename = datasetName ? `${datasetName}.yaml` : 'request.yaml';
+            
+            try {
+                // Create blob with proper MIME type
+                const blob = new Blob([yamlData], { 
+                    type: 'text/yaml;charset=utf-8'
+                });
+                
+                // Check if we can use the download attribute
+                if (typeof document.createElement('a').download !== 'undefined') {
+                    // Modern browsers with download support
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showStatus('File saved successfully');
+                } else {
+                    // Fallback for older browsers (like older Safari versions)
+                    const url = URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    showStatus('File opened in new tab - please save it manually');
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                // Ultimate fallback - copy to clipboard if possible
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(yamlData).then(() => {
+                        showStatus('YAML copied to clipboard - paste into a text editor and save as ' + filename, 'error');
+                    }).catch(() => {
+                        showStatus('Save failed - please copy the YAML from the console', 'error');
+                        console.log('YAML content:', yamlData);
+                    });
+                } else {
+                    showStatus('Save failed - please copy the YAML from the console', 'error');
+                    console.log('YAML content:', yamlData);
+                }
+            }
+        }
+
+        function validateLanguageISO(iso) {
+            // Language ISO should be exactly 3 characters, letters only
+            const isoRegex = /^[a-zA-Z]{3}$/;
+            return isoRegex.test(iso);
+        }
+
+        function validateS3URL(url) {
+            // S3 URL should start with s3:// and contain bucket/path format
+            const s3Regex = /^s3:\/\/[a-zA-Z0-9.-]+\/.+$/;
+            return s3Regex.test(url);
+        }
+
+        function parseEmailList(emailString) {
+            if (!emailString || !emailString.trim()) return [];
+            return emailString.split(',')
+                .map(email => email.trim())
+                .filter(email => email.length > 0);
+        }
+
+        function validateEmailList(emailString) {
+            if (!emailString || !emailString.trim()) return true; // Empty is valid
+            const emails = parseEmailList(emailString);
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emails.every(email => emailRegex.test(email));
+        }
+
+        function validateForm() {
+            const requiredFields = [
+                { id: 'datasetName', name: 'Dataset name' },
+                { id: 'username', name: 'Username' },
+                { id: 'languageIso', name: 'Language ISO' },
+                { id: 'textData', name: 'Text data (S3 path)' },
+                { id: 'audioData', name: 'Audio data (S3 path)' }
+            ];
+            
+            const errors = [];
+            
+            // Clear previous error styling
+            requiredFields.forEach(field => {
+                const element = document.getElementById(field.id);
+                element.classList.remove('required-error');
+            });
+            
+            // Check each required field
+            requiredFields.forEach(field => {
+                const element = document.getElementById(field.id);
+                const value = element.value.trim();
+                
+                if (!value) {
+                    errors.push(field.name);
+                    element.classList.add('required-error');
+                } else {
+                    // Additional validation for specific fields
+                    if (field.id === 'languageIso' && !validateLanguageISO(value)) {
+                        errors.push('Language ISO must be exactly 3 letters (a-z, A-Z)');
+                        element.classList.add('required-error');
+                    } else if (field.id === 'textData' && !validateS3URL(value)) {
+                        errors.push('Text data must be a valid S3 URL (s3://bucket/path)');
+                        element.classList.add('required-error');
+                    } else if (field.id === 'audioData' && !validateS3URL(value)) {
+                        errors.push('Audio data must be a valid S3 URL (s3://bucket/path)');
+                        element.classList.add('required-error');
+                    } else if (field.id === 'notifyOk' && !validateEmailList(value)) {
+                        errors.push('Notify OK must contain valid email addresses (comma-separated)');
+                        element.classList.add('required-error');
+                    } else if (field.id === 'notifyErr' && !validateEmailList(value)) {
+                        errors.push('Notify Error must contain valid email addresses (comma-separated)');
+                        element.classList.add('required-error');
+                    }
+                }
+            });
+            
+            
+            if (errors.length > 0) {
+                showStatus('Validation errors: ' + errors.join(', '), 'error');
+                return false;
+            }
+            
+            return true;
+        }
+
+        function generateYAML() {
+            const datasetName = document.getElementById('datasetName').value.trim();
+            const username = document.getElementById('username').value.trim();
+            const languageIso = document.getElementById('languageIso').value.trim();
+            const altLanguage = document.getElementById('altLanguage').value.trim();
+            const textData = document.getElementById('textData').value.trim();
+            const audioData = document.getElementById('audioData').value.trim();
+            const gordonFilter = parseInt(document.getElementById('gordonFilter').value) || 0;
+            const notifyOk = document.getElementById('notifyOk').value.trim();
+            const notifyErr = document.getElementById('notifyErr').value.trim();
+
+            if (!validateForm()) {
+                return null;
+            }
+
+            // Use loaded config if available, otherwise use defaults
+            const configToUse = window.loadedConfig || DEFAULT_CONFIG;
+
+            const request = {
+                is_new: true,
+                dataset_name: datasetName,
+                username: username,
+                notify_ok: configToUse.notify_ok || DEFAULT_CONFIG.notifyOk,
+                notify_err: configToUse.notify_err || DEFAULT_CONFIG.notifyErr
+            };
+
+            if (languageIso) request.language_iso = languageIso;
+            if (altLanguage) request.alt_language = altLanguage;
+
+            if (textData) {
+                request.text_data = { aws_s3: textData };
+            }
+
+            if (audioData) {
+                request.audio_data = { aws_s3: audioData };
+            }
+
+            // Notification emails
+            const notifyOkEmails = parseEmailList(notifyOk);
+            if (notifyOkEmails.length > 0) {
+                request.notify_ok = notifyOkEmails;
+            }
+
+            const notifyErrEmails = parseEmailList(notifyErr);
+            if (notifyErrEmails.length > 0) {
+                request.notify_err = notifyErrEmails;
+            }
+
+            // Timestamps
+            const timestampsValue = document.querySelector('input[name="timestamps"]:checked').value;
+            request.timestamps = {};
+            if (timestampsValue === 'mms_align') request.timestamps.mms_align = true;
+            else if (timestampsValue === 'mms_fa_verse') request.timestamps.mms_fa_verse = true;
+            else request.timestamps.no_timestamps = true;
+
+            // Training
+            const trainingValue = document.querySelector('input[name="training"]:checked').value;
+            request.training = {};
+            if (trainingValue === 'mms_adapter') {
+                request.training.mms_adapter = configToUse.training && configToUse.training.mms_adapter 
+                    ? configToUse.training.mms_adapter 
+                    : DEFAULT_CONFIG.mmsAdapter;
+            } else {
+                request.training.no_training = true;
+            }
+
+            // Speech to Text
+            const sttValue = document.querySelector('input[name="speech_to_text"]:checked').value;
+            request.speech_to_text = {};
+            if (sttValue === 'mms_asr') request.speech_to_text.mms_asr = true;
+            else if (sttValue === 'adapter_asr') request.speech_to_text.adapter_asr = true;
+            else request.speech_to_text.no_speech_to_text = true;
+
+            // Compare
+            const compareChecked = document.getElementById('compare').checked;
+            if (compareChecked) {
+                request.compare = {
+                    html_report: true,
+                    gordon_filter: gordonFilter,
+                    compare_settings: configToUse.compare && configToUse.compare.compare_settings 
+                        ? configToUse.compare.compare_settings 
+                        : DEFAULT_CONFIG.compareSettings
+                };
+            }
+
+            // Convert to YAML
+            try {
+                const jsYaml = window.jsyaml || window.yaml;
+                if (!jsYaml) {
+                    // Fallback to simple YAML generation if js-yaml is not available
+                    return generateSimpleYAML(request);
+                }
+                return jsYaml.dump(request, { indent: 4, lineWidth: -1 });
+            } catch (error) {
+                showStatus('Error generating YAML: ' + error.message, 'error');
+                return null;
+            }
+        }
+
+        function generateSimpleYAML(obj) {
+            // Simple YAML generator for basic structures
+            let yaml = '';
+            
+            function processValue(key, value, indent = 0) {
+                const spaces = '    '.repeat(indent);
+                
+                if (value === null || value === undefined) return '';
+                if (typeof value === 'boolean') return `${spaces}${key}: ${value}`;
+                if (typeof value === 'number') return `${spaces}${key}: ${value}`;
+                if (typeof value === 'string') return `${spaces}${key}: ${value}`;
+                
+                if (Array.isArray(value)) {
+                    let result = `${spaces}${key}:\n`;
+                    value.forEach(item => {
+                        result += `${spaces}    - ${item}\n`;
+                    });
+                    return result;
+                }
+                
+                if (typeof value === 'object') {
+                    let result = `${spaces}${key}:\n`;
+                    for (const [k, v] of Object.entries(value)) {
+                        result += processValue(k, v, indent + 1) + '\n';
+                    }
+                    return result;
+                }
+                
+                return `${spaces}${key}: ${value}`;
+            }
+            
+            for (const [key, value] of Object.entries(obj)) {
+                yaml += processValue(key, value) + '\n';
+            }
+            
+            return yaml;
+        }
+
+
+        async function runRequest() {
+            if (!AWS_CONFIG.accessKeyId || !AWS_CONFIG.secretAccessKey) {
+                showStatus('Please load AWS credentials first by dropping a credentials file', 'error');
+                return;
+            }
+
+            if (!validateForm()) {
+                return;
+            }
+
+            const yamlData = generateYAML();
+            if (!yamlData) return;
+
+            const datasetName = document.getElementById('datasetName').value;
+            const filename = `${datasetName}.yaml`;
+            
+            showLoading(true);
+            
+            try {
+                const s3 = new AWS.S3();
+                const params = {
+                    Bucket: S3_BUCKET,
+                    Key: `input/${filename}`,
+                    Body: yamlData,
+                    ContentType: 'text/yaml'
+                };
+
+                console.log('Attempting upload to:', `s3://${S3_BUCKET}/input/${filename}`);
+                const result = await s3.upload(params).promise();
+                console.log('Upload successful:', result);
+                
+                // Also save locally
+                saveFile();
+                
+                // Show two-line success message
+                showStatus(`✅ Downloaded: ${filename}\n📤 Uploaded to: s3://${S3_BUCKET}/input/${filename}`);
+                
+            } catch (error) {
+                console.error('S3 Upload Error:', error);
+                console.error('Error details:', {
+                    code: error.code,
+                    message: error.message,
+                    statusCode: error.statusCode,
+                    requestId: error.requestId,
+                    bucket: S3_BUCKET,
+                    key: `input/${filename}`
+                });
+                
+                let errorMsg = 'Upload failed: ' + error.message;
+                if (error.code) errorMsg += ' (Code: ' + error.code + ')';
+                if (error.statusCode) errorMsg += ' (HTTP: ' + error.statusCode + ')';
+                if (error.requestId) errorMsg += ' (RequestID: ' + error.requestId + ')';
+                
+                showStatus(errorMsg, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Initialize form with defaults
+        // Debounce timer for validation
+        let validationTimers = {};
+
+        function clearFieldError(fieldId) {
+            const element = document.getElementById(fieldId);
+            element.classList.remove('required-error');
+        }
+
+        function validateField(fieldId) {
+            const element = document.getElementById(fieldId);
+            const value = element.value.trim();
+            
+            if (!value) return; // Don't validate empty fields in real-time
+            
+            let isValid = true;
+            let errorMessage = '';
+            
+            if (fieldId === 'languageIso' && !validateLanguageISO(value)) {
+                isValid = false;
+                errorMessage = 'Must be exactly 3 letters (a-z, A-Z)';
+            } else if ((fieldId === 'textData' || fieldId === 'audioData') && !validateS3URL(value)) {
+                isValid = false;
+                errorMessage = 'Must be valid S3 URL (s3://bucket/path)';
+            } else if ((fieldId === 'notifyOk' || fieldId === 'notifyErr') && !validateEmailList(value)) {
+                isValid = false;
+                errorMessage = 'Must be valid email addresses (comma-separated)';
+            }
+            
+            if (!isValid) {
+                element.classList.add('required-error');
+                // Show a subtle tooltip or status message
+                showStatus(errorMessage, 'error');
+            }
+        }
+
+        function debouncedValidateField(fieldId) {
+            // Clear any existing timer for this field
+            if (validationTimers[fieldId]) {
+                clearTimeout(validationTimers[fieldId]);
+            }
+            
+            // Set a new timer to validate after 3 seconds of no typing
+            validationTimers[fieldId] = setTimeout(() => {
+                validateField(fieldId);
+            }, 3000);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            clearForm();
+            setupDragAndDrop();
+            setupOpenButtonDragAndDrop();
+            updateCredentialsStatus();
+            
+            // Add event listeners for real-time validation
+            const requiredFields = ['datasetName', 'username', 'languageIso', 'textData', 'audioData'];
+            const optionalFields = ['notifyOk', 'notifyErr'];
+            const allValidationFields = [...requiredFields, ...optionalFields];
+            
+            allValidationFields.forEach(fieldId => {
+                const element = document.getElementById(fieldId);
+                
+                // Clear errors immediately when user starts typing
+                element.addEventListener('input', () => {
+                    clearFieldError(fieldId);
+                    // Use debounced validation for typing
+                    debouncedValidateField(fieldId);
+                });
+                
+                // Validate immediately when user leaves the field (blur)
+                element.addEventListener('blur', () => {
+                    // Clear any pending timer since we're validating now
+                    if (validationTimers[fieldId]) {
+                        clearTimeout(validationTimers[fieldId]);
+                    }
+                    validateField(fieldId);
+                });
+            });
+        });
+    </script>
+    
+    <!-- Optional: Include js-yaml for better YAML handling -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+</body>
+</html>
