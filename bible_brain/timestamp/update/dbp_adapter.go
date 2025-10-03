@@ -347,14 +347,70 @@ type HLSFileGroup struct {
 
 // HLS Database Operations
 
-func (d *DBPAdapter) CheckHLSFilesetExists(filesetID string) (bool, *log.Status) {
-	query := `SELECT COUNT(*) FROM bible_filesets WHERE id = ?`
-	var count int
-	err := d.conn.QueryRow(query, filesetID).Scan(&count)
+func (d *DBPAdapter) RemoveHLSFileset(filesetID string) *log.Status {
+	// Get hash_id for the fileset
+	var hashID string
+	query := `SELECT hash_id FROM bible_filesets WHERE id = ?`
+	err := d.conn.QueryRow(query, filesetID).Scan(&hashID)
 	if err != nil {
-		return false, log.Error(d.ctx, 500, err, "Failed to check HLS fileset existence")
+		if err.Error() == "sql: no rows in result set" {
+			// Fileset doesn't exist, that's fine
+			return nil
+		}
+		return log.Error(d.ctx, 500, err, "Failed to get hash_id for fileset: "+filesetID)
 	}
-	return count > 0, nil
+
+	// Start transaction
+	tx, err := d.conn.Begin()
+	if err != nil {
+		return log.Error(d.ctx, 500, err, "Failed to begin transaction")
+	}
+	defer tx.Rollback()
+
+	// Delete in reverse dependency order
+	// 1. Delete stream bytes
+	_, err = tx.Exec(`DELETE FROM bible_file_stream_bytes WHERE stream_bandwidth_id IN (SELECT id FROM bible_file_stream_bandwidths WHERE bible_file_id IN (SELECT id FROM bible_files WHERE hash_id = ?))`, hashID)
+	if err != nil {
+		return log.Error(d.ctx, 500, err, "Failed to delete HLS stream bytes")
+	}
+
+	// 2. Delete stream bandwidths
+	_, err = tx.Exec(`DELETE FROM bible_file_stream_bandwidths WHERE bible_file_id IN (SELECT id FROM bible_files WHERE hash_id = ?)`, hashID)
+	if err != nil {
+		return log.Error(d.ctx, 500, err, "Failed to delete HLS stream bandwidths")
+	}
+
+	// 3. Delete bible files
+	_, err = tx.Exec(`DELETE FROM bible_files WHERE hash_id = ?`, hashID)
+	if err != nil {
+		return log.Error(d.ctx, 500, err, "Failed to delete HLS bible files")
+	}
+
+	// 4. Delete fileset connections
+	_, err = tx.Exec(`DELETE FROM bible_fileset_connections WHERE hash_id = ?`, hashID)
+	if err != nil {
+		return log.Error(d.ctx, 500, err, "Failed to delete HLS fileset connections")
+	}
+
+	// 5. Delete fileset tags
+	_, err = tx.Exec(`DELETE FROM bible_fileset_tags WHERE hash_id = ?`, hashID)
+	if err != nil {
+		return log.Error(d.ctx, 500, err, "Failed to delete HLS fileset tags")
+	}
+
+	// 6. Delete the fileset
+	_, err = tx.Exec(`DELETE FROM bible_filesets WHERE hash_id = ?`, hashID)
+	if err != nil {
+		return log.Error(d.ctx, 500, err, "Failed to delete HLS fileset")
+	}
+
+	// Commit transaction
+	err = tx.Commit()
+	if err != nil {
+		return log.Error(d.ctx, 500, err, "Failed to commit HLS removal transaction")
+	}
+
+	return nil
 }
 
 func (d *DBPAdapter) InsertHLSFileset(fileset HLSFileset) (int64, *log.Status) {
@@ -480,14 +536,46 @@ func (d *DBPAdapter) SelectFilesetLicenseInfo(filesetId string) (int, *int, bool
 	return modeID, licenseGroupID, publishedSNM, nil
 }
 
+func (d *DBPAdapter) RemoveTimestampsForFileset(filesetID string) *log.Status {
+	// Get hash_id for the fileset
+	var hashID string
+	query := `SELECT hash_id FROM bible_filesets WHERE id = ?`
+	err := d.conn.QueryRow(query, filesetID).Scan(&hashID)
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			// Fileset doesn't exist, that's fine
+			return nil
+		}
+		return log.Error(d.ctx, 500, err, "Failed to get hash_id for fileset: "+filesetID)
+	}
+
+	// Start transaction
+	tx, err := d.conn.Begin()
+	if err != nil {
+		return log.Error(d.ctx, 500, err, "Failed to begin transaction")
+	}
+	defer tx.Rollback()
+
+	// Delete timestamps for all files in this fileset
+	_, err = tx.Exec(`DELETE FROM bible_file_timestamps WHERE bible_file_id IN (SELECT id FROM bible_files WHERE hash_id = ?)`, hashID)
+	if err != nil {
+		return log.Error(d.ctx, 500, err, "Failed to delete timestamps for fileset: "+filesetID)
+	}
+
+	// Commit transaction
+	err = tx.Commit()
+	if err != nil {
+		return log.Error(d.ctx, 500, err, "Failed to commit timestamp removal transaction")
+	}
+
+	return nil
+}
+
 func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
-	// Check if HLS fileset already exists
-	exists, status := d.CheckHLSFilesetExists(hlsData.Fileset.ID)
+	// First remove any existing HLS data for this fileset
+	status := d.RemoveHLSFileset(hlsData.Fileset.ID)
 	if status != nil {
 		return status
-	}
-	if exists {
-		return log.ErrorNoErr(d.ctx, 409, "HLS creation was not done because the target fileset '"+hlsData.Fileset.ID+"' already exists. Please remove it and try again when ready.")
 	}
 
 	// Start transaction
