@@ -123,8 +123,7 @@ processor = Wav2Vec2Processor(
     feature_extractor=featureExtractor,
     tokenizer=tokenizer
 )
-
-sampleDB = dataPreparation(database, databasePath, audioDirectory, processor, 512, batchSizeMB, minAudioSec)
+sampleDB = dataPreparation(database, databasePath, audioDirectory, processor, 512, batchSizeMB, minAudioSec, 0.1)
 database.close()
 
 model = getWav2Vec2ForCTCModel(processor)

@@ -2,11 +2,12 @@ import os
 import sys
 import struct
 import io
+import torch
+import blosc
 from datasets import Dataset, Audio
 from transformers import Wav2Vec2ForCTC
 from transformers import Wav2Vec2Processor
 from transformers import AutoProcessor
-import torch
 
 
 def ensureMinimumTensorSize(tensor, minTensorLength, padValue):
@@ -14,6 +15,13 @@ def ensureMinimumTensorSize(tensor, minTensorLength, padValue):
     if currentLength < minTensorLength:
         paddingNeeded = minTensorLength - currentLength
         tensor = torch.nn.functional.pad(tensor, (0, paddingNeeded), mode='constant', value=padValue)
+    return tensor
+
+
+def decompress(blob, dtype):
+    decompressed = blosc.decompress(blob)
+    numpy_array = np.frombuffer(decompressed, dtype=dtype).copy()
+    tensor = torch.from_numpy(numpy_array)
     return tensor
 
 
@@ -41,8 +49,7 @@ while True:
     blob_data = sys.stdin.buffer.read(length)
     if len(blob_data) < length:
         break  # Incomplete read
-    buffer = io.BytesIO(blob_data)
-    inputTensor = torch.load(buffer)
+    inputTensor = decompress(blob_data)
     inputTensor = ensureMinimumTensorSize(inputTensor, minTensorLength, 0)
     inputTensor = inputTensor.to(device)
     inputs = {"input_values": inputTensor.unsqueeze(0)}
@@ -51,9 +58,6 @@ while True:
     ids = torch.argmax(outputs, dim=-1)[0]
     transcription = processor.decode(ids)
     print(transcription, flush=True)
-    #sys.stdout.write(transcription)
-    #sys.stdout.write("\n")
-    #sys.stdout.flush()
     print("\t", transcription, file=sys.stderr)
 
 
