@@ -1,8 +1,10 @@
 import os
 import sys
 import torch
+import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from sqlite_utility import *
+from data_preparation import decompress
 from io import BytesIO
 
 class MyDataset(Dataset):
@@ -17,12 +19,15 @@ class MyDataset(Dataset):
     def __getitem__(self, idx):
         query = 'SELECT input_values, attention_mask, labels, memory_mb FROM tensors WHERE idx = ?'
         (inputValues, attentionMask, labels, memoryMB) = self.database.selectOne(query, (idx,))
-        inputBuffer = BytesIO(inputValues)
-        audioTensor = torch.load(inputBuffer)
-        maskBuffer = BytesIO(attentionMask)
-        maskTensor = torch.load(maskBuffer)
-        labelsBuffer = BytesIO(labels)
-        labelsTensor = torch.load(labelsBuffer)
+        #inputBuffer = BytesIO(inputValues)
+        #audioTensor = torch.load(inputBuffer)
+        audioTensor = decompress(inputValues, np.float32)
+        #maskBuffer = BytesIO(attentionMask)
+        #maskTensor = torch.load(maskBuffer)
+        maskTensor = decompress(attentionMask, np.float32)
+        #labelsBuffer = BytesIO(labels)
+        #labelsTensor = torch.load(labelsBuffer)
+        labelsTensor = decompress(labels)
         print("tensor", idx, audioTensor.shape, type(audioTensor), audioTensor.nbytes / (1024**2))
         #print(reference, memoryMB, "MB")
         return {
