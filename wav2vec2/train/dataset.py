@@ -27,7 +27,7 @@ class MyDataset(Dataset):
         maskTensor = decompress(attentionMask, np.float32)
         #labelsBuffer = BytesIO(labels)
         #labelsTensor = torch.load(labelsBuffer)
-        labelsTensor = decompress(labels)
+        labelsTensor = decompress(labels, np.int64)
         print("tensor", idx, audioTensor.shape, type(audioTensor), audioTensor.nbytes / (1024**2))
         #print(reference, memoryMB, "MB")
         return {
