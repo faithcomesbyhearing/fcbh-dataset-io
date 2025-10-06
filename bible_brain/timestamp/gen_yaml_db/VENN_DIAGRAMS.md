@@ -20,22 +20,28 @@ The YAML generator selects Bible filesets based on:
 All Bible Filesets with N1DA + N_ET filesets
 ┌─────────────────────────────────────────────────────────────┐
 │                                                             │
-│  ┌─────────────────────┐    ┌─────────────────────────────┐ │
-│  │   USX Only          │    │        Plain Only           │ │
-│  │   (_ET-usx)         │    │        (_ET)                │ │
-│  │                     │    │                             │ │
-│  │  ENGNAB, ERVWTC,    │    │    JPNJCB                   │ │
-│  │  FRADPI, INDALA,    │    │                             │ │
-│  │  TAMWCO, TELGMI     │    │                             │ │
-│  └─────────────────────┘    └─────────────────────────────┘ │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │              Both USX and Plain                         │ │
-│  │           (Processed in USX run)                        │ │
-│  │                                                         │ │
-│  │  ABPWBT, ENGNIV, HINBIB, MALBIB,                       │ │
-│  │  PORBBS, RUSDPI, SWEBIB, TAMWCO, etc.                  │ │
-│  └─────────────────────────────────────────────────────────┘ │
+│        ┌─────────────────┐        ┌─────────────────┐      │
+│        │   Has USX       │        │   Has Plain     │      │
+│        │   (_ET-usx)     │        │   (_ET)         │      │
+│        │                 │        │                 │      │
+│        │  ENGNAB, ERVWTC,│        │    JPNJCB       │      │
+│        │  FRADPI, INDALA,│        │                 │      │
+│        │  TAMWCO, TELGMI │        │                 │      │
+│        └─────────────────┼────────┼─────────────────┘      │
+│                         │        │                         │
+│                         │        │                         │
+│                    ┌────┴────────┴────┐                    │
+│                    │   Both USX and   │                    │
+│                    │      Plain       │                    │
+│                    │ (Processed in    │                    │
+│                    │   USX run)       │                    │
+│                    │                  │                    │
+│                    │ ABPWBT, ENGNIV,  │                    │
+│                    │ HINBIB, MALBIB,  │                    │
+│                    │ PORBBS, RUSDPI,  │                    │
+│                    │ SWEBIB, TAMWCO,  │                    │
+│                    │ etc.             │                    │
+│                    └──────────────────┘                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -45,23 +51,29 @@ All Bible Filesets with N1DA + N_ET filesets
 All Bible Filesets with New Testament DA filesets
 ┌─────────────────────────────────────────────────────────────┐
 │                                                             │
-│  ┌─────────────────────┐    ┌─────────────────────────────┐ │
-│  │   N1 Only           │    │        N2 Only              │ │
-│  │   (N1DA filesets)   │    │        (N2DA filesets)      │ │
-│  │                     │    │                             │ │
-│  │  AMHBIB, BNGDIP,    │    │  ACRWB1, BAMLSB,           │ │
-│  │  FIN38V, GUJDPI,    │    │  BNGBBS, ENGCEV,           │ │
-│  │  HAUDPI, IBOBIB,    │    │  GEOIBT, HATSBH, etc.      │ │
-│  │  JAVLAI, KANBIB     │    │                             │ │
-│  └─────────────────────┘    └─────────────────────────────┘ │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │              Both N1 and N2                             │ │
-│  │           (hundreds of shared filesets)                 │ │
-│  │                                                         │ │
-│  │  ABPWBT, ACCBSG, ADXNVS, AEUWBT,                       │ │
-│  │  BNGWTC, BO1CAP, BULBOB, CATBSS, etc.                  │ │
-│  └─────────────────────────────────────────────────────────┘ │
+│        ┌─────────────────┐        ┌─────────────────┐      │
+│        │   Has N1        │        │   Has N2        │      │
+│        │   (N1DA filesets)│       │   (N2DA filesets)│      │
+│        │                 │        │                 │      │
+│        │  AMHBIB, BNGDIP,│        │  ACRWB1, BAMLSB,│      │
+│        │  FIN38V, GUJDPI,│        │  BNGBBS, ENGCEV,│      │
+│        │  HAUDPI, IBOBIB,│        │  GEOIBT, HATSBH,│      │
+│        │  JAVLAI, KANBIB │        │  etc.           │      │
+│        └─────────────────┼────────┼─────────────────┘      │
+│                         │        │                         │
+│                         │        │                         │
+│                    ┌────┴────────┴────┐                    │
+│                    │   Both N1 and    │                    │
+│                    │       N2         │                    │
+│                    │ (hundreds of     │                    │
+│                    │ shared filesets) │                    │
+│                    │                  │                    │
+│                    │ ABPWBT, ACCBSG,  │                    │
+│                    │ ADXNVS, AEUWBT,  │                    │
+│                    │ BNGWTC, BO1CAP,  │                    │
+│                    │ BULBOB, CATBSS,  │                    │
+│                    │ etc.             │                    │
+│                    └──────────────────┘                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -71,21 +83,25 @@ All Bible Filesets with New Testament DA filesets
 All Bible Filesets with DA filesets
 ┌─────────────────────────────────────────────────────────────┐
 │                                                             │
-│  ┌─────────────────────┐    ┌─────────────────────────────┐ │
-│  │   HLS Only          │    │        DASH Only            │ │
-│  │   (DA filesets)     │    │        (DA-opus16)          │ │
-│  │                     │    │                             │ │
-│  │  Most filesets      │    │  Fewer filesets             │ │
-│  │  have standard      │    │  have opus16                │ │
-│  │  HLS filesets       │    │  filesets                   │ │
-│  └─────────────────────┘    └─────────────────────────────┘ │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │              Both HLS and DASH                          │ │
-│  │           (Filesets with both formats)                  │ │
-│  │                                                         │ │
-│  │  ENGNIV, PORBBS, RUSDPI, etc.                          │ │
-│  └─────────────────────────────────────────────────────────┘ │
+│        ┌─────────────────┐        ┌─────────────────┐      │
+│        │   Has HLS       │        │   Has DASH      │      │
+│        │   (DA filesets) │        │   (DA-opus16)   │      │
+│        │                 │        │                 │      │
+│        │  Most filesets  │        │  Fewer filesets │      │
+│        │  have standard  │        │  have opus16    │      │
+│        │  HLS filesets   │        │  filesets       │      │
+│        └─────────────────┼────────┼─────────────────┘      │
+│                         │        │                         │
+│                         │        │                         │
+│                    ┌────┴────────┴────┐                    │
+│                    │   Both HLS and   │                    │
+│                    │      DASH        │                    │
+│                    │ (Filesets with   │                    │
+│                    │ both formats)    │                    │
+│                    │                  │                    │
+│                    │ ENGNIV, PORBBS,  │                    │
+│                    │ RUSDPI, etc.     │                    │
+│                    └──────────────────┘                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
