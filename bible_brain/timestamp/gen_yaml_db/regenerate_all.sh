@@ -72,7 +72,7 @@ echo "=============================================="
 for dir in all_*; do
     if [ -d "$dir" ]; then
         count=$(ls -1 "$dir" | wc -l)
-        echo "$dir: $count files"
+        printf "%-20s %4d files\n" "$dir:" "$count"
     fi
 done
 

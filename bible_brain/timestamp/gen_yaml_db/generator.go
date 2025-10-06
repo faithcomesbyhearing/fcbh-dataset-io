@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/lang_tree/search"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -23,6 +25,8 @@ type YAMLGenerator struct {
 	db         *sql.DB
 	template   string
 	mmssupport map[string]bool
+	ctx        context.Context
+	langTree   search.LanguageTree
 }
 
 func NewYAMLGenerator(config Config) (*YAMLGenerator, error) {
@@ -36,8 +40,16 @@ func NewYAMLGenerator(config Config) (*YAMLGenerator, error) {
 		return nil, fmt.Errorf("failed to ping database: %v", err)
 	}
 
-	// Load MMS supported languages
-	mmsSupport, err := loadMMSSupport()
+	// Create context and load language tree
+	ctx := context.Background()
+	langTree := search.NewLanguageTree(ctx)
+	err = langTree.Load()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load language tree: %v", err)
+	}
+
+	// Load MMS supported languages using the real language tree
+	mmsSupport, err := loadMMSSupportFromTree(langTree)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load MMS support: %v", err)
 	}
@@ -53,6 +65,8 @@ func NewYAMLGenerator(config Config) (*YAMLGenerator, error) {
 		db:         db,
 		template:   template,
 		mmssupport: mmsSupport,
+		ctx:        ctx,
+		langTree:   langTree,
 	}, nil
 }
 
@@ -132,8 +146,8 @@ func (g *YAMLGenerator) findMatchingLanguages() ([]BibleInfo, error) {
 			return nil, fmt.Errorf("failed to scan row: %v", err)
 		}
 
-		// Check MMS support
-		if !g.mmssupport[bible.LanguageISO] {
+		// Check MMS support using language tree
+		if !g.isMMSSupported(bible.LanguageISO) {
 			if g.config.Verbose {
 				fmt.Printf("Skipping %s: language %s not supported by MMS\n", bible.BibleId, bible.LanguageISO)
 			}
@@ -425,34 +439,35 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
-func loadMMSSupport() (map[string]bool, error) {
-	// For now, return a hardcoded list of common MMS-supported languages
-	// In a full implementation, this would load from the language tree
+func loadMMSSupportFromTree(langTree search.LanguageTree) (map[string]bool, error) {
+	// Load MMS ASR supported languages from the language tree
+	// This uses the same system as the rest of the MMS codebase
 	support := make(map[string]bool)
 
-	// Common MMS-supported languages (from mms_asr.tab)
-	mmssupported := []string{
-		"eng", "spa", "fra", "deu", "ita", "por", "rus", "jpn", "kor", "cmn",
-		"ara", "hin", "ben", "urd", "tam", "tel", "mar", "guj", "kan", "mal",
-		"abp", "abi", "acr", "adx", "aeu", "agd", "agu", "amh", "asm", "aze",
-		"bam", "ben", "bod", "bul", "cat", "ceb", "ces", "cmn", "cym", "dan",
-		"deu", "ell", "eng", "est", "eus", "fas", "fin", "fra", "gle", "glg",
-		"guj", "hat", "hau", "heb", "hin", "hrv", "hun", "ibo", "ind", "isl",
-		"ita", "jav", "jpn", "kan", "kat", "kaz", "khm", "kin", "kir", "kor",
-		"kur", "lao", "lat", "lav", "lit", "lug", "mal", "mar", "mkd", "mlg",
-		"mlt", "mon", "mri", "msa", "mya", "nep", "nld", "nor", "nso", "nya",
-		"ori", "orm", "pan", "pol", "por", "pus", "que", "ron", "run", "rus",
-		"sin", "slk", "slv", "sna", "som", "sot", "spa", "sqi", "srp", "ssw",
-		"sun", "swa", "swe", "tam", "tel", "tgk", "tha", "tir", "ton", "tsn",
-		"tso", "tur", "ukr", "umb", "urd", "uzb", "ven", "vie", "xho", "yor",
-		"zul",
-	}
-
-	for _, lang := range mmssupported {
-		support[lang] = true
+	// Get all languages from the mms_asr.tab file via the language tree
+	// We'll iterate through all languages and check if they're supported by MMS ASR
+	for _, lang := range langTree.Table {
+		if lang.Iso6393 != "" {
+			// Check if this language is supported by MMS ASR
+			_, distance, err := langTree.Search(lang.Iso6393, "mms_asr")
+			if err == nil && distance >= 0 {
+				// Language is supported (distance >= 0 means it was found)
+				support[lang.Iso6393] = true
+			}
+		}
 	}
 
 	return support, nil
+}
+
+func (g *YAMLGenerator) isMMSSupported(languageISO string) bool {
+	// Use the language tree to check if a language is supported by MMS ASR
+	_, distance, err := g.langTree.Search(languageISO, "mms_asr")
+	if err != nil {
+		return false
+	}
+	// Distance >= 0 means the language was found and is supported
+	return distance >= 0
 }
 
 func loadTemplate(templatePath string) (string, error) {

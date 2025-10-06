@@ -56,6 +56,7 @@ export PATH="/opt/homebrew/bin:$PATH"
 # export FCBH_DBP_KEY="your_api_key_here"
 
 # Set DBP MySQL connection (only needed if updating DBP timestamps)
+export DBP_MYSQL_DSN="root:@tcp(localhost:3306)/dbp_localtest"
 # export DBP_MYSQL_DSN="user:password@tcp(hostname:port)/database"
 
 echo "Environment variables set:"
