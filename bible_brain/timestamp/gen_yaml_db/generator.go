@@ -98,16 +98,24 @@ func (g *YAMLGenerator) findMatchingLanguages() ([]BibleInfo, error) {
 			g.config.BibleId,
 			g.getAudioPattern(),
 			g.getTextPattern(),
-			g.getSAPattern(),
 		}
+		// Add exclusion pattern if needed
+		if g.getTextExclusionPattern() != "" {
+			args = append(args, g.getTextExclusionPattern())
+		}
+		args = append(args, g.getSAPattern())
 	} else {
 		// Generate for all matching languages
 		query = g.buildDiscoveryQuery()
 		args = []interface{}{
 			g.getAudioPattern(),
 			g.getTextPattern(),
-			g.getSAPattern(),
 		}
+		// Add exclusion pattern if needed
+		if g.getTextExclusionPattern() != "" {
+			args = append(args, g.getTextExclusionPattern())
+		}
+		args = append(args, g.getSAPattern())
 	}
 
 	rows, err := g.db.Query(query, args...)
@@ -157,7 +165,21 @@ func (g *YAMLGenerator) buildDiscoveryQuery() string {
 
 	query += `
 		AND text_fs.id LIKE ?
-		AND text_fs.content_loaded = 1
+		AND text_fs.content_loaded = 1`
+
+	// Add exclusion pattern for text filesets if needed
+	exclusionPattern := g.getTextExclusionPattern()
+	if exclusionPattern != "" {
+		query += `
+		AND NOT EXISTS (
+			SELECT 1 FROM bible_filesets excl_fs 
+			JOIN bible_fileset_connections excl_bfc ON excl_fs.hash_id = excl_bfc.hash_id
+			WHERE excl_bfc.bible_id = b.id 
+			AND excl_fs.id LIKE ?
+		)`
+	}
+
+	query += `
 		AND NOT EXISTS (
 			SELECT 1 FROM bible_filesets sa_fs 
 			JOIN bible_fileset_connections sa_bfc ON sa_fs.hash_id = sa_bfc.hash_id
@@ -201,7 +223,21 @@ func (g *YAMLGenerator) buildSpecificBibleQuery() string {
 
 	query += `
 		AND text_fs.id LIKE ?
-		AND text_fs.content_loaded = 1
+		AND text_fs.content_loaded = 1`
+
+	// Add exclusion pattern for text filesets if needed
+	exclusionPattern := g.getTextExclusionPattern()
+	if exclusionPattern != "" {
+		query += `
+		AND NOT EXISTS (
+			SELECT 1 FROM bible_filesets excl_fs 
+			JOIN bible_fileset_connections excl_bfc ON excl_fs.hash_id = excl_bfc.hash_id
+			WHERE excl_bfc.bible_id = b.id 
+			AND excl_fs.id LIKE ?
+		)`
+	}
+
+	query += `
 		AND NOT EXISTS (
 			SELECT 1 FROM bible_filesets sa_fs 
 			JOIN bible_fileset_connections sa_bfc ON sa_fs.hash_id = sa_bfc.hash_id
