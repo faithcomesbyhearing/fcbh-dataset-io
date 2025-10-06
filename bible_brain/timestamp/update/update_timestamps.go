@@ -84,6 +84,12 @@ func (d *UpdateTimestamps) Process() *log.Status {
 func (d *UpdateTimestamps) ProcessBothTimestampsAndHLS(chapters []db.Script) *log.Status {
 	log.Info(d.ctx, "Processing both timestamps and HLS in single transaction")
 
+	// Remove all existing timestamps for the fileset once (not per chapter)
+	status := d.dbpConn.RemoveTimestampsForFileset(d.req.UpdateDBP.Timestamps)
+	if status != nil {
+		return status
+	}
+
 	// Process timestamps first
 	for _, ch := range chapters {
 		var timestamps []Timestamp
@@ -98,16 +104,26 @@ func (d *UpdateTimestamps) ProcessBothTimestampsAndHLS(chapters []db.Script) *lo
 				timestamps[i].EndTS = math.Round(timestamps[i].EndTS*1000.0) / 1000.0
 			}
 
-			// Remove existing timestamps and insert new ones
-			status = d.ReplaceTimestampsForFileset(d.req.UpdateDBP.Timestamps, ch.BookId, ch.ChapterNum, timestamps)
+			// Insert new timestamps (removal already done above)
+			status = d.InsertTimestampsForFileset(d.req.UpdateDBP.Timestamps, ch.BookId, ch.ChapterNum, timestamps)
 			if status != nil {
 				return status
 			}
 		}
 	}
 
+	// Set timing estimation tag for timestamps fileset
+	hashId, status := d.dbpConn.SelectHashId(d.req.UpdateDBP.Timestamps)
+	if status != nil {
+		return status
+	}
+	_, status = d.dbpConn.UpdateFilesetTimingEstTag(hashId, mmsAlignTimingEstErr)
+	if status != nil {
+		return status
+	}
+
 	// Now process HLS with the newly inserted timestamps
-	status := d.ProcessHLS(d.req.UpdateDBP.HLS, d.req.BibleId)
+	status = d.ProcessHLS(d.req.UpdateDBP.HLS, d.req.BibleId)
 	if status != nil {
 		return status
 	}
@@ -118,6 +134,12 @@ func (d *UpdateTimestamps) ProcessBothTimestampsAndHLS(chapters []db.Script) *lo
 
 func (d *UpdateTimestamps) ProcessTimestampsOnly(chapters []db.Script) *log.Status {
 	log.Info(d.ctx, "Processing timestamps only")
+
+	// Remove all existing timestamps for the fileset once (not per chapter)
+	status := d.dbpConn.RemoveTimestampsForFileset(d.req.UpdateDBP.Timestamps)
+	if status != nil {
+		return status
+	}
 
 	for _, ch := range chapters {
 		var timestamps []Timestamp
@@ -132,12 +154,22 @@ func (d *UpdateTimestamps) ProcessTimestampsOnly(chapters []db.Script) *log.Stat
 				timestamps[i].EndTS = math.Round(timestamps[i].EndTS*1000.0) / 1000.0
 			}
 
-			// Remove existing timestamps and insert new ones
-			status = d.ReplaceTimestampsForFileset(d.req.UpdateDBP.Timestamps, ch.BookId, ch.ChapterNum, timestamps)
+			// Insert new timestamps (removal already done above)
+			status = d.InsertTimestampsForFileset(d.req.UpdateDBP.Timestamps, ch.BookId, ch.ChapterNum, timestamps)
 			if status != nil {
 				return status
 			}
 		}
+	}
+
+	// Set timing estimation tag for timestamps fileset
+	hashId, status := d.dbpConn.SelectHashId(d.req.UpdateDBP.Timestamps)
+	if status != nil {
+		return status
+	}
+	_, status = d.dbpConn.UpdateFilesetTimingEstTag(hashId, mmsAlignTimingEstErr)
+	if status != nil {
+		return status
 	}
 
 	log.Info(d.ctx, "Timestamps updated successfully")
@@ -343,6 +375,28 @@ func (d *UpdateTimestamps) ReplaceTimestampsForFileset(filesetID, bookID string,
 	}
 
 	// Insert new timestamps
+	hashID, status := d.dbpConn.SelectHashId(filesetID)
+	if status != nil {
+		return status
+	}
+
+	bibleFileID, _, status := d.dbpConn.SelectFileId(hashID, bookID, chapterNum)
+	if status != nil {
+		return status
+	}
+
+	if bibleFileID > 0 {
+		_, _, status = d.dbpConn.InsertTimestamps(bibleFileID, timestamps)
+		if status != nil {
+			return status
+		}
+	}
+
+	return nil
+}
+
+func (d *UpdateTimestamps) InsertTimestampsForFileset(filesetID, bookID string, chapterNum int, timestamps []Timestamp) *log.Status {
+	// Insert new timestamps (removal already done outside this function)
 	hashID, status := d.dbpConn.SelectHashId(filesetID)
 	if status != nil {
 		return status
