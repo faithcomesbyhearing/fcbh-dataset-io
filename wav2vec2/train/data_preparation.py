@@ -5,6 +5,8 @@ import torchaudio
 import numpy as np
 from transformers import Wav2Vec2Processor
 from sqlite_utility import *
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from common import ensureMinimumTensorSize, compress, decompress
 import time
 import blosc
 
@@ -166,10 +168,7 @@ def prepareBatches(database, processor, minTensorLength):
             (sampleIdx, inputValues, labels, text, reference, memoryMB) = database.selectOne(sampleQuery, (int(s),))
             inputTensor = decompress(inputValues, np.float32)
             originalLen = len(inputTensor)
-            inputTensor = ensureMinimumTensorSize(inputTensor, minTensorLength, 0)
-            attentionMask = torch.ones(len(inputTensor), dtype=torch.int)
-            if len(inputTensor) > originalLen:
-                attentionMask[originalLen:] = 0  # Mark padding as invalid
+            inputTensor, attentionMask = ensureMinimumTensorSize(inputTensor, minTensorLength, 0)
             inputFeatures.append({
                 "input_values": inputTensor,
                 "attention_mask": attentionMask
@@ -196,37 +195,6 @@ def prepareBatches(database, processor, minTensorLength):
         database.execute(insert, (index, numSamples, paddedMB, inputValuesBlob,
                 attentionMaskBlob, labelsBlob))
     return len(batches)
-
-
-def compress(tensor):
-    numpy_array = tensor.cpu().numpy()
-    compressed = blosc.compress(
-        numpy_array.tobytes(),
-        typesize = numpy_array.itemsize,
-        cname = 'lz4',
-        clevel = 5,
-        shuffle = blosc.SHUFFLE
-    )
-    return compressed
-
-
-def decompress(blob, dtype, numSamples=1):
-    decompressed = blosc.decompress(blob)
-    numpy_array = np.frombuffer(decompressed, dtype=dtype).copy()
-    if numSamples != 1:
-        if len(numpy_array) % numSamples != 0:
-            print("Cannot reshape", len(numpy_array), "element into", numSamples, file=sys.stderr)
-        numpy_array = numpy_array.reshape(numSamples, -1)
-    tensor = torch.from_numpy(numpy_array)
-    return tensor
-
-
-def ensureMinimumTensorSize(tensor, minTensorLength, padValue):
-    currentLength = tensor.shape[-1]
-    if currentLength < minTensorLength:
-        paddingNeeded = minTensorLength - currentLength
-        tensor = torch.nn.functional.pad(tensor, (0, paddingNeeded), mode='constant', value=padValue)
-    return tensor
 
 
 def displaySamples(database):

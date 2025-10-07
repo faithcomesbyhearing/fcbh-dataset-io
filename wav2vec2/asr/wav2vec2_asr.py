@@ -4,30 +4,12 @@ import struct
 import io
 import torch
 import numpy as np
-import blosc
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from common import ensureMinimumTensorSize, decompress
 from datasets import Dataset, Audio
 from transformers import Wav2Vec2ForCTC
 from transformers import Wav2Vec2Processor
 from transformers import AutoProcessor
-
-
-def ensureMinimumTensorSize(tensor, minTensorLength, padValue):
-    currentLength = tensor.shape[-1]
-    if currentLength < minTensorLength:
-        paddingNeeded = minTensorLength - currentLength
-        tensor = torch.nn.functional.pad(tensor, (0, paddingNeeded), mode='constant', value=padValue)
-    return tensor
-
-
-def decompress(blob, dtype, numSamples=1):
-    decompressed = blosc.decompress(blob)
-    numpy_array = np.frombuffer(decompressed, dtype=dtype).copy()
-    if numSamples != 1:
-        if len(numpy_array) % numSamples != 0:
-            print("Cannot reshape", len(numpy_array), "element into", numSamples, file=sys.stderr)
-        numpy_array = numpy_array.reshape(numSamples, -1)
-    tensor = torch.from_numpy(numpy_array)
-    return tensor
 
 
 if len(sys.argv) < 2:
@@ -55,9 +37,14 @@ while True:
     if len(blob_data) < length:
         break  # Incomplete read
     inputTensor = decompress(blob_data, np.float32)
-    #inputTensor = ensureMinimumTensorSize(inputTensor, minTensorLength, 0)
+    originalLen = len(inputTensor)
+    inputTensor, attentionMask = ensureMinimumTensorSize(inputTensor, minTensorLength, 0)
     inputTensor = inputTensor.to(device)
-    inputs = {"input_values": inputTensor.unsqueeze(0)}
+    attentionMask = attentionMask.to(device)
+    inputs = {
+        "input_values": inputTensor.unsqueeze(0),
+        "attention_mask": attentionMask.unsqueeze(0)
+    }
     with torch.no_grad():
         outputs = model(**inputs).logits
     ids = torch.argmax(outputs, dim=-1)[0]
