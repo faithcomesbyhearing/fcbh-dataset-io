@@ -1,0 +1,121 @@
+# Artie Project Rules and Guidelines
+
+## Project Overview
+This is the Artie project - a Bible audio processing and timestamping system that handles:
+- Audio file processing and HLS/DASH stream generation
+- Text-to-audio alignment using MMS (Multilingual Multimodal Speech)
+- Bible Brain API integration for database operations
+- Timestamp and HLS data management in MySQL
+
+## Development Workflow
+
+### Building and Running
+```bash
+# Build the main CLI
+cd /Users/jrstear/git/artie
+go build -o dataset controller/dataset_cli/dataset.go
+
+# Set up environment
+source setup_env.sh
+
+# Run with YAML config
+./dataset bible_brain/timestamp/update/engnivn1da_hls_test.yaml
+```
+
+### Database Operations
+- **MySQL**: `dbp_localtest` database for production-like testing
+- **SQLite**: Local `*_TS.db` files for timestamp processing
+- **Environment**: Use `DBP_MYSQL_DSN` for database connections
+
+### Key Directories
+- `bible_brain/timestamp/update/` - Core timestamp and HLS processing
+- `controller/dataset_cli/` - Main CLI application
+- `bible_brain/timestamp/gen_yaml_db/` - YAML generator utility
+- `mms/` - MMS alignment and ASR processing
+- `db/` - Database adapters and models
+
+## Code Standards
+
+### Git Commits
+- Use conventional commit format: `type(scope): description`
+- Examples: `fix(hls): include verse 0 entries`, `feat(yaml): add stream type filtering`
+
+### Go Code
+- Follow standard Go formatting and linting
+- Use `log.Info` for structured logging, `fmt.Println` for immediate stdout output
+- Handle errors explicitly, use `*log.Status` for database operations
+
+### Database Schema
+- Respect foreign key constraints in MySQL operations
+- Use transactions for atomic operations (timestamps + HLS)
+- Always clean up test data after operations
+
+## Testing and Debugging
+
+### Common Test Operations
+```bash
+# Remove test fileset (ENGNIVN1SA example)
+mysql -u root dbp_localtest -e "SET @hash_id = (SELECT hash_id FROM bible_filesets WHERE id = 'ENGNIVN1SA'); DELETE FROM bible_file_stream_bytes WHERE stream_bandwidth_id IN (SELECT id FROM bible_file_stream_bandwidths WHERE bible_file_id IN (SELECT id FROM bible_files WHERE hash_id = @hash_id)); DELETE FROM bible_file_stream_bandwidths WHERE bible_file_id IN (SELECT id FROM bible_files WHERE hash_id = @hash_id); DELETE FROM bible_files WHERE hash_id = @hash_id; DELETE FROM bible_fileset_connections WHERE hash_id = @hash_id; DELETE FROM bible_fileset_tags WHERE hash_id = @hash_id; DELETE FROM bible_filesets WHERE hash_id = @hash_id;"
+
+# Verify timestamp counts
+mysql -u root dbp_localtest -e "SELECT COUNT(*) as da_timestamps FROM bible_file_timestamps t JOIN bible_files f ON t.bible_file_id = f.id JOIN bible_filesets fs ON f.hash_id = fs.hash_id WHERE fs.id = 'ENGNIVN1DA';"
+
+# Verify HLS stream bytes
+mysql -u root dbp_localtest -e "SELECT COUNT(*) as hls_bytes FROM bible_file_stream_bytes bytes JOIN bible_file_stream_bandwidths bw ON bytes.stream_bandwidth_id = bw.id JOIN bible_files f ON bw.bible_file_id = f.id JOIN bible_filesets fs ON f.hash_id = fs.hash_id WHERE fs.id = 'ENGNIVN1SA';"
+```
+
+### HLS Fileset Tracing
+```bash
+# Trace an audio HLS fileset link - the SA fileset
+mysql -u root dbp_localtest -e "SELECT bf_sa.id as fileset_id, bf_sa.hash_id, bf_file.file_name, bw.file_name as bandwidth_name, bytes.runtime, bytes.timestamp_id, NULL as verse_start, NULL as timestamp FROM bible_filesets bf_sa JOIN bible_files bf_file ON bf_sa.hash_id = bf_file.hash_id JOIN bible_file_stream_bandwidths bw ON bf_file.id = bw.bible_file_id JOIN bible_file_stream_bytes bytes ON bw.id = bytes.stream_bandwidth_id WHERE bf_sa.id = 'ENGNIVN1SA' LIMIT 1;"
+
+# Trace the corresponding DA fileset (timestamps)
+mysql -u root dbp_localtest -e "SELECT bf_da.id as fileset_id, bf_da.hash_id, ts_file.file_name, NULL as bandwidth_name, NULL as runtime, ts.id as timestamp_id, ts.verse_start, ts.timestamp FROM bible_file_stream_bytes bytes JOIN bible_file_timestamps ts ON bytes.timestamp_id = ts.id JOIN bible_files ts_file ON ts.bible_file_id = ts_file.id JOIN bible_filesets bf_da ON ts_file.hash_id = bf_da.hash_id WHERE bytes.stream_bandwidth_id IN (SELECT bw.id FROM bible_filesets bf_sa JOIN bible_files bf_file ON bf_sa.hash_id = bf_file.hash_id JOIN bible_file_stream_bandwidths bw ON bf_file.id = bw.bible_file_id WHERE bf_sa.id = 'ENGNIVN1SA') LIMIT 1;"
+```
+
+### Debugging Tips
+- Use `fmt.Println` for immediate output visibility during processing
+- Check both SQLite and MySQL databases for data consistency
+- Verify verse 0 entries are included in both timestamps and HLS data
+- Use `git stash` and `git checkout` to test on clean states
+
+## Important Patterns
+
+### Timestamp Processing
+- Always include verse 0 entries (chapter titles) with timestamp 0.0
+- Use full replacement strategy: remove existing, then insert new
+- Process timestamps before HLS to ensure proper timestamp_id references
+
+### HLS Processing
+- FFmpeg-based byte calculation requires special handling for verse 0
+- Ensure chapter lists come from MySQL (not SQLite) for consistency
+- HLS stream bytes count should match timestamp count exactly
+
+### YAML Generation
+- Use database-driven approach (`gen_yaml_db`) over API-driven (`gen_yaml`)
+- Filter by MMS language support using language tree system
+- Generate per-fileset, not per-language
+- Support multiple modes: `timings-only`, `streams-only`, `both`
+
+## Common Issues and Solutions
+
+### Build Errors
+- `undefined: NewLocalHLSProcessor` - Check if all files are present
+- Import errors - Verify `go.mod` dependencies and module paths
+- Database connection errors - Check `setup_env.sh` and environment variables
+
+### Data Consistency
+- Timestamp count ≠ HLS bytes count - Check verse 0 inclusion
+- Missing fileset data - Verify `content_loaded=1` in database
+- API vs database mismatches - Use database-driven approaches
+
+### Performance
+- Large timestamp processing - Use transactions and batch operations
+- Memory issues - Process chapters individually, not all at once
+- FFmpeg processing - Ensure audio files are accessible and valid
+
+## Environment Setup
+- Always source `setup_env.sh` before running commands
+- Verify `DBP_MYSQL_DSN` points to correct database
+- Check API keys in environment variables
+- Ensure FFmpeg is available for HLS processing
