@@ -181,6 +181,21 @@ func (p *LocalHLSProcessor) getBoundaries(audioPath string, timestamps []Timesta
 					UpdatedAt:   time.Now().Format("2006-01-02 15:04:05"),
 				}
 				streamBytes = append(streamBytes, streamByte)
+			} else {
+				// Special case for the first timestamp (verse 0) - create a segment from 0 to current position
+				duration := timestamp - 0.0
+				bytes := int64(pos - 0)
+				offset := int64(0)
+
+				streamByte := HLSStreamBytes{
+					Runtime:     duration,
+					Bytes:       bytes,
+					Offset:      offset,
+					TimestampID: timestamps[currentTimestampIndex].TimestampId, // Use current timestamp ID
+					CreatedAt:   time.Now().Format("2006-01-02 15:04:05"),
+					UpdatedAt:   time.Now().Format("2006-01-02 15:04:05"),
+				}
+				streamBytes = append(streamBytes, streamByte)
 			}
 
 			prevTime = timestamp
