@@ -17,19 +17,12 @@ class MyDataset(Dataset):
         return count[0]
 
     def __getitem__(self, idx):
-        query = 'SELECT input_values, attention_mask, labels, memory_mb FROM tensors WHERE idx = ?'
-        (inputValues, attentionMask, labels, memoryMB) = self.database.selectOne(query, (idx,))
-        #inputBuffer = BytesIO(inputValues)
-        #audioTensor = torch.load(inputBuffer)
-        audioTensor = decompress(inputValues, np.float32)
-        #maskBuffer = BytesIO(attentionMask)
-        #maskTensor = torch.load(maskBuffer)
-        maskTensor = decompress(attentionMask, np.float32)
-        #labelsBuffer = BytesIO(labels)
-        #labelsTensor = torch.load(labelsBuffer)
-        labelsTensor = decompress(labels, np.int64)
+        query = 'SELECT num_samples, input_values, attention_mask, labels, memory_mb FROM tensors WHERE idx = ?'
+        (numSamples, inputValues, attentionMask, labels, memoryMB) = self.database.selectOne(query, (idx,))
+        audioTensor = decompress(inputValues, np.float32, numSamples)
+        maskTensor = decompress(attentionMask, np.int32, numSamples)
+        labelsTensor = decompress(labels, np.int64, numSamples)
         print("tensor", idx, audioTensor.shape, type(audioTensor), audioTensor.nbytes / (1024**2))
-        #print(reference, memoryMB, "MB")
         return {
             "input_values": audioTensor,
             "attention_mask": maskTensor,

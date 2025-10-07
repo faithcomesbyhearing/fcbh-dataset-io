@@ -79,10 +79,10 @@ def train_wav2vec2(model, dataset, num_epochs=3, lr=5e-5,
                 #modelMemoryStatistics(logger, model, step_label)
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
-                    logger.warn("Cleared CUDA cache due to fragmentation")
+                    logger.warning("Cleared CUDA cache due to fragmentation")
                 elif torch.backends.mps.is_available():
                     torch.mps.empty_cache()
-                    logger.warn("Cleared MPS cache due to fragmentation")
+                    logger.warning("Cleared MPS cache due to fragmentation")
         avg_epoch_loss = epoch_loss / len(dataloader)
         logger.info(f"Epoch {epoch + 1} completed. Average loss: {avg_epoch_loss:.4f}")
 

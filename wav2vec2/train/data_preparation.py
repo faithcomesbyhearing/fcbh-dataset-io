@@ -165,8 +165,15 @@ def prepareBatches(database, processor, minTensorLength):
                             FROM samples WHERE idx = ?"""
             (sampleIdx, inputValues, labels, text, reference, memoryMB) = database.selectOne(sampleQuery, (int(s),))
             inputTensor = decompress(inputValues, np.float32)
+            originalLen = len(inputTensor)
             inputTensor = ensureMinimumTensorSize(inputTensor, minTensorLength, 0)
-            inputFeatures.append({"input_values": inputTensor})
+            attentionMask = torch.ones(len(inputTensor), dtype=torch.int)
+            if len(inputTensor) > originalLen:
+                attentionMask[originalLen:] = 0  # Mark padding as invalid
+            inputFeatures.append({
+                "input_values": inputTensor,
+                "attention_mask": attentionMask
+            })
             labelsTensor = decompress(labels, np.int64)
             labelFeatures.append({"input_ids": labelsTensor})
         batch = processor.pad(
@@ -181,11 +188,11 @@ def prepareBatches(database, processor, minTensorLength):
         )
         # replace padding with -100 to ignore loss correctly
         labels = labelsBatch["input_ids"].masked_fill(labelsBatch.attention_mask.ne(1), -100)
-        insert = """INSERT INTO tensors (idx, num_samples, memory_mb, input_values,
-                    attention_mask, labels) VALUES (?,?,?,?,?,?)"""
         inputValuesBlob = compress(batch['input_values'])
         attentionMaskBlob = compress(batch['attention_mask'])
         labelsBlob = compress(labels)
+        insert = """INSERT INTO tensors (idx, num_samples, memory_mb, input_values,
+                            attention_mask, labels) VALUES (?,?,?,?,?,?)"""
         database.execute(insert, (index, numSamples, paddedMB, inputValuesBlob,
                 attentionMaskBlob, labelsBlob))
     return len(batches)
@@ -203,9 +210,13 @@ def compress(tensor):
     return compressed
 
 
-def decompress(blob, dtype):
+def decompress(blob, dtype, numSamples=1):
     decompressed = blosc.decompress(blob)
     numpy_array = np.frombuffer(decompressed, dtype=dtype).copy()
+    if numSamples != 1:
+        if len(numpy_array) % numSamples != 0:
+            print("Cannot reshape", len(numpy_array), "element into", numSamples, file=sys.stderr)
+        numpy_array = numpy_array.reshape(numSamples, -1)
     tensor = torch.from_numpy(numpy_array)
     return tensor
 
