@@ -419,7 +419,15 @@ func (g *YAMLGenerator) generateTimingsOnlyYAML(bible BibleInfo) string {
 	content = strings.ReplaceAll(content, "  json: yes\n", "")
 	content = strings.ReplaceAll(content, "  json: no\n", "")
 	content = strings.ReplaceAll(content, "  csv: yes", "  csv: yes")
-
+	
+	// Add mp3_64: yes stanza at same level as set_type_code
+	content = strings.ReplaceAll(content, "set_type_code: "+audioTypeCode, "set_type_code: "+audioTypeCode+"\n    mp3_64: yes")
+	
+	// Ensure YAML ends with newline
+	if !strings.HasSuffix(content, "\n") {
+		content += "\n"
+	}
+	
 	return content
 }
 
@@ -477,7 +485,15 @@ func (g *YAMLGenerator) generateBothYAML(bible BibleInfo) string {
 	content = strings.ReplaceAll(content, "  json: yes\n", "")
 	content = strings.ReplaceAll(content, "  json: no\n", "")
 	content = strings.ReplaceAll(content, "  csv: yes", "  csv: yes")
-
+	
+	// Add mp3_64: yes stanza at same level as set_type_code
+	content = strings.ReplaceAll(content, "set_type_code: "+audioTypeCode, "set_type_code: "+audioTypeCode+"\n    mp3_64: yes")
+	
+	// Ensure YAML ends with newline
+	if !strings.HasSuffix(content, "\n") {
+		content += "\n"
+	}
+	
 	return content
 }
 
