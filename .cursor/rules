@@ -26,6 +26,7 @@ source setup_env.sh
 - **MySQL**: `dbp_localtest` database for production-like testing
 - **SQLite**: Local `*_TS.db` files for timestamp processing
 - **Environment**: Use `DBP_MYSQL_DSN` for database connections
+- **Schema**: MySQL schema definition is in `bible_brain/dbp_NEWDATA_schema.sql`
 
 ### Key Directories
 - `bible_brain/timestamp/update/` - Core timestamp and HLS processing
