@@ -3,6 +3,7 @@ import sys
 import struct
 import io
 import torch
+import numpy as np
 import blosc
 from datasets import Dataset, Audio
 from transformers import Wav2Vec2ForCTC
@@ -18,9 +19,13 @@ def ensureMinimumTensorSize(tensor, minTensorLength, padValue):
     return tensor
 
 
-def decompress(blob, dtype):
+def decompress(blob, dtype, numSamples=1):
     decompressed = blosc.decompress(blob)
     numpy_array = np.frombuffer(decompressed, dtype=dtype).copy()
+    if numSamples != 1:
+        if len(numpy_array) % numSamples != 0:
+            print("Cannot reshape", len(numpy_array), "element into", numSamples, file=sys.stderr)
+        numpy_array = numpy_array.reshape(numSamples, -1)
     tensor = torch.from_numpy(numpy_array)
     return tensor
 
@@ -49,8 +54,8 @@ while True:
     blob_data = sys.stdin.buffer.read(length)
     if len(blob_data) < length:
         break  # Incomplete read
-    inputTensor = decompress(blob_data)
-    inputTensor = ensureMinimumTensorSize(inputTensor, minTensorLength, 0)
+    inputTensor = decompress(blob_data, np.float32)
+    #inputTensor = ensureMinimumTensorSize(inputTensor, minTensorLength, 0)
     inputTensor = inputTensor.to(device)
     inputs = {"input_values": inputTensor.unsqueeze(0)}
     with torch.no_grad():
