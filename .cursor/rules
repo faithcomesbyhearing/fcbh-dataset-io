@@ -110,6 +110,10 @@ mysql -u root dbp_localtest -e "SELECT bf_da.id as fileset_id, bf_da.hash_id, ts
 - Missing fileset data - Verify `content_loaded=1` in database
 - API vs database mismatches - Use database-driven approaches
 
+### API Access Issues
+- Text fileset download failures due to API key permissions - Text downloads happen before audio to fail early
+- Audio already downloaded when text fails - This is now prevented by processing text first
+
 ### Performance
 - Large timestamp processing - Use transactions and batch operations
 - Memory issues - Process chapters individually, not all at once
