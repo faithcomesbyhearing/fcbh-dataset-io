@@ -124,3 +124,11 @@ mysql -u root dbp_localtest -e "SELECT bf_da.id as fileset_id, bf_da.hash_id, ts
 - Verify `DBP_MYSQL_DSN` points to correct database
 - Check API keys in environment variables
 - Ensure FFmpeg is available for HLS processing
+
+### System Dependencies
+- **FFmpeg and Sox**: Required for audio processing (see MMS documentation for installation)
+- **Python 3.8+**: With virtual environment for MMS processing
+- **For MMS Forced Alignment**: See `mms/forced_align/README.md` for detailed setup instructions
+  - Includes PyTorch installation
+  - Model download procedures  
+  - Platform-specific commands (macOS/Linux/Windows)
