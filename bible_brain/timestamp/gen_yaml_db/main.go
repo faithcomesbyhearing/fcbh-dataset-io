@@ -15,6 +15,7 @@ type Config struct {
 	Template   string
 	BibleId    string
 	Verbose    bool
+	Only       string
 }
 
 func main() {
@@ -27,18 +28,21 @@ func main() {
 	flag.StringVar(&config.Template, "template", "", "Custom template file (optional)")
 	flag.StringVar(&config.BibleId, "bible", "", "Generate for specific Bible ID (optional)")
 	flag.BoolVar(&config.Verbose, "verbose", false, "Verbose output")
+	flag.StringVar(&config.Only, "only", "", "Processing mode: timings|streams (optional)")
 
 	flag.Parse()
 
 	// Validate required arguments
 	if config.Testament == "" || config.TextType == "" || config.OutputDir == "" {
-		fmt.Println("Usage: yaml_generator -testament {n1|n2|o1|o2} -text {usx|plain} -output <dir> [-stream {hls|dash}] [-template <file>] [-bible <id>] [-verbose]")
+		fmt.Println("Usage: yaml_generator -testament {n1|n2|o1|o2} -text {usx|plain} -output <dir> [-stream {hls|dash}] [-template <file>] [-bible <id>] [-only {timings|streams}] [-verbose]")
 		fmt.Println()
 		fmt.Println("Examples:")
 		fmt.Println("  ./yaml_generator -testament n1 -text usx -output ./n1_usx/")
 		fmt.Println("  ./yaml_generator -testament n2 -text plain -stream dash -output ./n2_plain/ -verbose")
 		fmt.Println("  ./yaml_generator -testament n1 -text usx -template ./my_template.yaml -output ./custom/")
 		fmt.Println("  ./yaml_generator -testament n1 -text usx -bible ABPWBT -output ./single/")
+		fmt.Println("  ./yaml_generator -testament n1 -text usx -only timings -output ./n1_usx_timings/")
+		fmt.Println("  ./yaml_generator -testament n1 -text usx -only streams -output ./n1_usx_streams/")
 		os.Exit(1)
 	}
 
@@ -53,6 +57,10 @@ func main() {
 
 	if !isValidStreamType(config.StreamType) {
 		log.Fatalf("Invalid stream type: %s. Must be one of: hls, dash", config.StreamType)
+	}
+
+	if !isValidOnly(config.Only) {
+		log.Fatalf("Invalid only value: %s. Must be one of: timings, streams", config.Only)
 	}
 
 	// Create output directory
@@ -95,6 +103,15 @@ func isValidTextType(textType string) bool {
 func isValidStreamType(streamType string) bool {
 	switch streamType {
 	case "hls", "dash":
+		return true
+	default:
+		return false
+	}
+}
+
+func isValidOnly(only string) bool {
+	switch only {
+	case "", "timings", "streams":
 		return true
 	default:
 		return false

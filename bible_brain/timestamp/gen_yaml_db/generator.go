@@ -362,6 +362,97 @@ func (g *YAMLGenerator) getSAPattern() string {
 }
 
 func (g *YAMLGenerator) generateYAML(bible BibleInfo) error {
+	// Generate content based on the -only parameter
+	var content string
+	var filename string
+
+	switch g.config.Only {
+	case "timings":
+		content = g.generateTimingsOnlyYAML(bible)
+		filename = filepath.Join(g.config.OutputDir, bible.FilesetId+"_timings.yaml")
+	case "streams":
+		content = g.generateStreamsOnlyYAML(bible)
+		filename = filepath.Join(g.config.OutputDir, bible.FilesetId+"_streams.yaml")
+	default:
+		// Both (current behavior)
+		content = g.generateBothYAML(bible)
+		filename = filepath.Join(g.config.OutputDir, bible.FilesetId+".yaml")
+	}
+
+	return os.WriteFile(filename, []byte(content), 0644)
+}
+
+func (g *YAMLGenerator) generateTimingsOnlyYAML(bible BibleInfo) string {
+	content := g.template
+
+	// Remove update_dbp stanza by finding and removing it
+	lines := strings.Split(content, "\n")
+	var filteredLines []string
+	inUpdateDBP := false
+
+	for _, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), "update_dbp:") {
+			inUpdateDBP = true
+			continue
+		}
+		if inUpdateDBP && strings.TrimSpace(line) != "" && !strings.HasPrefix(line, "  ") && !strings.HasPrefix(line, "\t") {
+			inUpdateDBP = false
+		}
+		if !inUpdateDBP {
+			filteredLines = append(filteredLines, line)
+		}
+	}
+
+	content = strings.Join(filteredLines, "\n")
+
+	// Replace template placeholders
+	content = strings.ReplaceAll(content, "{{DATASET_NAME}}", bible.FilesetId)
+	content = strings.ReplaceAll(content, "{{BIBLE_ID}}", bible.BibleId)
+	content = strings.ReplaceAll(content, "{{TIMESTAMPS_FILESET}}", bible.AudioFileset)
+	content = strings.ReplaceAll(content, "{{SET_TYPE_CODE}}", g.getSetTypeCode())
+
+	// Replace audio type code format
+	audioTypeCode := g.getAudioTypeCode()
+	content = strings.ReplaceAll(content, "{{AUDIO_TYPE_CODE}}", "set_type_code: "+audioTypeCode)
+
+	// Change output to CSV only - remove JSON line completely
+	content = strings.ReplaceAll(content, "  json: yes\n", "")
+	content = strings.ReplaceAll(content, "  json: no\n", "")
+	content = strings.ReplaceAll(content, "  csv: yes", "  csv: yes")
+
+	return content
+}
+
+func (g *YAMLGenerator) generateStreamsOnlyYAML(bible BibleInfo) string {
+	// Start with basic YAML structure
+	content := `is_new: no
+dataset_name: {{DATASET_NAME}}_TS
+bible_id: {{BIBLE_ID}}
+username: jrstear
+notify_ok: [jrstear@fcbhmail.org]
+notify_err: [jrstear@fcbhmail.org]
+update_dbp:
+  timestamps: {{TIMESTAMPS_FILESET}}
+  {{STREAM_STANZA}}
+`
+
+	// Replace template placeholders
+	content = strings.ReplaceAll(content, "{{DATASET_NAME}}", bible.FilesetId)
+	content = strings.ReplaceAll(content, "{{BIBLE_ID}}", bible.BibleId)
+	content = strings.ReplaceAll(content, "{{TIMESTAMPS_FILESET}}", bible.AudioFileset)
+
+	// Replace HLS/DASH stanza based on stream type
+	hlsFileset := g.generateHLSFileset(bible.FilesetId)
+	if g.config.StreamType == "dash" {
+		content = strings.ReplaceAll(content, "{{STREAM_STANZA}}", "dash: "+hlsFileset)
+	} else {
+		content = strings.ReplaceAll(content, "{{STREAM_STANZA}}", "hls: "+hlsFileset)
+	}
+
+	return content
+}
+
+func (g *YAMLGenerator) generateBothYAML(bible BibleInfo) string {
 	// Replace template placeholders
 	content := g.template
 	content = strings.ReplaceAll(content, "{{DATASET_NAME}}", bible.FilesetId)
@@ -369,6 +460,7 @@ func (g *YAMLGenerator) generateYAML(bible BibleInfo) error {
 	content = strings.ReplaceAll(content, "{{TIMESTAMPS_FILESET}}", bible.AudioFileset)
 	content = strings.ReplaceAll(content, "{{HLS_FILESET}}", g.generateHLSFileset(bible.FilesetId))
 	content = strings.ReplaceAll(content, "{{SET_TYPE_CODE}}", g.getSetTypeCode())
+
 	// Replace HLS/DASH stanza based on stream type
 	hlsFileset := g.generateHLSFileset(bible.FilesetId)
 	if g.config.StreamType == "dash" {
@@ -381,9 +473,12 @@ func (g *YAMLGenerator) generateYAML(bible BibleInfo) error {
 	audioTypeCode := g.getAudioTypeCode()
 	content = strings.ReplaceAll(content, "{{AUDIO_TYPE_CODE}}", "set_type_code: "+audioTypeCode)
 
-	// Write to file
-	filename := filepath.Join(g.config.OutputDir, bible.FilesetId+".yaml")
-	return os.WriteFile(filename, []byte(content), 0644)
+	// Change output to CSV only - remove JSON line completely
+	content = strings.ReplaceAll(content, "  json: yes\n", "")
+	content = strings.ReplaceAll(content, "  json: no\n", "")
+	content = strings.ReplaceAll(content, "  csv: yes", "  csv: yes")
+
+	return content
 }
 
 func (g *YAMLGenerator) generateHLSFileset(audioFileset string) string {
