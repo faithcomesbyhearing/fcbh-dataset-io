@@ -63,7 +63,7 @@ conda install -y ffmpeg -c conda-forge  ## appears to be redundant
  
 conda install -y numpy -c conda-forge
  
-sudo apt-get -y install espeak libespeak-dev
+sudo apt-get -y install espeak libespeak-dev mysql-client
 # centos
 # sudo yum -y install espeak espeak-devel
  
