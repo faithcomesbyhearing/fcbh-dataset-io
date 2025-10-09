@@ -104,7 +104,7 @@ func (a *Wav2Vec2ASR) processFile(file input.InputFile, sampleDB db.DBAdapter) *
 			if status1 != nil {
 				return status1
 			}
-			log.Info(a.ctx, file.BookId, file.Chapter, verse.verseStr, word.wordNum, response)
+			//log.Info(a.ctx, file.BookId, file.Chapter, verse.verseStr, word.wordNum, response)
 			wordList = append(wordList, response)
 		}
 		verseStr := strings.Join(wordList, " ")

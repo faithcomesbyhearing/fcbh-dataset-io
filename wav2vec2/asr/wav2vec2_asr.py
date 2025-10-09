@@ -50,6 +50,6 @@ while True:
     ids = torch.argmax(outputs, dim=-1)[0]
     transcription = processor.decode(ids)
     print(transcription, flush=True)
-    print("\t", transcription, file=sys.stderr)
+    #print("\t", transcription, file=sys.stderr)
 
 
