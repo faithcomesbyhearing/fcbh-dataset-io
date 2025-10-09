@@ -74,6 +74,208 @@
             color: #90ee90;
         }
 
+        .folder-dropzone {
+            position: absolute;
+            top: 110px;
+            right: 20px;
+            width: 200px;
+            height: 80px;
+            border: 2px dashed #666;
+            border-radius: 8px;
+            background-color: #4a4a4a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .folder-dropzone:hover {
+            border-color: #0066cc;
+            background-color: #5a5a5a;
+        }
+
+        .folder-dropzone.dragover {
+            border-color: #00cc00;
+            background-color: #2a4a2a;
+        }
+
+        .folder-dropzone.success {
+            border-color: #00cc00;
+            background-color: #1a4d1a;
+        }
+
+        .folder-dropzone.error {
+            border-color: #ff4444;
+            background-color: #4d1a1a;
+        }
+
+        .folder-dropzone.processing {
+            border-color: #ffaa00;
+            background-color: #4a3a1a;
+        }
+
+        .folder-status {
+            font-size: 10px;
+            color: #ccc;
+            margin-top: 5px;
+        }
+
+        .folder-status.success {
+            color: #90ee90;
+        }
+
+        .folder-status.error {
+            color: #ffb3b3;
+        }
+
+        .folder-status.processing {
+            color: #ffaa00;
+        }
+
+        .folder-status.default {
+            color: #ccc;
+        }
+
+        .folder-progress {
+            margin-top: 8px;
+            width: 100%;
+        }
+
+        .folder-progress .progress-bar {
+            width: 100%;
+            height: 12px;
+            background-color: #2a2a2a;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .folder-progress .progress-fill {
+            height: 100%;
+            background-color: #ffaa00;
+            transition: width 0.3s ease;
+        }
+
+        .folder-progress .progress-text {
+            color: #ffaa00;
+            font-size: 9px;
+            text-align: center;
+        }
+
+        .upload-progress {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #4a4a4a;
+            border-radius: 8px;
+            border: 1px solid #666;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #0066cc;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            color: #ffffff;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        /* Validation Error Modal */
+        .error-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+        }
+
+        .error-modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #2b2b2b;
+            border: 2px solid #ff4444;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+
+        .error-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #666;
+            padding-bottom: 10px;
+        }
+
+        .error-modal-title {
+            color: #ff4444;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .error-modal-close {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .error-modal-close:hover {
+            background-color: #444;
+            border-radius: 4px;
+        }
+
+        .error-list {
+            color: #ffffff;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .error-item {
+            margin-bottom: 8px;
+            padding: 5px;
+            background-color: #3a1a1a;
+            border-left: 3px solid #ff4444;
+            border-radius: 3px;
+        }
+
+        .error-item:last-child {
+            margin-bottom: 0;
+        }
+
         .header {
             display: flex;
             align-items: center;
@@ -281,6 +483,23 @@
             color: #ffb3b3;
         }
 
+        .status.warning {
+            background-color: #4d3a1a;
+            border: 1px solid #6b4d2d;
+            color: #ffd700;
+        }
+
+        /* Required field validation styling */
+        .required-error {
+            border: 2px solid #ff4444 !important;
+            background-color: #4d1a1a !important;
+        }
+
+        .required-valid {
+            border: 2px solid #44ff44 !important;
+            background-color: #1a4d1a !important;
+        }
+
         .loading {
             display: none;
             text-align: center;
@@ -354,9 +573,25 @@
             <div class="credentials-status" id="credentialsStatus">No credentials loaded</div>
         </div>
         
+            <div class="folder-dropzone" id="folderDropzone">
+                <div>📁 Drag a media folder here, or press to select</div>
+                <div class="folder-status" id="folderStatus">No folder selected</div>
+                <div class="folder-progress" id="folderProgress" style="display: none;"></div>
+            </div>
+            
+        
         <div class="header">
             <img src="arti.png" alt="Artie Logo" class="logo">
             <h2 class="subtitle">Run Request</h2>
+        </div>
+        
+        <!-- Upload Progress Bar -->
+        <div id="uploadProgressBar" style="display: none; margin-bottom: 15px;">
+            <div style="background-color: #444; border-radius: 4px; height: 20px; position: relative; overflow: hidden;">
+                <div id="uploadProgressFill" style="background-color: #4CAF50; height: 100%; width: 0%; transition: width 0.3s ease; border-radius: 4px;"></div>
+                <div id="uploadProgressText" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">0%</div>
+            </div>
+            <div id="uploadProgressMessage" style="margin-top: 5px; font-size: 12px; color: #ccc; text-align: center;"></div>
         </div>
         
         <div class="button-group">
@@ -364,6 +599,7 @@
             <button onclick="saveFile()">Download</button>
             <button onclick="clearForm()">Clear</button>
             <button class="primary" onclick="runRequest()">Download & Run</button>
+            <button id="uploadButton" disabled>Upload</button>
             <button onclick="window.close()">Quit</button>
         </div>
 
@@ -380,7 +616,7 @@
             <div class="form-group">
                 <div class="form-row">
                     <label for="username">username:</label>
-                    <input type="text" id="username" placeholder="Enter a unique name for yourself.">
+                    <input type="text" id="username" placeholder="Enter a unique name for yourself. (Required field)" required>
                 </div>
             </div>
 
@@ -505,9 +741,24 @@
 
         <div class="loading" id="loading"></div>
         <div class="status" id="status"></div>
+        <div class="upload-progress" id="uploadProgress"></div>
+        
+        <!-- Validation Error Modal -->
+        <div class="error-modal" id="errorModal">
+            <div class="error-modal-content">
+                <div class="error-modal-header">
+                    <div class="error-modal-title">Validation Errors</div>
+                    <button class="error-modal-close" onclick="closeErrorModal()">&times;</button>
+                </div>
+                <div class="error-list" id="errorList"></div>
+            </div>
+        </div>
     </div>
 
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1500.0.min.js"></script>
+    <script src="arti-validation.js?v=19"></script>
+    <script src="arti-upload.js?v=19"></script>
+    <script src="arti-main.js?v=19"></script>
     <script>
         // AWS Configuration - loaded from credentials file
         let AWS_CONFIG = {
@@ -536,7 +787,7 @@
             }
             
             // Fallback to hardcoded bucket for local development
-            return 'dataset-queue-dev';
+            return 'dataset-queue';
         }
 
         const S3_BUCKET = getBucketName();
@@ -653,6 +904,10 @@
             } finally {
                 showLoading(false);
                 updateCredentialsStatus();
+                // Update upload button state when credentials change
+                if (typeof updateUploadButtonState === 'function') {
+                    updateUploadButtonState();
+                }
             }
         }
 
@@ -882,6 +1137,20 @@
             }, 5000);
         }
 
+        function updateUsernameFieldStyling() {
+            const usernameField = document.getElementById('username');
+            const username = usernameField.value.trim();
+            
+            // Remove any existing styling
+            usernameField.classList.remove('required-error', 'required-valid');
+            
+            if (username.length === 0) {
+                usernameField.classList.add('required-error');
+            } else {
+                usernameField.classList.add('required-valid');
+            }
+        }
+
         function showLoading(show = true) {
             document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
@@ -899,6 +1168,11 @@
             document.getElementById('notifyErr').value = 'jbarndt@fcbhmail.org, gary@shortsands.com, ezornes@fcbhmail.org';
             // Clear loaded config so defaults are used again
             window.loadedConfig = null;
+            
+            // Update upload button state
+            if (typeof updateUploadButtonState === 'function') {
+                updateUploadButtonState();
+            }
         }
 
         function loadFile() {
@@ -1363,6 +1637,14 @@
             setupOpenButtonDragAndDrop();
             updateCredentialsStatus();
             
+            // Initialize upload button state
+            if (typeof updateUploadButtonState === 'function') {
+                updateUploadButtonState();
+            }
+            
+            // Initialize username field styling
+            updateUsernameFieldStyling();
+            
             // Add event listeners for real-time validation
             const requiredFields = ['datasetName', 'username', 'languageIso', 'textData', 'audioData'];
             const optionalFields = ['notifyOk', 'notifyErr'];
@@ -1376,6 +1658,12 @@
                     clearFieldError(fieldId);
                     // Use debounced validation for typing
                     debouncedValidateField(fieldId);
+                    
+                    // Update upload button state and field styling if username field changed
+                    if (fieldId === 'username') {
+                        updateUploadButtonState();
+                        updateUsernameFieldStyling();
+                    }
                 });
                 
                 // Validate immediately when user leaves the field (blur)
@@ -1385,9 +1673,43 @@
                         clearTimeout(validationTimers[fieldId]);
                     }
                     validateField(fieldId);
+                    
+                    // Update upload button state and field styling if username field changed
+                    if (fieldId === 'username') {
+                        updateUploadButtonState();
+                        updateUsernameFieldStyling();
+                    }
                 });
             });
         });
+
+        // Error Modal Functions
+        function showErrorModal(errors) {
+            const modal = document.getElementById('errorModal');
+            const errorList = document.getElementById('errorList');
+            
+            // Create error list HTML
+            let errorHtml = '';
+            errors.forEach(error => {
+                errorHtml += `<div class="error-item">${error}</div>`;
+            });
+            
+            errorList.innerHTML = errorHtml;
+            modal.style.display = 'block';
+        }
+
+        function closeErrorModal() {
+            const modal = document.getElementById('errorModal');
+            modal.style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('errorModal');
+            if (event.target === modal) {
+                closeErrorModal();
+            }
+        }
     </script>
     
     <!-- Optional: Include js-yaml for better YAML handling -->
