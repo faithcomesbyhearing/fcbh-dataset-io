@@ -3,6 +3,7 @@ package update
 import (
 	"context"
 	"crypto/md5"
+	"database/sql"
 	"fmt"
 	"math"
 	"time"
@@ -288,8 +289,8 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status 
 	// Create HLS processor
 	processor := NewLocalHLSProcessor(d.ctx, bibleID, timestampsFilesetID)
 
-	// Get all chapters that have timestamps
-	chapters, status := d.conn.SelectBookChapter()
+	// Get all chapters that have timestamps from MySQL (not SQLite)
+	chapters, status := d.dbpConn.SelectBookChapterFromDBP(timestampsFilesetID)
 	if status != nil {
 		return status
 	}
@@ -408,7 +409,24 @@ func (d *UpdateTimestamps) InsertTimestampsForFileset(filesetID, bookID string, 
 	}
 
 	if bibleFileID > 0 {
-		_, _, status = d.dbpConn.InsertTimestamps(bibleFileID, timestamps)
+		// Create a copy of timestamps and add verse 0 entry
+		enhancedTimestamps := make([]Timestamp, 0, len(timestamps)+1)
+
+		// Add verse 0 entry at the beginning of each chapter (timestamp 0.0)
+		verse0Entry := Timestamp{
+			VerseStr:    "0",
+			VerseEnd:    sql.NullString{Valid: false},
+			BeginTS:     0.0,
+			EndTS:       0.0,
+			VerseSeq:    0,
+			TimestampId: 0, // Will be set by InsertTimestamps
+		}
+		enhancedTimestamps = append(enhancedTimestamps, verse0Entry)
+
+		// Add all existing timestamps
+		enhancedTimestamps = append(enhancedTimestamps, timestamps...)
+
+		_, _, status = d.dbpConn.InsertTimestamps(bibleFileID, enhancedTimestamps)
 		if status != nil {
 			return status
 		}

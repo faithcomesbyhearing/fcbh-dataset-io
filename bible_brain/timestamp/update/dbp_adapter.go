@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -282,6 +283,43 @@ func (d *DBPAdapter) UpdateFilesetTimingEstTag(hashId string, timingEstErr strin
 		}
 	}
 	return rowCount, nil
+}
+
+// SelectBookChapterFromDBP gets chapters from MySQL database for a specific fileset
+func (d *DBPAdapter) SelectBookChapterFromDBP(filesetId string) ([]db.Script, *log.Status) {
+	var result []db.Script
+
+	// Get the hash_id for the fileset
+	hashId, status := d.SelectHashId(filesetId)
+	if status != nil {
+		return nil, status
+	}
+
+	query := `SELECT DISTINCT bf.book_id, bf.chapter_start, bf.chapter_end
+		FROM bible_files bf 
+		WHERE bf.hash_id = ?
+		ORDER BY bf.book_id, bf.chapter_start`
+
+	rows, err := d.conn.Query(query, hashId)
+	if err != nil {
+		return nil, log.Error(d.ctx, 500, err, query)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var script db.Script
+		var chapterEnd sql.NullInt32
+		err = rows.Scan(&script.BookId, &script.ChapterNum, &chapterEnd)
+		if err != nil {
+			return nil, log.Error(d.ctx, 500, err, query)
+		}
+		if chapterEnd.Valid {
+			script.ChapterEnd = int(chapterEnd.Int32)
+		}
+		result = append(result, script)
+	}
+
+	return result, nil
 }
 
 // HLS Data Structures
