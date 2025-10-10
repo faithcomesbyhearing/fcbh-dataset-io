@@ -499,8 +499,14 @@ function setupUploadButton() {
                 uploadController.signal
             );
             
-            // Show success message
-            showStatus(`✅ Upload complete! Files uploaded to s3://${bucketName}/testing/uploaded/${currentFolderData.folderName}/ and YAML saved to s3://${bucketName}/testing/input/${currentFolderInfo.datasetName}.yaml`, 'success');
+            // Show success message with upload statistics
+            const message = result.uploadedCount > 0 && result.skippedCount > 0 
+                ? `✅ Upload complete! Processed ${result.totalProcessed} files (${result.uploadedCount} uploaded, ${result.skippedCount} skipped) and YAML saved to s3://${bucketName}/testing/input/${currentFolderInfo.datasetName}.yaml`
+                : result.skippedCount === result.totalProcessed
+                    ? `✅ Upload complete! All ${result.totalProcessed} files already exist (skipped) and YAML saved to s3://${bucketName}/testing/input/${currentFolderInfo.datasetName}.yaml`
+                    : `✅ Upload complete! Files uploaded to s3://${bucketName}/testing/uploaded/${currentFolderData.folderName}/ and YAML saved to s3://${bucketName}/testing/input/${currentFolderInfo.datasetName}.yaml`;
+            
+            showStatus(message, 'success');
             
             // Also save locally
             saveFile();

@@ -4,13 +4,61 @@
  */
 
 /**
- * Upload files to S3 with progress tracking
+ * Check existing files in S3 bucket for smart re-upload
+ */
+async function checkExistingFiles(folderData, folderName, bucketName) {
+    const s3 = new AWS.S3();
+    const existingFiles = new Map(); // filename -> size
+    
+    try {
+        // Check audio files
+        const audioPrefix = `testing/uploaded/${folderName}/${folderData.audioSubfolder}/`;
+        const audioList = await s3.listObjectsV2({
+            Bucket: bucketName,
+            Prefix: audioPrefix
+        }).promise();
+        
+        if (audioList.Contents) {
+            audioList.Contents.forEach(obj => {
+                const filename = obj.Key.split('/').pop(); // Get just the filename
+                existingFiles.set(filename, obj.Size);
+            });
+        }
+        
+        // Check text files
+        const textPrefix = `testing/uploaded/${folderName}/${folderData.textSubfolder}/`;
+        const textList = await s3.listObjectsV2({
+            Bucket: bucketName,
+            Prefix: textPrefix
+        }).promise();
+        
+        if (textList.Contents) {
+            textList.Contents.forEach(obj => {
+                const filename = obj.Key.split('/').pop(); // Get just the filename
+                existingFiles.set(filename, obj.Size);
+            });
+        }
+        
+        return existingFiles;
+    } catch (error) {
+        console.warn('Could not check existing files, will upload all:', error.message);
+        return new Map(); // Return empty map if we can't check
+    }
+}
+
+/**
+ * Upload files to S3 with progress tracking and smart re-upload
  */
 async function uploadFilesToS3(folderData, folderName, bucketName, onProgress, abortSignal = null) {
     const s3 = new AWS.S3();
     const uploadedFiles = [];
     const totalFiles = folderData.audioFiles.length + folderData.textFiles.length;
     let uploadedCount = 0;
+    let skippedCount = 0;
+    
+    // Check existing files first
+    onProgress(0, totalFiles, 'Checking existing files...');
+    const existingFiles = await checkExistingFiles(folderData, folderName, bucketName);
     
     // Upload audio files
     for (const file of folderData.audioFiles) {
@@ -20,6 +68,20 @@ async function uploadFilesToS3(folderData, folderName, bucketName, onProgress, a
         }
         
         const key = `testing/uploaded/${folderName}/${folderData.audioSubfolder}/${file.name}`;
+        const existingSize = existingFiles.get(file.name);
+        
+        // Check if file already exists with same size
+        if (existingSize !== undefined && existingSize === file.size) {
+            // File exists with same size, skip upload
+            skippedCount++;
+            uploadedCount++;
+            uploadedFiles.push(key); // Still track it as "processed"
+            
+            if (onProgress) {
+                onProgress(uploadedCount, totalFiles, `Skipped: ${file.name} (already exists)`);
+            }
+            continue;
+        }
         
         try {
             const fileContent = await readFileAsArrayBuffer(file);
@@ -52,6 +114,20 @@ async function uploadFilesToS3(folderData, folderName, bucketName, onProgress, a
         }
         
         const key = `testing/uploaded/${folderName}/${folderData.textSubfolder}/${file.name}`;
+        const existingSize = existingFiles.get(file.name);
+        
+        // Check if file already exists with same size
+        if (existingSize !== undefined && existingSize === file.size) {
+            // File exists with same size, skip upload
+            skippedCount++;
+            uploadedCount++;
+            uploadedFiles.push(key); // Still track it as "processed"
+            
+            if (onProgress) {
+                onProgress(uploadedCount, totalFiles, `Skipped: ${file.name} (already exists)`);
+            }
+            continue;
+        }
         
         try {
             const fileContent = await readFileAsArrayBuffer(file);
@@ -76,7 +152,12 @@ async function uploadFilesToS3(folderData, folderName, bucketName, onProgress, a
         }
     }
     
-    return uploadedFiles;
+    return {
+        uploadedFiles: uploadedFiles,
+        uploadedCount: uploadedCount - skippedCount,
+        skippedCount: skippedCount,
+        totalProcessed: uploadedCount
+    };
 }
 
 /**
@@ -265,7 +346,7 @@ async function performUpload(folderData, folderInfo, bucketName, onProgress, abo
     try {
         // Step 1: Upload files
         onProgress(0, 100, 'Starting file upload...');
-        const uploadedFiles = await uploadFilesToS3(folderData, folderData.folderName, bucketName, 
+        const uploadResult = await uploadFilesToS3(folderData, folderData.folderName, bucketName, 
             (current, total, message) => {
                 const percentage = Math.round((current / total) * 80); // Files upload = 80% of progress
                 onProgress(percentage, 100, message);
@@ -284,9 +365,12 @@ async function performUpload(folderData, folderInfo, bucketName, onProgress, abo
         
         return {
             success: true,
-            uploadedFiles: uploadedFiles,
+            uploadedFiles: uploadResult.uploadedFiles,
             yamlKey: yamlKey,
-            message: `Successfully uploaded ${uploadedFiles.length} files and YAML configuration`
+            uploadedCount: uploadResult.uploadedCount,
+            skippedCount: uploadResult.skippedCount,
+            totalProcessed: uploadResult.totalProcessed,
+            message: `Successfully processed ${uploadResult.totalProcessed} files (${uploadResult.uploadedCount} uploaded, ${uploadResult.skippedCount} skipped) and YAML configuration`
         };
         
     } catch (error) {
