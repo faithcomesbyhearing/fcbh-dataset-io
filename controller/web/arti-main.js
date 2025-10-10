@@ -10,6 +10,7 @@ let validationResult = null;
 
 // Upload control
 let uploadController = null; // For canceling uploads
+let uploadCompleted = false; // Track if upload was completed successfully
 let isUploading = false;
 
 /**
@@ -405,6 +406,14 @@ function populateFormFromFolder(folderInfo, folderData) {
     clearFieldError('languageIso');
     clearFieldError('textData');
     clearFieldError('audioData');
+    
+    // Clear any upload celebration when fields change
+    clearUploadCelebration();
+    
+    // Update field styling to show green (valid) state
+    if (typeof updateRequiredFieldStyling === 'function') {
+        updateRequiredFieldStyling();
+    }
 }
 
 /**
@@ -476,10 +485,10 @@ function setupUploadButton() {
         try {
             const bucketName = getBucketName();
             
-            // Show progress
-            const progressDiv = document.getElementById('uploadProgress');
-            if (progressDiv) {
-                progressDiv.style.display = 'block';
+            // Show progress bar
+            const progressBar = document.getElementById('uploadProgressBar');
+            if (progressBar) {
+                progressBar.style.display = 'block';
             }
             
             // Perform upload
@@ -504,22 +513,13 @@ function setupUploadButton() {
             isUploading = false;
             uploadController = null;
             
-            // Hide progress bar
-            const progressBar = document.getElementById('uploadProgressBar');
-            if (progressBar) {
-                progressBar.style.display = 'none';
-            }
-            
             // Reset button
             uploadButton.disabled = false;
             uploadButton.textContent = 'Upload';
             uploadButton.style.backgroundColor = ''; // Reset to default color
             
-            // Hide progress
-            const progressDiv = document.getElementById('uploadProgress');
-            if (progressDiv) {
-                progressDiv.style.display = 'none';
-            }
+            // Note: Progress bar is NOT hidden here to allow celebration to persist
+            // It will be hidden when user makes changes or clicks Clear
         }
     });
 }
@@ -545,19 +545,27 @@ window.updateUploadButtonState = function() {
     console.log('  - Username entered:', hasUsername);
     console.log('  - Username value:', document.getElementById('username').value);
     
-    uploadButton.disabled = !hasCredentials || !hasValidFolder || !hasUsername;
+    const isReady = hasCredentials && hasValidFolder && hasUsername;
+    uploadButton.disabled = !isReady;
+    
+    // Remove existing styling classes
+    uploadButton.classList.remove('upload-error', 'upload-ready');
     
     if (!hasCredentials) {
         uploadButton.title = 'Load AWS credentials first';
+        uploadButton.classList.add('upload-error');
         console.log('  - Button disabled: Missing credentials');
     } else if (!hasValidFolder) {
         uploadButton.title = 'Select and validate a folder first';
+        uploadButton.classList.add('upload-error');
         console.log('  - Button disabled: No valid folder');
     } else if (!hasUsername) {
         uploadButton.title = 'Enter a username (required field)';
+        uploadButton.classList.add('upload-error');
         console.log('  - Button disabled: No username');
     } else {
         uploadButton.title = 'Upload folder to S3';
+        uploadButton.classList.add('upload-ready');
         console.log('  - Button ENABLED: All requirements met');
     }
 };
@@ -635,6 +643,7 @@ function updateUploadProgress(current, total, message) {
             progressFill.style.backgroundColor = '#00ff00'; // Bright green
             progressText.textContent = `🎉 100% 🎉`;
             progressMessage.innerHTML = `🎊 <strong style="color: #00ff00; font-size: 16px;">Upload Completed!</strong> 🎊`;
+            uploadCompleted = true; // Mark upload as completed
         } else {
             // Normal progress update
             progressFill.style.width = `${percentage}%`;
@@ -643,7 +652,7 @@ function updateUploadProgress(current, total, message) {
             
             // Show only the last uploaded file name (no file count)
             if (message) {
-                progressMessage.textContent = `Last uploaded: ${message}`;
+                progressMessage.textContent = message;
             } else {
                 progressMessage.textContent = `Uploading...`;
             }
@@ -658,6 +667,19 @@ function clearFieldError(fieldId) {
     const element = document.getElementById(fieldId);
     if (element) {
         element.classList.remove('required-error');
+    }
+}
+
+/**
+ * Clear upload completion celebration
+ */
+function clearUploadCelebration() {
+    if (uploadCompleted) {
+        uploadCompleted = false;
+        const progressBar = document.getElementById('uploadProgressBar');
+        if (progressBar) {
+            progressBar.style.display = 'none';
+        }
     }
 }
 

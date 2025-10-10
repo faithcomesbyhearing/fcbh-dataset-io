@@ -491,13 +491,37 @@
 
         /* Required field validation styling */
         .required-error {
-            border: 2px solid #ff4444 !important;
-            background-color: #4d1a1a !important;
+            border: 1px solid #cc6666 !important;
+            background-color: #3d2a2a !important;
         }
 
         .required-valid {
-            border: 2px solid #44ff44 !important;
-            background-color: #1a4d1a !important;
+            border: 1px solid #66cc66 !important;
+            background-color: #2a3d2a !important;
+        }
+
+        /* Credentials box validation styling */
+        .credentials-dropzone.credentials-error {
+            border: 1px solid #cc6666 !important;
+            background-color: #3d2a2a !important;
+        }
+
+        .credentials-dropzone.credentials-valid {
+            border: 1px solid #66cc66 !important;
+            background-color: #2a3d2a !important;
+        }
+
+        /* Upload button validation styling */
+        #uploadButton.upload-error {
+            border: 2px solid #cc6666 !important;
+            background-color: #3d2a2a !important;
+        }
+
+        #uploadButton.upload-ready {
+            border: 3px solid #66cc66 !important;
+            background-color: #2a3d2a !important;
+            box-shadow: 0 0 10px rgba(102, 204, 102, 0.5) !important;
+            font-weight: bold !important;
         }
 
         .loading {
@@ -596,11 +620,8 @@
         
         <div class="button-group">
             <button id="openButton" onclick="loadFile()">Open</button>
-            <button onclick="saveFile()">Download</button>
             <button onclick="clearForm()">Clear</button>
-            <button class="primary" onclick="runRequest()">Download & Run</button>
             <button id="uploadButton" disabled>Upload</button>
-            <button onclick="window.close()">Quit</button>
         </div>
 
         <div class="separator"></div>
@@ -756,9 +777,9 @@
     </div>
 
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1500.0.min.js"></script>
-    <script src="arti-validation.js?v=19"></script>
-    <script src="arti-upload.js?v=19"></script>
-    <script src="arti-main.js?v=19"></script>
+    <script src="arti-validation.js?v=23"></script>
+    <script src="arti-upload.js?v=23"></script>
+    <script src="arti-main.js?v=23"></script>
     <script>
         // AWS Configuration - loaded from credentials file
         let AWS_CONFIG = {
@@ -800,18 +821,21 @@
             const statusDiv = document.getElementById('credentialsStatus');
             const dropzone = document.getElementById('credentialsDropzone');
             
+            // Remove any existing validation classes
+            dropzone.classList.remove('credentials-error', 'credentials-valid');
+            
             if (customMessage) {
                 statusDiv.textContent = customMessage;
                 statusDiv.className = 'credentials-status';
-                dropzone.className = 'credentials-dropzone';
+                dropzone.className = 'credentials-dropzone credentials-error';
             } else if (AWS_CONFIG.accessKeyId && AWS_CONFIG.secretAccessKey) {
                 statusDiv.textContent = `Connected as ${AWS_CONFIG.accessKeyId.substring(0, 8)}...`;
                 statusDiv.className = 'credentials-status connected';
-                dropzone.className = 'credentials-dropzone credentials-loaded';
+                dropzone.className = 'credentials-dropzone credentials-loaded credentials-valid';
             } else {
                 statusDiv.textContent = 'No credentials loaded';
                 statusDiv.className = 'credentials-status';
-                dropzone.className = 'credentials-dropzone';
+                dropzone.className = 'credentials-dropzone credentials-error';
             }
         }
 
@@ -1137,18 +1161,29 @@
             }, 5000);
         }
 
+        function updateRequiredFieldStyling() {
+            const requiredFields = ['datasetName', 'username', 'languageIso', 'textData', 'audioData'];
+            
+            requiredFields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (!field) return;
+                
+                const value = field.value.trim();
+                
+                // Remove any existing styling
+                field.classList.remove('required-error', 'required-valid');
+                
+                if (value.length === 0) {
+                    field.classList.add('required-error');
+                } else {
+                    field.classList.add('required-valid');
+                }
+            });
+        }
+
+        // Keep the old function for backward compatibility
         function updateUsernameFieldStyling() {
-            const usernameField = document.getElementById('username');
-            const username = usernameField.value.trim();
-            
-            // Remove any existing styling
-            usernameField.classList.remove('required-error', 'required-valid');
-            
-            if (username.length === 0) {
-                usernameField.classList.add('required-error');
-            } else {
-                usernameField.classList.add('required-valid');
-            }
+            updateRequiredFieldStyling();
         }
 
         function showLoading(show = true) {
@@ -1168,6 +1203,11 @@
             document.getElementById('notifyErr').value = 'jbarndt@fcbhmail.org, gary@shortsands.com, ezornes@fcbhmail.org';
             // Clear loaded config so defaults are used again
             window.loadedConfig = null;
+            
+            // Clear upload celebration
+            if (typeof clearUploadCelebration === 'function') {
+                clearUploadCelebration();
+            }
             
             // Update upload button state
             if (typeof updateUploadButtonState === 'function') {
@@ -1642,8 +1682,8 @@
                 updateUploadButtonState();
             }
             
-            // Initialize username field styling
-            updateUsernameFieldStyling();
+            // Initialize all required field styling
+            updateRequiredFieldStyling();
             
             // Add event listeners for real-time validation
             const requiredFields = ['datasetName', 'username', 'languageIso', 'textData', 'audioData'];
@@ -1659,10 +1699,14 @@
                     // Use debounced validation for typing
                     debouncedValidateField(fieldId);
                     
-                    // Update upload button state and field styling if username field changed
-                    if (fieldId === 'username') {
+                    // Update upload button state and field styling if required field changed
+                    if (['datasetName', 'username', 'languageIso', 'textData', 'audioData'].includes(fieldId)) {
+                        // Clear upload celebration when user manually edits fields
+                        if (typeof clearUploadCelebration === 'function') {
+                            clearUploadCelebration();
+                        }
                         updateUploadButtonState();
-                        updateUsernameFieldStyling();
+                        updateRequiredFieldStyling();
                     }
                 });
                 
@@ -1674,10 +1718,14 @@
                     }
                     validateField(fieldId);
                     
-                    // Update upload button state and field styling if username field changed
-                    if (fieldId === 'username') {
+                    // Update upload button state and field styling if required field changed
+                    if (['datasetName', 'username', 'languageIso', 'textData', 'audioData'].includes(fieldId)) {
+                        // Clear upload celebration when user manually edits fields
+                        if (typeof clearUploadCelebration === 'function') {
+                            clearUploadCelebration();
+                        }
                         updateUploadButtonState();
-                        updateUsernameFieldStyling();
+                        updateRequiredFieldStyling();
                     }
                 });
             });
