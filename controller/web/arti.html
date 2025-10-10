@@ -48,6 +48,10 @@
             text-align: center;
             padding: 10px;
         }
+        
+        .credentials-dropzone > * {
+            pointer-events: none;
+        }
 
         .credentials-dropzone:hover {
             border-color: #0066cc;
@@ -92,6 +96,14 @@
             font-size: 12px;
             text-align: center;
             padding: 10px;
+        }
+        
+        .folder-dropzone > * {
+            pointer-events: none;
+        }
+        
+        .folder-status {
+            pointer-events: auto !important;
         }
 
         .folder-dropzone:hover {
@@ -1016,18 +1028,27 @@
         function setupDragAndDrop() {
             const dropzone = document.getElementById('credentialsDropzone');
             
+            dropzone.addEventListener('dragenter', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            
             dropzone.addEventListener('dragover', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = 'copy';
                 dropzone.classList.add('dragover');
             });
             
             dropzone.addEventListener('dragleave', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
                 dropzone.classList.remove('dragover');
             });
             
             dropzone.addEventListener('drop', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
                 dropzone.classList.remove('dragover');
                 
                 const files = e.dataTransfer.files;
@@ -1158,7 +1179,8 @@
             if (folderDropzone) {
                 folderDropzone.innerHTML = `
                     <div>📁 Drag a media folder or YAML file here, or press to select</div>
-                    <div class="folder-name">No folder or file selected</div>
+                    <div class="folder-status" id="folderStatus">No folder or file selected</div>
+                    <div class="folder-progress" id="folderProgress" style="display: none;"></div>
                 `;
                 folderDropzone.classList.remove('success', 'error', 'processing');
             }
@@ -1286,7 +1308,12 @@
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
+                    
+                    // Wait a moment before revoking the URL to allow download to complete
+                    setTimeout(() => {
+                        URL.revokeObjectURL(url);
+                    }, 1000);
+                    
                     showStatus('File saved successfully');
                 } else {
                     // Fallback for older browsers (like older Safari versions)

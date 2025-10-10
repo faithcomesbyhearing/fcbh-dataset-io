@@ -28,19 +28,28 @@ function setupFolderDropzone() {
     const dropzone = document.getElementById('folderDropzone');
     if (!dropzone) return;
     
-    // Drag and drop events
+    // Drag and drop events - must prevent default on ALL drag events
+    dropzone.addEventListener('dragenter', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    });
+    
     dropzone.addEventListener('dragover', function(e) {
         e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'copy'; // Show copy cursor
         dropzone.classList.add('dragover');
     });
     
     dropzone.addEventListener('dragleave', function(e) {
         e.preventDefault();
+        e.stopPropagation();
         dropzone.classList.remove('dragover');
     });
     
     dropzone.addEventListener('drop', function(e) {
         e.preventDefault();
+        e.stopPropagation();
         dropzone.classList.remove('dragover');
         
         const items = e.dataTransfer.items;
@@ -518,9 +527,17 @@ function setupUploadButton() {
         console.log('  - validationResult:', !!validationResult);
         console.log('  - AWS credentials:', !!AWS_CONFIG.accessKeyId && !!AWS_CONFIG.secretAccessKey);
         
-        if (!currentFolderData || !currentFolderInfo || !validationResult) {
-            console.log('❌ Missing folder data');
-            showStatus('❌ Please select and validate a folder first', 'error');
+        // Check if we have either folder data OR all required fields populated
+        const hasValidFolder = currentFolderData && currentFolderInfo && validationResult;
+        const requiredFields = ['datasetName', 'username', 'languageIso', 'textData', 'audioData'];
+        const allFieldsPopulated = requiredFields.every(fieldId => {
+            const field = document.getElementById(fieldId);
+            return field && field.value.trim().length > 0;
+        });
+        
+        if (!hasValidFolder && !allFieldsPopulated) {
+            console.log('❌ Missing folder data or required fields');
+            showStatus('❌ Please select and validate a folder OR fill all required fields', 'error');
             return;
         }
         
@@ -546,9 +563,15 @@ function setupUploadButton() {
         
         console.log('✅ All checks passed, starting upload...');
         
-        // Warn about same folder upload
-        const folderName = currentFolderData.folderName;
-        showStatus(`⚠️ Uploading folder: ${folderName} (will overwrite existing files)`, 'warning');
+        // Show appropriate upload message based on upload type
+        if (hasValidFolder) {
+            // Warn about same folder upload
+            const folderName = currentFolderData.folderName;
+            showStatus(`⚠️ Uploading folder: ${folderName} (will overwrite existing files)`, 'warning');
+        } else {
+            // YAML upload message
+            showStatus(`📤 Uploading YAML configuration...`, 'warning');
+        }
         
         // Set upload state
         isUploading = true;
@@ -560,33 +583,75 @@ function setupUploadButton() {
         uploadButton.style.backgroundColor = '#dc3545'; // Red for cancel
         
         try {
-            const bucketName = getBucketName();
-            
-            // Show progress bar
-            const progressBar = document.getElementById('uploadProgressBar');
-            if (progressBar) {
-                progressBar.style.display = 'block';
+            if (hasValidFolder) {
+                // Folder upload: upload files + YAML
+                const bucketName = getBucketName();
+                
+                // Show progress bar
+                const progressBar = document.getElementById('uploadProgressBar');
+                if (progressBar) {
+                    progressBar.style.display = 'block';
+                }
+                
+                // Perform upload
+                const result = await performUpload(currentFolderData, currentFolderInfo, bucketName, 
+                    (current, total, message) => {
+                        updateUploadProgress(current, total, message);
+                    },
+                    uploadController.signal
+                );
+                
+                // Show success message with upload statistics
+                const message = result.uploadedCount > 0 && result.skippedCount > 0 
+                    ? `✅ Upload complete! Processed ${result.totalProcessed} files (${result.uploadedCount} uploaded, ${result.skippedCount} skipped) and YAML saved to s3://${bucketName}/testing/input/${currentFolderInfo.datasetName}.yaml`
+                    : result.skippedCount === result.totalProcessed
+                        ? `✅ Upload complete! All ${result.totalProcessed} files already exist (skipped) and YAML saved to s3://${bucketName}/testing/input/${currentFolderInfo.datasetName}.yaml`
+                        : `✅ Upload complete! Files uploaded to s3://${bucketName}/testing/uploaded/${currentFolderData.folderName}/ and YAML saved to s3://${bucketName}/testing/input/${currentFolderInfo.datasetName}.yaml`;
+                
+                showStatus(message, 'success');
+                
+                // Also save locally
+                saveFile();
+                
+            } else {
+                // YAML-only upload: use progress bar and celebration like folder uploads
+                const bucketName = getBucketName();
+                const datasetName = document.getElementById('datasetName').value;
+                
+                // Show progress bar
+                const progressBar = document.getElementById('uploadProgressBar');
+                if (progressBar) {
+                    progressBar.style.display = 'block';
+                }
+                
+                // Generate YAML
+                updateUploadProgress(10, 100, 'Generating YAML...');
+                const yamlData = generateYAML();
+                if (!yamlData) throw new Error('Failed to generate YAML');
+                
+                // Upload to S3
+                updateUploadProgress(50, 100, 'Uploading to S3...');
+                const s3 = new AWS.S3();
+                const filename = `${datasetName}.yaml`;
+                const params = {
+                    Bucket: bucketName,
+                    Key: `input/${filename}`,
+                    Body: yamlData,
+                    ContentType: 'text/yaml'
+                };
+                
+                const result = await s3.upload(params).promise();
+                console.log('YAML upload successful:', result);
+                
+                // Show completion with celebration
+                updateUploadProgress(100, 100, 'Upload complete!');
+                
+                // Show success message
+                showStatus(`✅ YAML uploaded successfully to s3://${bucketName}/input/${filename}`, 'success');
+                
+                // Also save locally
+                saveFile();
             }
-            
-            // Perform upload
-            const result = await performUpload(currentFolderData, currentFolderInfo, bucketName, 
-                (current, total, message) => {
-                    updateUploadProgress(current, total, message);
-                },
-                uploadController.signal
-            );
-            
-            // Show success message with upload statistics
-            const message = result.uploadedCount > 0 && result.skippedCount > 0 
-                ? `✅ Upload complete! Processed ${result.totalProcessed} files (${result.uploadedCount} uploaded, ${result.skippedCount} skipped) and YAML saved to s3://${bucketName}/testing/input/${currentFolderInfo.datasetName}.yaml`
-                : result.skippedCount === result.totalProcessed
-                    ? `✅ Upload complete! All ${result.totalProcessed} files already exist (skipped) and YAML saved to s3://${bucketName}/testing/input/${currentFolderInfo.datasetName}.yaml`
-                    : `✅ Upload complete! Files uploaded to s3://${bucketName}/testing/uploaded/${currentFolderData.folderName}/ and YAML saved to s3://${bucketName}/testing/input/${currentFolderInfo.datasetName}.yaml`;
-            
-            showStatus(message, 'success');
-            
-            // Also save locally
-            saveFile();
             
         } catch (error) {
             console.error('Upload error:', error);
@@ -633,8 +698,9 @@ window.updateUploadButtonState = function() {
     console.log('  - Valid folder:', hasValidFolder);
     console.log('  - All required fields populated:', allFieldsPopulated);
     
-    // Ready if: (has credentials) AND (has valid folder OR all fields populated)
-    const isReady = hasCredentials && (hasValidFolder || allFieldsPopulated);
+    // Ready if: (has credentials) AND all required fields populated
+    // Note: Whether fields are populated from folder or manually doesn't matter
+    const isReady = hasCredentials && allFieldsPopulated;
     uploadButton.disabled = !isReady;
     
     // Remove existing styling classes
@@ -644,10 +710,10 @@ window.updateUploadButtonState = function() {
         uploadButton.title = 'Load AWS credentials first';
         uploadButton.classList.add('upload-error');
         console.log('  - Button disabled: Missing credentials');
-    } else if (!hasValidFolder && !allFieldsPopulated) {
-        uploadButton.title = 'Select and validate a folder OR fill all required fields';
+    } else if (!allFieldsPopulated) {
+        uploadButton.title = 'Fill all required fields (username, dataset name, language ISO, text data, audio data)';
         uploadButton.classList.add('upload-error');
-        console.log('  - Button disabled: No valid folder or missing required fields');
+        console.log('  - Button disabled: Missing required fields');
     } else {
         uploadButton.title = 'Upload to S3';
         uploadButton.classList.add('upload-ready');
@@ -771,6 +837,20 @@ window.clearUploadCelebration = function() {
         }
     }
 };
+
+// Prevent default drag-and-drop behavior globally to avoid browser opening files
+// Use capture phase (true) to catch events before they reach target elements
+document.addEventListener('dragenter', function(e) {
+    e.preventDefault();
+}, true);
+
+document.addEventListener('dragover', function(e) {
+    e.preventDefault();
+}, true);
+
+document.addEventListener('drop', function(e) {
+    // Don't prevent default here - let the dropzone handle it
+}, true);
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
