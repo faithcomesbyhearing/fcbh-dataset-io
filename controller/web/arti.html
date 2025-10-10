@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artie Run Request</title>
+    <title>Artie Media and Job Upload</title>
     <style>
         * {
             box-sizing: border-box;
@@ -31,7 +31,7 @@
 
         .credentials-dropzone {
             position: absolute;
-            top: 20px;
+            top: 40px;
             right: 20px;
             width: 200px;
             height: 80px;
@@ -76,7 +76,7 @@
 
         .folder-dropzone {
             position: absolute;
-            top: 110px;
+            top: 130px;
             right: 20px;
             width: 200px;
             height: 80px;
@@ -606,7 +606,7 @@
         
         <div class="header">
             <img src="arti.png" alt="Artie Logo" class="logo">
-            <h2 class="subtitle">Run Request</h2>
+            <h2 class="subtitle">Media and Job<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Upload</h2>
         </div>
         
         <!-- Upload Progress Bar -->
@@ -637,7 +637,7 @@
             <div class="form-group">
                 <div class="form-row">
                     <label for="username">username:</label>
-                    <input type="text" id="username" placeholder="Enter a unique name for yourself. (Required field)" required>
+                    <input type="text" id="username" placeholder="Enter a unique name for yourself." required>
                 </div>
             </div>
 
@@ -779,7 +779,7 @@
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1500.0.min.js"></script>
     <script src="arti-validation.js?v=23"></script>
     <script src="arti-upload.js?v=24"></script>
-    <script src="arti-main.js?v=28"></script>
+    <script src="arti-main.js?v=38"></script>
     <script>
         // AWS Configuration - loaded from credentials file
         let AWS_CONFIG = {
