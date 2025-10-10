@@ -642,20 +642,6 @@
 
             <div class="form-group">
                 <div class="form-row">
-                    <label for="languageIso">language_iso:</label>
-                    <input type="text" id="languageIso" placeholder="Enter 3-letter ISO code (e.g., eng, spa, fra), this specifies the language model to use." maxlength="3">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <div class="form-row">
-                    <label for="altLanguage">alt_language: <span style="color: #888; font-size: 12px;">(optional)</span></label>
-                    <input type="text" id="altLanguage" class="optional" placeholder="Enter a different ISO code, to override the above.">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <div class="form-row">
                     <label for="textData">text_data:</label>
                     <input type="text" id="textData" placeholder="s3://bucket-name/path/to/files/*.usx">
                 </div>
@@ -665,6 +651,20 @@
                 <div class="form-row">
                     <label for="audioData">audio_data:</label>
                     <input type="text" id="audioData" placeholder="s3://bucket-name/path/to/files/*.wav">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="form-row">
+                    <label for="languageIso">language_iso:</label>
+                    <input type="text" id="languageIso" placeholder="Enter 3-letter ISO code (e.g., eng, spa, fra), this specifies the language model to use." maxlength="3">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="form-row">
+                    <label for="altLanguage">alt_language: <span style="color: #888; font-size: 12px;">(optional)</span></label>
+                    <input type="text" id="altLanguage" class="optional" placeholder="Enter a different ISO code, to override the above.">
                 </div>
             </div>
 
