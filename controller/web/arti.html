@@ -674,15 +674,11 @@
                     <div class="radio-options">
                         <div class="radio-option">
                             <input type="radio" id="timestamps_mms_align" name="timestamps" value="mms_align" checked>
-                            <label for="timestamps_mms_align">mms_align - most accurate, but uses lots of memory</label>
+                            <label for="timestamps_mms_align">mms_align - fastest and most accurate</label>
                         </div>
                         <div class="radio-option">
                             <input type="radio" id="timestamps_mms_fa_verse" name="timestamps" value="mms_fa_verse">
-                            <label for="timestamps_mms_fa_verse">mms_fa_verse - slightly less accurate, but uses less memory</label>
-                        </div>
-                        <div class="radio-option">
-                            <input type="radio" id="timestamps_no_timestamps" name="timestamps" value="no_timestamps">
-                            <label for="timestamps_no_timestamps">no_timestamps</label>
+                            <label for="timestamps_mms_fa_verse">mms_fa_verse - slower and less accurate, but try this if mms_align fails</label>
                         </div>
                     </div>
                 </div>
@@ -694,11 +690,11 @@
                     <div class="radio-options">
                         <div class="radio-option">
                             <input type="radio" id="training_mms_adapter" name="training" value="mms_adapter" checked>
-                            <label for="training_mms_adapter">mms_adapter - training using MMS adapter module</label>
+                            <label for="training_mms_adapter">mms_adapter - train a local model for this iso</label>
                         </div>
                         <div class="radio-option">
                             <input type="radio" id="training_no_training" name="training" value="no_training">
-                            <label for="training_no_training">no_training</label>
+                            <label for="training_no_training">no_training - do not train a local model for this iso</label>
                         </div>
                     </div>
                 </div>
@@ -710,15 +706,11 @@
                     <div class="radio-options">
                         <div class="radio-option">
                             <input type="radio" id="stt_adapter_asr" name="speech_to_text" value="adapter_asr" checked>
-                            <label for="stt_adapter_asr">adapter_asr - speech to text using trained mms_adapter</label>
+                            <label for="stt_adapter_asr">adapter_asr - use local model (via mms_adapter) for speech to text</label>
                         </div>
                         <div class="radio-option">
                             <input type="radio" id="stt_mms_asr" name="speech_to_text" value="mms_asr">
-                            <label for="stt_mms_asr">mms_asr - speech to text using mms</label>
-                        </div>
-                        <div class="radio-option">
-                            <input type="radio" id="stt_no_speech_to_text" name="speech_to_text" value="no_speech_to_text">
-                            <label for="stt_no_speech_to_text">no_speech_to_text</label>
+                            <label for="stt_mms_asr">mms_asr - use mms's model for speech to text</label>
                         </div>
                     </div>
                 </div>
@@ -1230,7 +1222,6 @@
             if (data.timestamps) {
                 if (data.timestamps.mms_align) document.getElementById('timestamps_mms_align').checked = true;
                 else if (data.timestamps.mms_fa_verse) document.getElementById('timestamps_mms_fa_verse').checked = true;
-                else document.getElementById('timestamps_no_timestamps').checked = true;
             }
 
             if (data.training) {
@@ -1241,7 +1232,6 @@
             if (data.speech_to_text) {
                 if (data.speech_to_text.mms_asr) document.getElementById('stt_mms_asr').checked = true;
                 else if (data.speech_to_text.adapter_asr) document.getElementById('stt_adapter_asr').checked = true;
-                else document.getElementById('stt_no_speech_to_text').checked = true;
             }
 
             // Handle checkbox
@@ -1446,7 +1436,6 @@
             request.timestamps = {};
             if (timestampsValue === 'mms_align') request.timestamps.mms_align = true;
             else if (timestampsValue === 'mms_fa_verse') request.timestamps.mms_fa_verse = true;
-            else request.timestamps.no_timestamps = true;
 
             // Training
             const trainingValue = document.querySelector('input[name="training"]:checked').value;
@@ -1464,7 +1453,6 @@
             request.speech_to_text = {};
             if (sttValue === 'mms_asr') request.speech_to_text.mms_asr = true;
             else if (sttValue === 'adapter_asr') request.speech_to_text.adapter_asr = true;
-            else request.speech_to_text.no_speech_to_text = true;
 
             // Compare
             const compareChecked = document.getElementById('compare').checked;
