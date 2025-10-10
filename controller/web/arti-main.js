@@ -620,15 +620,21 @@ window.updateUploadButtonState = function() {
     
     const hasCredentials = AWS_CONFIG.accessKeyId && AWS_CONFIG.secretAccessKey;
     const hasValidFolder = currentFolderData && currentFolderInfo && validationResult;
-    const hasUsername = document.getElementById('username').value.trim().length > 0;
+    
+    // Check if all required fields are populated (for YAML files or manual entry)
+    const requiredFields = ['datasetName', 'username', 'languageIso', 'textData', 'audioData'];
+    const allFieldsPopulated = requiredFields.every(fieldId => {
+        const field = document.getElementById(fieldId);
+        return field && field.value.trim().length > 0;
+    });
     
     console.log('🔍 Upload button state check:');
     console.log('  - Credentials loaded:', hasCredentials);
     console.log('  - Valid folder:', hasValidFolder);
-    console.log('  - Username entered:', hasUsername);
-    console.log('  - Username value:', document.getElementById('username').value);
+    console.log('  - All required fields populated:', allFieldsPopulated);
     
-    const isReady = hasCredentials && hasValidFolder && hasUsername;
+    // Ready if: (has credentials) AND (has valid folder OR all fields populated)
+    const isReady = hasCredentials && (hasValidFolder || allFieldsPopulated);
     uploadButton.disabled = !isReady;
     
     // Remove existing styling classes
@@ -638,16 +644,12 @@ window.updateUploadButtonState = function() {
         uploadButton.title = 'Load AWS credentials first';
         uploadButton.classList.add('upload-error');
         console.log('  - Button disabled: Missing credentials');
-    } else if (!hasValidFolder) {
-        uploadButton.title = 'Select and validate a folder first';
+    } else if (!hasValidFolder && !allFieldsPopulated) {
+        uploadButton.title = 'Select and validate a folder OR fill all required fields';
         uploadButton.classList.add('upload-error');
-        console.log('  - Button disabled: No valid folder');
-    } else if (!hasUsername) {
-        uploadButton.title = 'Enter a username (required field)';
-        uploadButton.classList.add('upload-error');
-        console.log('  - Button disabled: No username');
+        console.log('  - Button disabled: No valid folder or missing required fields');
     } else {
-        uploadButton.title = 'Upload folder to S3';
+        uploadButton.title = 'Upload to S3';
         uploadButton.classList.add('upload-ready');
         console.log('  - Button ENABLED: All requirements met');
     }

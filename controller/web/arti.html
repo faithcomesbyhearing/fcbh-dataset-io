@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artie Media and Job Upload</title>
+    <title>Artie Media and Job Uploader</title>
     <style>
         * {
             box-sizing: border-box;
@@ -606,7 +606,7 @@
         
         <div class="header">
             <img src="arti.png" alt="Artie Logo" class="logo">
-            <h2 class="subtitle">Media and Job<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Upload</h2>
+            <h2 class="subtitle">Media and Job<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Uploader</h2>
         </div>
         
         <!-- Upload Progress Bar -->
@@ -619,7 +619,6 @@
         </div>
         
         <div class="button-group">
-            <button id="openButton" onclick="loadFile()">Open</button>
             <button onclick="clearForm()">Clear</button>
             <button id="uploadButton" disabled>Upload</button>
         </div>
@@ -779,7 +778,7 @@
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1500.0.min.js"></script>
     <script src="arti-validation.js?v=23"></script>
     <script src="arti-upload.js?v=24"></script>
-    <script src="arti-main.js?v=43"></script>
+    <script src="arti-main.js?v=44"></script>
     <script>
         // AWS Configuration - loaded from credentials file
         let AWS_CONFIG = {
@@ -1075,38 +1074,6 @@
             });
         }
 
-        function setupOpenButtonDragAndDrop() {
-            const openButton = document.getElementById('openButton');
-            
-            openButton.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                openButton.classList.add('drag-over');
-            });
-            
-            openButton.addEventListener('dragleave', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                openButton.classList.remove('drag-over');
-            });
-            
-            openButton.addEventListener('drop', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                openButton.classList.remove('drag-over');
-                
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    const file = files[0];
-                    // Check if it's a YAML file
-                    if (file.name.toLowerCase().endsWith('.yaml') || file.name.toLowerCase().endsWith('.yml')) {
-                        loadYamlFile(file);
-                    } else {
-                        showStatus('Please drop a YAML file (.yaml or .yml)', 'error');
-                    }
-                }
-            });
-        }
 
         function loadYamlFile(file) {
             const reader = new FileReader();
@@ -1674,7 +1641,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             clearForm();
             setupDragAndDrop();
-            setupOpenButtonDragAndDrop();
             updateCredentialsStatus();
             
             // Initialize upload button state
