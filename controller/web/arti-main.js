@@ -43,22 +43,29 @@ function setupFolderDropzone() {
         e.preventDefault();
         dropzone.classList.remove('dragover');
         
-        // Show immediate feedback
-        showFolderStatus('📁 Processing dropped folder...', 'processing');
-        
         const items = e.dataTransfer.items;
         if (items && items.length > 0) {
-            // Check if it's a directory
             const item = items[0];
             if (item.kind === 'file') {
                 // Try webkit API first (Chrome, Edge, Safari)
                 if (item.webkitGetAsEntry) {
                     const entry = item.webkitGetAsEntry();
                     if (entry && entry.isDirectory) {
+                        // It's a folder
+                        showFolderStatus('📁 Processing dropped folder...', 'processing');
                         handleFolderSelection(entry);
                         return;
                     } else if (entry && entry.isFile) {
-                        showFolderStatus('Please drop a folder, not a file', 'error');
+                        // It's a file - check if it's a YAML file
+                        entry.file(function(file) {
+                            if (file.name.toLowerCase().endsWith('.yaml') || file.name.toLowerCase().endsWith('.yml')) {
+                                // Process as YAML file using existing logic
+                                showFolderStatus('📄 Loading YAML file...', 'processing');
+                                loadYAMLFile(file);
+                            } else {
+                                showFolderStatus('Please drop a folder or YAML file', 'error');
+                            }
+                        });
                         return;
                     }
                 }
@@ -67,10 +74,17 @@ function setupFolderDropzone() {
                 if (item.getAsFileSystemHandle) {
                     item.getAsFileSystemHandle().then(handle => {
                         if (handle.kind === 'directory') {
+                            showFolderStatus('📁 Processing dropped folder...', 'processing');
                             handleDirectoryPicker(handle);
                             return;
-                        } else {
-                            showFolderStatus('Please drop a folder, not a file', 'error');
+                        } else if (handle.kind === 'file') {
+                            // It's a file - check if it's a YAML file
+                            if (handle.name.toLowerCase().endsWith('.yaml') || handle.name.toLowerCase().endsWith('.yml')) {
+                                showFolderStatus('📄 Loading YAML file...', 'processing');
+                                handle.getFile().then(file => loadYAMLFile(file));
+                            } else {
+                                showFolderStatus('Please drop a folder or YAML file', 'error');
+                            }
                             return;
                         }
                     }).catch(err => {
@@ -80,13 +94,21 @@ function setupFolderDropzone() {
                     return;
                 }
                 
+                // Fallback: try to get the file directly
+                const file = item.getAsFile();
+                if (file && (file.name.toLowerCase().endsWith('.yaml') || file.name.toLowerCase().endsWith('.yml'))) {
+                    showFolderStatus('📄 Loading YAML file...', 'processing');
+                    loadYAMLFile(file);
+                    return;
+                }
+                
                 // Fallback message
                 showFolderStatus('Folder drag-and-drop not supported. Please use "Click to select"', 'error');
             } else {
-                showFolderStatus('Please drop a folder', 'error');
+                showFolderStatus('Please drop a folder or YAML file', 'error');
             }
         } else {
-            showFolderStatus('No folder detected in drop', 'error');
+            showFolderStatus('No folder or file detected in drop', 'error');
         }
     });
     
@@ -121,6 +143,61 @@ function setupFolderDropzone() {
             input.click();
         }
     });
+}
+
+/**
+ * Load a YAML file using the same logic as the "Open" button
+ */
+function loadYAMLFile(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const yamlContent = e.target.result;
+            const jsYaml = window.jsyaml || window.yaml;
+            
+            if (!jsYaml) {
+                showFolderStatus('YAML parser not loaded', 'error');
+                return;
+            }
+
+            const data = jsYaml.load(yamlContent);
+            
+            // Use the existing populateForm function from arti.html
+            if (typeof populateForm === 'function') {
+                populateForm(data);
+                
+                // Update field styling to reflect loaded values
+                if (typeof updateRequiredFieldStyling === 'function') {
+                    updateRequiredFieldStyling();
+                }
+                
+                // Update upload button state
+                if (typeof updateUploadButtonState === 'function') {
+                    updateUploadButtonState();
+                }
+                
+                showFolderStatus(`📄 Loaded: ${file.name}`, 'success');
+                
+                // Clear folder-specific state since we loaded a YAML file
+                currentFolderData = null;
+                currentFolderInfo = null;
+                validationResult = null;
+                
+                if (typeof clearUploadCelebration === 'function') {
+                    clearUploadCelebration();
+                }
+            } else {
+                showFolderStatus('Form population function not available', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading YAML file:', error);
+            showFolderStatus('Error loading YAML: ' + error.message, 'error');
+        }
+    };
+    reader.onerror = function() {
+        showFolderStatus('Error reading file', 'error');
+    };
+    reader.readAsText(file);
 }
 
 /**
