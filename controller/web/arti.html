@@ -779,7 +779,7 @@
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1500.0.min.js"></script>
     <script src="arti-validation.js?v=23"></script>
     <script src="arti-upload.js?v=24"></script>
-    <script src="arti-main.js?v=24"></script>
+    <script src="arti-main.js?v=28"></script>
     <script>
         // AWS Configuration - loaded from credentials file
         let AWS_CONFIG = {
@@ -1729,6 +1729,31 @@
                     }
                 });
             });
+            
+            // Add event listener to ALL form inputs to clear upload celebration on ANY change
+            // Use event capture (third parameter = true) to catch all events bubbling up
+            const form = document.querySelector('.form-container');
+            if (form) {
+                // Single event listener with capture=true catches everything
+                const clearCelebration = function() {
+                    if (typeof clearUploadCelebration === 'function') {
+                        clearUploadCelebration();
+                    }
+                };
+                
+                // Listen for 'input' event (text fields, textareas as you type)
+                form.addEventListener('input', clearCelebration, true);
+                
+                // Listen for 'change' event (radio, checkbox, select)
+                form.addEventListener('change', clearCelebration, true);
+                
+                // Listen for 'click' event (catches radio/checkbox clicks immediately)
+                form.addEventListener('click', function(e) {
+                    if (e.target.tagName === 'INPUT' && (e.target.type === 'radio' || e.target.type === 'checkbox')) {
+                        clearCelebration();
+                    }
+                }, true);
+            }
         });
 
         // Error Modal Functions
