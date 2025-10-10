@@ -670,47 +670,31 @@
 
             <div class="form-group">
                 <div class="radio-group">
+                    <label>model:</label>
+                    <div class="radio-options">
+                        <div class="radio-option">
+                            <input type="radio" id="training_mms_adapter" name="training" value="mms_adapter" checked>
+                            <label for="training_mms_adapter">mms_adapter - use a locally-trained model for this iso</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="training_no_training" name="training" value="no_training">
+                            <label for="training_no_training">mms - use mms' model for this iso</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="radio-group">
                     <label>timestamps:</label>
                     <div class="radio-options">
                         <div class="radio-option">
-                            <input type="radio" id="timestamps_mms_align" name="timestamps" value="mms_align" checked>
-                            <label for="timestamps_mms_align">mms_align - fastest and most accurate</label>
+                            <input type="radio" id="timestamps_mms_align" name="timestamps" value="mms_align" checked> 
+                            <label for="timestamps_mms_align">mms_align - fastest and most accurate, but can fail due to insufficient memory</label>
                         </div>
                         <div class="radio-option">
                             <input type="radio" id="timestamps_mms_fa_verse" name="timestamps" value="mms_fa_verse">
                             <label for="timestamps_mms_fa_verse">mms_fa_verse - slower and less accurate, but try this if mms_align fails</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <div class="radio-group">
-                    <label>training:</label>
-                    <div class="radio-options">
-                        <div class="radio-option">
-                            <input type="radio" id="training_mms_adapter" name="training" value="mms_adapter" checked>
-                            <label for="training_mms_adapter">mms_adapter - train a local model for this iso</label>
-                        </div>
-                        <div class="radio-option">
-                            <input type="radio" id="training_no_training" name="training" value="no_training">
-                            <label for="training_no_training">no_training - do not train a local model for this iso</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <div class="radio-group">
-                    <label>speech_to_text:</label>
-                    <div class="radio-options">
-                        <div class="radio-option">
-                            <input type="radio" id="stt_adapter_asr" name="speech_to_text" value="adapter_asr" checked>
-                            <label for="stt_adapter_asr">adapter_asr - use local model (via mms_adapter) for speech to text</label>
-                        </div>
-                        <div class="radio-option">
-                            <input type="radio" id="stt_mms_asr" name="speech_to_text" value="mms_asr">
-                            <label for="stt_mms_asr">mms_asr - use mms's model for speech to text</label>
                         </div>
                     </div>
                 </div>
@@ -770,7 +754,7 @@
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1500.0.min.js"></script>
     <script src="arti-validation.js?v=23"></script>
     <script src="arti-upload.js?v=24"></script>
-    <script src="arti-main.js?v=44"></script>
+    <script src="arti-main.js?v=50"></script>
     <script>
         // AWS Configuration - loaded from credentials file
         let AWS_CONFIG = {
@@ -1150,22 +1134,41 @@
         }
 
         function clearForm() {
+            // Preserve username before reset
+            const username = document.getElementById('username').value;
+            
             document.getElementById('requestForm').reset();
             document.getElementById('gordonFilter').value = '4';
             // Set default radio selections
             document.getElementById('timestamps_mms_align').checked = true;
             document.getElementById('training_mms_adapter').checked = true;
-            document.getElementById('stt_adapter_asr').checked = true;
             document.getElementById('compare').checked = true;
             // Set default email values
             document.getElementById('notifyOk').value = 'jbarndt@fcbhmail.org, ezornes@fcbhmail.org, gfiddes@fcbhmail.org, edomschot@fcbhmail.org';
             document.getElementById('notifyErr').value = 'jbarndt@fcbhmail.org, gary@shortsands.com, ezornes@fcbhmail.org';
+            
+            // Restore username
+            document.getElementById('username').value = username;
+            
             // Clear loaded config so defaults are used again
             window.loadedConfig = null;
             
+            // Reset folder dropzone to initial state
+            const folderDropzone = document.getElementById('folderDropzone');
+            if (folderDropzone) {
+                folderDropzone.innerHTML = `
+                    <div>📁 Drag a media folder or YAML file here, or press to select</div>
+                    <div class="folder-name">No folder or file selected</div>
+                `;
+                folderDropzone.classList.remove('success', 'error', 'processing');
+            }
+            
+            // Reset field styling to initial state (red for empty required fields)
+            updateRequiredFieldStyling();
+            
             // Clear upload celebration
-            if (typeof clearUploadCelebration === 'function') {
-                clearUploadCelebration();
+            if (typeof window.clearUploadCelebration === 'function') {
+                window.clearUploadCelebration();
             }
             
             // Update upload button state
@@ -1224,14 +1227,21 @@
                 else if (data.timestamps.mms_fa_verse) document.getElementById('timestamps_mms_fa_verse').checked = true;
             }
 
+            // Populate model (training) radio buttons from YAML
+            // Priority: check training section, fallback to speech_to_text section
             if (data.training) {
-                if (data.training.mms_adapter) document.getElementById('training_mms_adapter').checked = true;
-                else document.getElementById('training_no_training').checked = true;
-            }
-
-            if (data.speech_to_text) {
-                if (data.speech_to_text.mms_asr) document.getElementById('stt_mms_asr').checked = true;
-                else if (data.speech_to_text.adapter_asr) document.getElementById('stt_adapter_asr').checked = true;
+                if (data.training.mms_adapter) {
+                    document.getElementById('training_mms_adapter').checked = true;
+                } else if (data.training.no_training) {
+                    document.getElementById('training_no_training').checked = true;
+                }
+            } else if (data.speech_to_text) {
+                // Fallback: infer from speech_to_text if training not present
+                if (data.speech_to_text.adapter_asr) {
+                    document.getElementById('training_mms_adapter').checked = true;
+                } else if (data.speech_to_text.mms_asr) {
+                    document.getElementById('training_no_training').checked = true;
+                }
             }
 
             // Handle checkbox
@@ -1437,22 +1447,22 @@
             if (timestampsValue === 'mms_align') request.timestamps.mms_align = true;
             else if (timestampsValue === 'mms_fa_verse') request.timestamps.mms_fa_verse = true;
 
-            // Training
-            const trainingValue = document.querySelector('input[name="training"]:checked').value;
+            // Model (training) - determine both training and speech_to_text from model selection
+            const modelValue = document.querySelector('input[name="training"]:checked').value;
             request.training = {};
-            if (trainingValue === 'mms_adapter') {
+            request.speech_to_text = {};
+
+            if (modelValue === 'mms_adapter') {
+                // mms_adapter selected: generate training.mms_adapter + speech_to_text.adapter_asr
                 request.training.mms_adapter = configToUse.training && configToUse.training.mms_adapter 
                     ? configToUse.training.mms_adapter 
                     : DEFAULT_CONFIG.mmsAdapter;
+                request.speech_to_text.adapter_asr = true;
             } else {
+                // mms (no_training) selected: generate training.no_training + speech_to_text.mms_asr
                 request.training.no_training = true;
+                request.speech_to_text.mms_asr = true;
             }
-
-            // Speech to Text
-            const sttValue = document.querySelector('input[name="speech_to_text"]:checked').value;
-            request.speech_to_text = {};
-            if (sttValue === 'mms_asr') request.speech_to_text.mms_asr = true;
-            else if (sttValue === 'adapter_asr') request.speech_to_text.adapter_asr = true;
 
             // Compare
             const compareChecked = document.getElementById('compare').checked;
@@ -1686,25 +1696,32 @@
             
             // Add event listener to ALL form inputs to clear upload celebration on ANY change
             // Use event capture (third parameter = true) to catch all events bubbling up
-            const form = document.querySelector('.form-container');
+            const form = document.getElementById('requestForm');
             if (form) {
                 // Single event listener with capture=true catches everything
-                const clearCelebration = function() {
-                    if (typeof clearUploadCelebration === 'function') {
-                        clearUploadCelebration();
+                const clearCelebration = function(eventType, target) {
+                    console.log('clearCelebration triggered by:', eventType, 'target:', target);
+                    if (typeof window.clearUploadCelebration === 'function') {
+                        window.clearUploadCelebration();
+                    } else {
+                        console.log('window.clearUploadCelebration is not a function');
                     }
                 };
                 
                 // Listen for 'input' event (text fields, textareas as you type)
-                form.addEventListener('input', clearCelebration, true);
+                form.addEventListener('input', function(e) {
+                    clearCelebration('input', e.target);
+                }, true);
                 
                 // Listen for 'change' event (radio, checkbox, select)
-                form.addEventListener('change', clearCelebration, true);
+                form.addEventListener('change', function(e) {
+                    clearCelebration('change', e.target);
+                }, true);
                 
                 // Listen for 'click' event (catches radio/checkbox clicks immediately)
                 form.addEventListener('click', function(e) {
                     if (e.target.tagName === 'INPUT' && (e.target.type === 'radio' || e.target.type === 'checkbox')) {
-                        clearCelebration();
+                        clearCelebration('click', e.target);
                     }
                 }, true);
             }

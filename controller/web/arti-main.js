@@ -485,7 +485,7 @@ function populateFormFromFolder(folderInfo, folderData) {
     clearFieldError('audioData');
     
     // Clear any upload celebration when fields change
-    clearUploadCelebration();
+    window.clearUploadCelebration();
     
     // Update field styling to show green (valid) state
     if (typeof updateRequiredFieldStyling === 'function') {
@@ -758,15 +758,19 @@ function clearFieldError(fieldId) {
 /**
  * Clear upload completion celebration
  */
-function clearUploadCelebration() {
+window.clearUploadCelebration = function() {
+    console.log('clearUploadCelebration called, uploadCompleted:', uploadCompleted);
     if (uploadCompleted) {
         uploadCompleted = false;
         const progressBar = document.getElementById('uploadProgressBar');
         if (progressBar) {
+            console.log('Hiding progress bar');
             progressBar.style.display = 'none';
+        } else {
+            console.log('Progress bar element not found');
         }
     }
-}
+};
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
