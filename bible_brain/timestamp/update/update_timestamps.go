@@ -409,22 +409,25 @@ func (d *UpdateTimestamps) InsertTimestampsForFileset(filesetID, bookID string, 
 	}
 
 	if bibleFileID > 0 {
-		// Create a copy of timestamps and add verse 0 entry
-		enhancedTimestamps := make([]Timestamp, 0, len(timestamps)+1)
-
-		// Add verse 0 entry at the beginning of each chapter (timestamp 0.0)
-		verse0Entry := Timestamp{
-			VerseStr:    "0",
-			VerseEnd:    sql.NullString{Valid: false},
-			BeginTS:     0.0,
-			EndTS:       0.0,
-			VerseSeq:    0,
-			TimestampId: 0, // Will be set by InsertTimestamps
+		// Check if we need to add a verse 0 entry
+		var enhancedTimestamps []Timestamp
+		if len(timestamps) > 0 && timestamps[0].BeginTS > 0.0 {
+			// First verse starts after 0, add verse 0 entry to capture intro/header
+			enhancedTimestamps = make([]Timestamp, 0, len(timestamps)+1)
+			verse0Entry := Timestamp{
+				VerseStr:    "0",
+				VerseEnd:    sql.NullString{Valid: false},
+				BeginTS:     0.0,
+				EndTS:       timestamps[0].BeginTS,
+				VerseSeq:    0,
+				TimestampId: 0, // Will be set by InsertTimestamps
+			}
+			enhancedTimestamps = append(enhancedTimestamps, verse0Entry)
+			enhancedTimestamps = append(enhancedTimestamps, timestamps...)
+		} else {
+			// First verse starts at 0 or no timestamps, use as-is
+			enhancedTimestamps = timestamps
 		}
-		enhancedTimestamps = append(enhancedTimestamps, verse0Entry)
-
-		// Add all existing timestamps
-		enhancedTimestamps = append(enhancedTimestamps, timestamps...)
 
 		_, _, status = d.dbpConn.InsertTimestamps(bibleFileID, enhancedTimestamps)
 		if status != nil {
