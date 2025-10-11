@@ -166,37 +166,30 @@ func (p *LocalHLSProcessor) getBoundaries(audioPath string, timestamps []Timesta
 
 		// Check if we've reached the next timestamp boundary
 		if currentTimestampIndex < len(timestamps) && timestamp >= timestamps[currentTimestampIndex].BeginTS {
-			// Calculate the segment for the previous timestamp
-			if currentTimestampIndex > 0 {
-				duration := timestamp - prevTime
-				bytes := int64(pos - prevPos)
-				offset := int64(prevPos)
+			// Calculate the segment for the current timestamp
+			var duration, bytes, offset float64
 
-				streamByte := HLSStreamBytes{
-					Runtime:     duration,
-					Bytes:       bytes,
-					Offset:      offset,
-					TimestampID: timestamps[currentTimestampIndex-1].TimestampId, // Use actual MySQL timestamp ID
-					CreatedAt:   time.Now().Format("2006-01-02 15:04:05"),
-					UpdatedAt:   time.Now().Format("2006-01-02 15:04:05"),
-				}
-				streamBytes = append(streamBytes, streamByte)
+			if currentTimestampIndex == 0 {
+				// First timestamp (verse 0) - segment from 0 to current position
+				duration = timestamp - 0.0
+				bytes = float64(pos - 0)
+				offset = 0
 			} else {
-				// Special case for the first timestamp (verse 0) - create a segment from 0 to current position
-				duration := timestamp - 0.0
-				bytes := int64(pos - 0)
-				offset := int64(0)
-
-				streamByte := HLSStreamBytes{
-					Runtime:     duration,
-					Bytes:       bytes,
-					Offset:      offset,
-					TimestampID: timestamps[currentTimestampIndex].TimestampId, // Use current timestamp ID
-					CreatedAt:   time.Now().Format("2006-01-02 15:04:05"),
-					UpdatedAt:   time.Now().Format("2006-01-02 15:04:05"),
-				}
-				streamBytes = append(streamBytes, streamByte)
+				// Subsequent timestamps - segment from previous to current position
+				duration = timestamp - prevTime
+				bytes = float64(pos - prevPos)
+				offset = prevPos
 			}
+
+			streamByte := HLSStreamBytes{
+				Runtime:     duration,
+				Bytes:       int64(bytes),
+				Offset:      int64(offset),
+				TimestampID: timestamps[currentTimestampIndex].TimestampId,
+				CreatedAt:   time.Now().Format("2006-01-02 15:04:05"),
+				UpdatedAt:   time.Now().Format("2006-01-02 15:04:05"),
+			}
+			streamBytes = append(streamBytes, streamByte)
 
 			prevTime = timestamp
 			prevPos = pos
