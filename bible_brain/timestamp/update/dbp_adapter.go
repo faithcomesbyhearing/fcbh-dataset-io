@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"os"
+	"strings"
 
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
@@ -344,6 +345,7 @@ type HLSFile struct {
 	ChapterNum int
 	FileName   string
 	FileSize   int64
+	Duration   int // Duration in seconds (rounded to int)
 	CreatedAt  string
 	UpdatedAt  string
 }
@@ -468,11 +470,23 @@ func (d *DBPAdapter) InsertHLSFileset(fileset HLSFileset) (int64, *log.Status) {
 	return id, nil
 }
 
-func (d *DBPAdapter) InsertHLSFile(file HLSFile) (int64, *log.Status) {
-	query := `INSERT INTO bible_files (hash_id, book_id, chapter_start, file_name, file_size, created_at, updated_at) 
-			  VALUES (?, ?, ?, ?, ?, ?, ?)`
+func (d *DBPAdapter) InsertHLSFile(file HLSFile, isSA bool) (int64, *log.Status) {
+	var query string
+	var result sql.Result
+	var err error
 
-	result, err := d.conn.Exec(query, file.HashID, file.BookID, file.ChapterNum, file.FileName, file.FileSize, file.CreatedAt, file.UpdatedAt)
+	if isSA {
+		// For SA filesets, set verse_start to "1" and verse_end to NULL
+		query = `INSERT INTO bible_files (hash_id, book_id, chapter_start, verse_start, verse_end, file_name, file_size, created_at, updated_at) 
+				  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		result, err = d.conn.Exec(query, file.HashID, file.BookID, file.ChapterNum, "1", nil, file.FileName, file.FileSize, file.CreatedAt, file.UpdatedAt)
+	} else {
+		// For non-SA filesets, don't set verse_start/verse_end
+		query = `INSERT INTO bible_files (hash_id, book_id, chapter_start, file_name, file_size, created_at, updated_at) 
+				  VALUES (?, ?, ?, ?, ?, ?, ?)`
+		result, err = d.conn.Exec(query, file.HashID, file.BookID, file.ChapterNum, file.FileName, file.FileSize, file.CreatedAt, file.UpdatedAt)
+	}
+
 	if err != nil {
 		return 0, log.Error(d.ctx, 500, err, query)
 	}
@@ -635,7 +649,8 @@ func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
 		fileGroup.File.HashID = hlsData.Fileset.HashID
 
 		// 1. Insert file → get fileID
-		fileID, err := d.insertHLSFileTx(tx, fileGroup.File)
+		isSA := d.isSAFileset(hlsData.Fileset.ID)
+		fileID, err := d.insertHLSFileTx(tx, fileGroup.File, isSA)
 		if err != nil {
 			return log.Error(d.ctx, 500, err, "Failed to insert HLS file")
 		}
@@ -687,16 +702,34 @@ func (d *DBPAdapter) insertHLSFilesetTx(tx *sql.Tx, fileset HLSFileset) (int64, 
 	return result.LastInsertId()
 }
 
-func (d *DBPAdapter) insertHLSFileTx(tx *sql.Tx, file HLSFile) (int64, error) {
-	query := `INSERT INTO bible_files (hash_id, book_id, chapter_start, file_name, file_size, created_at, updated_at) 
-			  VALUES (?, ?, ?, ?, ?, ?, ?)`
+func (d *DBPAdapter) insertHLSFileTx(tx *sql.Tx, file HLSFile, isSA bool) (int64, error) {
+	var query string
+	var result sql.Result
+	var err error
 
-	result, err := tx.Exec(query, file.HashID, file.BookID, file.ChapterNum, file.FileName, file.FileSize, file.CreatedAt, file.UpdatedAt)
+	if isSA {
+		// For SA filesets, set verse_start to "1", verse_end to NULL, and duration (rounded to int)
+		query = `INSERT INTO bible_files (hash_id, book_id, chapter_start, verse_start, verse_end, file_name, file_size, duration, created_at, updated_at) 
+				  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		result, err = tx.Exec(query, file.HashID, file.BookID, file.ChapterNum, "1", nil, file.FileName, file.FileSize, file.Duration, file.CreatedAt, file.UpdatedAt)
+	} else {
+		// For non-SA filesets, don't set verse_start/verse_end or duration
+		query = `INSERT INTO bible_files (hash_id, book_id, chapter_start, file_name, file_size, created_at, updated_at) 
+				  VALUES (?, ?, ?, ?, ?, ?, ?)`
+		result, err = tx.Exec(query, file.HashID, file.BookID, file.ChapterNum, file.FileName, file.FileSize, file.CreatedAt, file.UpdatedAt)
+	}
+
 	if err != nil {
 		return 0, err
 	}
 
 	return result.LastInsertId()
+}
+
+// isSAFileset checks if a fileset ID represents an SA (Single Audio) fileset
+func (d *DBPAdapter) isSAFileset(filesetID string) bool {
+	// SA filesets typically end with "SA" (e.g., ENGNIVN1SA)
+	return strings.HasSuffix(strings.ToUpper(filesetID), "SA")
 }
 
 func (d *DBPAdapter) insertHLSStreamBandwidthTx(tx *sql.Tx, bandwidth HLSStreamBandwidth) (int64, error) {

@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
@@ -346,11 +347,19 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status 
 					ChapterNum: ch.ChapterNum,
 					FileName:   fileData.File.FileName,
 					FileSize:   fileData.File.FileSize,
+					Duration:   fileData.File.Duration,
 					CreatedAt:  now,
 					UpdatedAt:  now,
 				},
 				Bandwidths: fileData.Bandwidths,
 				Bytes:      fileData.Bytes,
+			}
+
+			// Special handling for SA filesets: set verse_start to 1
+			if isSAFileset(hlsFilesetID) {
+				// For SA filesets, we need to ensure verse_start is always 1
+				// This is handled in the database insertion logic
+				log.Info(d.ctx, "Processing SA fileset:", hlsFilesetID, "for chapter:", ch.ChapterNum)
 			}
 
 			// Add file group to HLS data
@@ -448,4 +457,10 @@ func generateHashID(filesetID, setTypeCode string) string {
 
 	// Convert to hex string and truncate to 12 characters
 	return fmt.Sprintf("%x", hash)[:12]
+}
+
+// isSAFileset checks if a fileset ID represents an SA (Single Audio) fileset
+func isSAFileset(filesetID string) bool {
+	// SA filesets typically end with "SA" (e.g., ENGNIVN1SA)
+	return strings.HasSuffix(strings.ToUpper(filesetID), "SA")
 }
