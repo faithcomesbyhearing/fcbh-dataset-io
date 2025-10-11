@@ -17,7 +17,8 @@ audio_data:
 #timestamps:
 #  mms_align: yes
 training:
-  wav2vec2:
+  redo_training: no
+  wav2vec2_word:
     batch_mb: 4
     num_epochs: 1 
     learning_rate: 7.5e-5 # 5e-5 to 1e-4 suggested

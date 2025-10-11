@@ -35,6 +35,20 @@ func NewTrainAdapter(ctx context.Context, conn db.DBAdapter, langISO string, tra
 	return t
 }
 
+func (t *TrainAdapter) HasModel() bool {
+	filename := "adapter." + t.langISO + ".safetensors"
+	model := filepath.Join(os.Getenv("FCBH_DATASET_DB"), "mms_adapter", t.langISO, filename)
+	fileInfo, err := os.Stat(model)
+	if os.IsNotExist(err) {
+		return false
+	}
+	if err != nil {
+		log.Warn(t.ctx, err, "Failed to read model file")
+		return false
+	}
+	return fileInfo.Size() > 1000000 // must be GT 1Meg
+}
+
 func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
 	if len(files) == 0 {
 		return nil

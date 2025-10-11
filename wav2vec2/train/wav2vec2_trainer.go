@@ -35,6 +35,19 @@ func NewWav2Vec2Trainer(ctx context.Context, conn db.DBAdapter, langISO string, 
 	return t
 }
 
+func (t *Wav2Vec2Trainer) HasModel() bool {
+	filename := "model.safetensors"
+	model := filepath.Join(os.Getenv("FCBH_DATASET_DB"), "wav2vec2_models", t.langISO, filename)
+	fileInfo, err := os.Stat(model)
+	if os.IsNotExist(err) {
+		return false
+	}
+	if err != nil {
+		log.Warn(t.ctx, err, "Failed to read model file")
+	}
+	return fileInfo.Size() > 10000000 // must be GT 10Meg
+}
+
 func (t *Wav2Vec2Trainer) Train(files []input.InputFile) *log.Status {
 	if len(files) == 0 {
 		return nil

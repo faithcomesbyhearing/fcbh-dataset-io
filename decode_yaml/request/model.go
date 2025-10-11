@@ -184,9 +184,10 @@ func (t MediaType) IsFrom(ttype string) bool {
 }
 
 type Training struct {
-	MMSAdapter MMSAdapter `yaml:"mms_adapter,omitempty"`
-	Wav2Vec2   Wav2Vec2   `yaml:"wav2vec2,omitempty"`
-	NoTraining bool       `yaml:"no_training,omitempty"`
+	RedoTraining bool       `yaml:"redo_training,omitempty"`
+	MMSAdapter   MMSAdapter `yaml:"mms_adapter,omitempty"`
+	Wav2Vec2Word Wav2Vec2   `yaml:"wav2vec2_word,omitempty"`
+	NoTraining   bool       `yaml:"no_training,omitempty"`
 }
 
 type MMSAdapter struct {
@@ -204,7 +205,7 @@ type Wav2Vec2 struct {
 	WarmupPct    float64 `yaml:"warmup_pct,omitempty"`
 	GradNormMax  float64 `yaml:"grad_norm_max,omitempty"`
 	MinAudioSec  float64 `yaml:"min_audio_sec,omitempty"`
-	LoggingSteps int     `yaml:"logging_steps,omitempty"`
+	//LoggingSteps int     `yaml:"logging_steps,omitempty"`
 }
 
 type SpeechToText struct {

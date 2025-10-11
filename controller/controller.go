@@ -179,16 +179,20 @@ func (c *Controller) processSteps() *log.Status {
 		log.Info(c.ctx, "Train", c.ident.LanguageISO)
 		if c.req.Training.MMSAdapter.NumEpochs != 0 {
 			trainer := adapter.NewTrainAdapter(c.ctx, c.database, c.ident.LanguageISO, c.req.Training.MMSAdapter)
-			status = trainer.Train(audioFiles)
-			if status != nil {
-				return status
+			if c.req.Training.RedoTraining || !trainer.HasModel() {
+				status = trainer.Train(audioFiles)
+				if status != nil {
+					return status
+				}
 			}
 		}
-		if c.req.Training.Wav2Vec2.NumEpochs != 0 {
-			trainer := train.NewWav2Vec2Trainer(c.ctx, c.database, c.ident.LanguageISO, c.req.Training.Wav2Vec2)
-			status = trainer.Train(audioFiles)
-			if status != nil {
-				return status
+		if c.req.Training.Wav2Vec2Word.NumEpochs != 0 {
+			trainer := train.NewWav2Vec2Trainer(c.ctx, c.database, c.ident.LanguageISO, c.req.Training.Wav2Vec2Word)
+			if c.req.Training.RedoTraining || !trainer.HasModel() {
+				status = trainer.Train(audioFiles)
+				if status != nil {
+					return status
+				}
 			}
 		}
 	}

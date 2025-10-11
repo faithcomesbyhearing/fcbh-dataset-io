@@ -89,7 +89,7 @@ func (r *RequestDecoder) checkTraining(req *request.Training, fieldName string) 
 	count := r.checkForOne(reflect.ValueOf(*req), fieldName, false)
 	if count == 0 {
 		req.NoTraining = true
-	} else if req.MMSAdapter.NumEpochs == 0 && req.Wav2Vec2.NumEpochs == 0 {
+	} else if req.MMSAdapter.NumEpochs == 0 && req.Wav2Vec2Word.NumEpochs == 0 {
 		req.NoTraining = true
 	}
 }
