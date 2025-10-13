@@ -638,7 +638,8 @@ func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
 	defer tx.Rollback()
 
 	// Insert fileset
-	_, err = d.insertHLSFilesetTx(tx, hlsData.Fileset)
+	isSA := d.isSAFileset(hlsData.Fileset.ID)
+	_, err = d.insertHLSFilesetTx(tx, hlsData.Fileset, isSA)
 	if err != nil {
 		return log.Error(d.ctx, 500, err, "Failed to insert HLS fileset")
 	}
@@ -680,6 +681,24 @@ func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
 		}
 	}
 
+	// For SA filesets, copy the stock_no tag from the corresponding DA fileset
+	if isSA {
+		// Convert SA fileset ID to DA fileset ID (replace "SA" with "DA")
+		daFilesetID := strings.TrimSuffix(hlsData.Fileset.ID, "SA") + "DA"
+
+		// Get the DA fileset's hash_id
+		daHashID, status := d.SelectHashId(daFilesetID)
+		if status != nil {
+			return log.Error(d.ctx, 500, nil, "Failed to get DA fileset hash_id for stock_no tag copying")
+		}
+
+		// Copy the stock_no tag
+		err = d.copyStockNoTagTx(tx, hlsData.Fileset.HashID, daHashID)
+		if err != nil {
+			return log.Error(d.ctx, 500, err, "Failed to copy stock_no tag from DA to SA fileset")
+		}
+	}
+
 	// Commit transaction
 	err = tx.Commit()
 	if err != nil {
@@ -690,11 +709,17 @@ func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
 }
 
 // Transaction helper methods
-func (d *DBPAdapter) insertHLSFilesetTx(tx *sql.Tx, fileset HLSFileset) (int64, error) {
-	query := `INSERT INTO bible_filesets (id, set_type_code, set_size_code, mode_id, hash_id, asset_id, license_group_id, published_snm, created_at, updated_at) 
-			  VALUES (?, ?, ?, ?, ?, 'dbp-prod', ?, ?, ?, ?)`
+func (d *DBPAdapter) insertHLSFilesetTx(tx *sql.Tx, fileset HLSFileset, isSA bool) (int64, error) {
+	// Set content_loaded to 1 for SA filesets, 0 for others
+	contentLoaded := 0
+	if isSA {
+		contentLoaded = 1
+	}
 
-	result, err := tx.Exec(query, fileset.ID, fileset.SetTypeCode, fileset.SetSizeCode, fileset.ModeID, fileset.HashID, fileset.LicenseGroupID, fileset.PublishedSNM, fileset.CreatedAt, fileset.UpdatedAt)
+	query := `INSERT INTO bible_filesets (id, set_type_code, set_size_code, mode_id, hash_id, asset_id, license_group_id, published_snm, content_loaded, created_at, updated_at) 
+			  VALUES (?, ?, ?, ?, ?, 'dbp-prod', ?, ?, ?, ?, ?)`
+
+	result, err := tx.Exec(query, fileset.ID, fileset.SetTypeCode, fileset.SetSizeCode, fileset.ModeID, fileset.HashID, fileset.LicenseGroupID, fileset.PublishedSNM, contentLoaded, fileset.CreatedAt, fileset.UpdatedAt)
 	if err != nil {
 		return 0, err
 	}
@@ -730,6 +755,18 @@ func (d *DBPAdapter) insertHLSFileTx(tx *sql.Tx, file HLSFile, isSA bool) (int64
 func (d *DBPAdapter) isSAFileset(filesetID string) bool {
 	// SA filesets typically end with "SA" (e.g., ENGNIVN1SA)
 	return strings.HasSuffix(strings.ToUpper(filesetID), "SA")
+}
+
+// copyStockNoTagTx copies the stock_no tag from DA fileset to SA fileset
+func (d *DBPAdapter) copyStockNoTagTx(tx *sql.Tx, saHashID, daHashID string) error {
+	// Copy the stock_no tag from DA fileset to SA fileset
+	query := `INSERT INTO bible_fileset_tags (hash_id, name, description, admin_only, notes, iso, language_id)
+			  SELECT ?, name, description, admin_only, notes, iso, language_id
+			  FROM bible_fileset_tags
+			  WHERE hash_id = ? AND name = 'stock_no'`
+
+	_, err := tx.Exec(query, saHashID, daHashID)
+	return err
 }
 
 func (d *DBPAdapter) insertHLSStreamBandwidthTx(tx *sql.Tx, bandwidth HLSStreamBandwidth) (int64, error) {
