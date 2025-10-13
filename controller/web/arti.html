@@ -1432,7 +1432,11 @@
             return true;
         }
 
-        function generateYAML() {
+        /**
+         * Build YAML object from form values
+         * Returns a JavaScript object (not a YAML string)
+         */
+        function buildYAMLObject() {
             const datasetName = document.getElementById('datasetName').value.trim();
             const username = document.getElementById('username').value.trim();
             const languageIso = document.getElementById('languageIso').value.trim();
@@ -1515,6 +1519,19 @@
                 };
             }
 
+            return request;
+        }
+
+        /**
+         * Generate YAML string from form values
+         * Returns a YAML string for local downloads
+         */
+        function generateYAML() {
+            const request = buildYAMLObject();
+            if (!request) {
+                return null;
+            }
+
             // Convert to YAML
             try {
                 const jsYaml = window.jsyaml || window.yaml;
@@ -1528,6 +1545,9 @@
                 return null;
             }
         }
+        
+        // Make buildYAMLObject globally accessible for arti-upload.js
+        window.buildYAMLObject = buildYAMLObject;
 
         function generateSimpleYAML(obj) {
             // Simple YAML generator for basic structures

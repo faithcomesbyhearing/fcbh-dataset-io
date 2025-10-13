@@ -187,11 +187,11 @@ function getContentType(filename) {
 
 /**
  * Generate YAML content for the request
- * Uses the main generateYAML() function and overrides the paths for folder uploads
+ * Uses the main buildYAMLObject() function and overrides the paths for folder uploads
  */
 function generateUploadYAML(folderData, folderInfo, audioBucketName) {
-    // Use the main generateYAML function to get all form values
-    const yamlData = window.generateYAML();
+    // Use the main buildYAMLObject function to get all form values as an object
+    const yamlData = window.buildYAMLObject();
     if (!yamlData) {
         return null;
     }
