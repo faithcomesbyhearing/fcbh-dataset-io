@@ -187,87 +187,21 @@ function getContentType(filename) {
 
 /**
  * Generate YAML content for the request
+ * Uses the main generateYAML() function and overrides the paths for folder uploads
  */
 function generateUploadYAML(folderData, folderInfo, audioBucketName) {
-    const datasetName = document.getElementById('datasetName').value || folderInfo.datasetName;
-    const iso = document.getElementById('languageIso').value || folderInfo.iso;
-    const audioPath = `s3://${audioBucketName}/${folderData.folderName}/${folderData.audioSubfolder}/*.{mp3,wav}`;
+    // Use the main generateYAML function to get all form values
+    const yamlData = window.generateYAML();
+    if (!yamlData) {
+        return null;
+    }
+    
+    // Override the paths for folder uploads
+    const audioPath = `s3://${audioBucketName}/${folderData.folderName}/${folderData.audioSubfolder}/*.mp3`;
     const textPath = `s3://${audioBucketName}/${folderData.folderName}/${folderData.textSubfolder}/*.usx`;
     
-    // Get current form values or use defaults
-    const username = document.getElementById('username').value || 'uploaded_user';
-    const notifyOk = document.getElementById('notifyOk').value || 'jbarndt@fcbhmail.org, ezornes@fcbhmail.org, gfiddes@fcbhmail.org, edomschot@fcbhmail.org';
-    const notifyErr = document.getElementById('notifyErr').value || 'jbarndt@fcbhmail.org, gary@shortsands.com, ezornes@fcbhmail.org';
-    const gordonFilter = document.getElementById('gordonFilter').value || '4';
-    
-    // Get radio button values
-    const timestampsValue = document.querySelector('input[name="timestamps"]:checked')?.value || 'mms_align';
-    const trainingValue = document.querySelector('input[name="training"]:checked')?.value || 'mms_adapter';
-    const sttValue = document.querySelector('input[name="speech_to_text"]:checked')?.value || 'adapter_asr';
-    const compareChecked = document.getElementById('compare').checked;
-    
-    // Parse email lists
-    const notifyOkEmails = notifyOk.split(',').map(email => email.trim()).filter(email => email);
-    const notifyErrEmails = notifyErr.split(',').map(email => email.trim()).filter(email => email);
-    
-    // Build YAML structure
-    const yamlData = {
-        is_new: true,
-        dataset_name: datasetName,
-        username: username,
-        language_iso: iso,
-        notify_ok: notifyOkEmails,
-        notify_err: notifyErrEmails,
-        text_data: {
-            aws_s3: textPath
-        },
-        audio_data: {
-            aws_s3: audioPath
-        }
-    };
-    
-    // Add timestamps
-    yamlData.timestamps = {};
-    if (timestampsValue === 'mms_align') yamlData.timestamps.mms_align = true;
-    else if (timestampsValue === 'mms_fa_verse') yamlData.timestamps.mms_fa_verse = true;
-    else yamlData.timestamps.no_timestamps = true;
-    
-    // Add training
-    yamlData.training = {};
-    if (trainingValue === 'mms_adapter') {
-        yamlData.training.mms_adapter = {
-            batch_mb: 4,
-            num_epochs: 16,
-            learning_rate: 0.001,
-            warmup_pct: 12,
-            grad_norm_max: 0.4
-        };
-    } else {
-        yamlData.training.no_training = true;
-    }
-    
-    // Add speech to text
-    yamlData.speech_to_text = {};
-    if (sttValue === 'mms_asr') yamlData.speech_to_text.mms_asr = true;
-    else if (sttValue === 'adapter_asr') yamlData.speech_to_text.adapter_asr = true;
-    else yamlData.speech_to_text.no_speech_to_text = true;
-    
-    // Add compare settings
-    if (compareChecked) {
-        yamlData.compare = {
-            html_report: true,
-            gordon_filter: parseInt(gordonFilter) || 4,
-            compare_settings: {
-                lower_case: true,
-                remove_prompt_chars: true,
-                remove_punctuation: true,
-                double_quotes: { remove: true },
-                apostrophe: { remove: true },
-                hyphen: { remove: true },
-                diacritical_marks: { normalize_nfc: true }
-            }
-        };
-    }
+    yamlData.text_data = { aws_s3: textPath };
+    yamlData.audio_data = { aws_s3: audioPath };
     
     return yamlData;
 }
