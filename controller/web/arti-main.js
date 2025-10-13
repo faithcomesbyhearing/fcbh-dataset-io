@@ -480,9 +480,10 @@ function populateFormFromFolder(folderInfo, folderData) {
     document.getElementById('datasetName').value = folderInfo.datasetName;
     document.getElementById('languageIso').value = folderInfo.iso;
     
-    // Populate S3 paths (using testing/ prefix)
-    const textPath = `s3://${bucketName}/testing/uploaded/${folderData.folderName}/${folderData.textSubfolder}/*.usx`;
-    const audioPath = `s3://${bucketName}/testing/uploaded/${folderData.folderName}/${folderData.audioSubfolder}/*.mp3`;
+    // Populate S3 paths (using new bucket structure)
+    const audioBucketName = getAudioBucketName();
+    const textPath = `s3://${audioBucketName}/${folderData.folderName}/${folderData.textSubfolder}/*.usx`;
+    const audioPath = `s3://${audioBucketName}/${folderData.folderName}/${folderData.audioSubfolder}/*.mp3`;
     
     document.getElementById('textData').value = textPath;
     document.getElementById('audioData').value = audioPath;
@@ -567,7 +568,7 @@ function setupUploadButton() {
         if (hasValidFolder) {
             // Warn about same folder upload
             const folderName = currentFolderData.folderName;
-            showStatus(`⚠️ Uploading folder: ${folderName} (will overwrite existing files)`, 'warning');
+            showStatus(`⚠️ Uploading folder: ${folderName} (files with different sizes will be overwritten, same name and size will be skipped)`, 'warning');
         } else {
             // YAML upload message
             showStatus(`📤 Uploading YAML configuration...`, 'warning');
@@ -585,7 +586,8 @@ function setupUploadButton() {
         try {
             if (hasValidFolder) {
                 // Folder upload: upload files + YAML
-                const bucketName = getBucketName();
+                const audioBucketName = getAudioBucketName();
+                const yamlBucketName = getYamlBucketName();
                 
                 // Show progress bar
                 const progressBar = document.getElementById('uploadProgressBar');
@@ -594,7 +596,7 @@ function setupUploadButton() {
                 }
                 
                 // Perform upload
-                const result = await performUpload(currentFolderData, currentFolderInfo, bucketName, 
+                const result = await performUpload(currentFolderData, currentFolderInfo, audioBucketName, yamlBucketName, 
                     (current, total, message) => {
                         updateUploadProgress(current, total, message);
                     },
@@ -603,10 +605,10 @@ function setupUploadButton() {
                 
                 // Show success message with upload statistics
                 const message = result.uploadedCount > 0 && result.skippedCount > 0 
-                    ? `✅ Upload complete! Processed ${result.totalProcessed} files (${result.uploadedCount} uploaded, ${result.skippedCount} skipped) and YAML saved to s3://${bucketName}/testing/input/${currentFolderInfo.datasetName}.yaml`
+                    ? `✅ Upload complete! Processed ${result.totalProcessed} files (${result.uploadedCount} uploaded, ${result.skippedCount} skipped) and YAML saved to s3://${yamlBucketName}/input/${currentFolderInfo.datasetName}.yaml`
                     : result.skippedCount === result.totalProcessed
-                        ? `✅ Upload complete! All ${result.totalProcessed} files already exist (skipped) and YAML saved to s3://${bucketName}/testing/input/${currentFolderInfo.datasetName}.yaml`
-                        : `✅ Upload complete! Files uploaded to s3://${bucketName}/testing/uploaded/${currentFolderData.folderName}/ and YAML saved to s3://${bucketName}/testing/input/${currentFolderInfo.datasetName}.yaml`;
+                        ? `✅ Upload complete! All ${result.totalProcessed} files already exist (skipped) and YAML saved to s3://${yamlBucketName}/input/${currentFolderInfo.datasetName}.yaml`
+                        : `✅ Upload complete! Files uploaded to s3://${audioBucketName}/${currentFolderData.folderName}/ and YAML saved to s3://${yamlBucketName}/input/${currentFolderInfo.datasetName}.yaml`;
                 
                 showStatus(message, 'success');
                 
@@ -615,7 +617,7 @@ function setupUploadButton() {
                 
             } else {
                 // YAML-only upload: use progress bar and celebration like folder uploads
-                const bucketName = getBucketName();
+                const yamlBucketName = getYamlBucketName();
                 const datasetName = document.getElementById('datasetName').value;
                 
                 // Show progress bar
@@ -634,7 +636,7 @@ function setupUploadButton() {
                 const s3 = new AWS.S3();
                 const filename = `${datasetName}.yaml`;
                 const params = {
-                    Bucket: bucketName,
+                    Bucket: yamlBucketName,
                     Key: `input/${filename}`,
                     Body: yamlData,
                     ContentType: 'text/yaml'
@@ -647,7 +649,7 @@ function setupUploadButton() {
                 updateUploadProgress(100, 100, 'Upload complete!');
                 
                 // Show success message
-                showStatus(`✅ YAML uploaded successfully to s3://${bucketName}/input/${filename}`, 'success');
+                showStatus(`✅ YAML uploaded successfully to s3://${yamlBucketName}/input/${filename}`, 'success');
                 
                 // Also save locally
                 saveFile();

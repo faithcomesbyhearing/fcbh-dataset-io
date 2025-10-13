@@ -6,15 +6,15 @@
 /**
  * Check existing files in S3 bucket for smart re-upload
  */
-async function checkExistingFiles(folderData, folderName, bucketName) {
+async function checkExistingFiles(folderData, folderName, audioBucketName) {
     const s3 = new AWS.S3();
     const existingFiles = new Map(); // filename -> size
     
     try {
         // Check audio files
-        const audioPrefix = `testing/uploaded/${folderName}/${folderData.audioSubfolder}/`;
+        const audioPrefix = `${folderName}/${folderData.audioSubfolder}/`;
         const audioList = await s3.listObjectsV2({
-            Bucket: bucketName,
+            Bucket: audioBucketName,
             Prefix: audioPrefix
         }).promise();
         
@@ -26,9 +26,9 @@ async function checkExistingFiles(folderData, folderName, bucketName) {
         }
         
         // Check text files
-        const textPrefix = `testing/uploaded/${folderName}/${folderData.textSubfolder}/`;
+        const textPrefix = `${folderName}/${folderData.textSubfolder}/`;
         const textList = await s3.listObjectsV2({
-            Bucket: bucketName,
+            Bucket: audioBucketName,
             Prefix: textPrefix
         }).promise();
         
@@ -49,7 +49,7 @@ async function checkExistingFiles(folderData, folderName, bucketName) {
 /**
  * Upload files to S3 with progress tracking and smart re-upload
  */
-async function uploadFilesToS3(folderData, folderName, bucketName, onProgress, abortSignal = null) {
+async function uploadFilesToS3(folderData, folderName, audioBucketName, onProgress, abortSignal = null) {
     const s3 = new AWS.S3();
     const uploadedFiles = [];
     const totalFiles = folderData.audioFiles.length + folderData.textFiles.length;
@@ -58,7 +58,7 @@ async function uploadFilesToS3(folderData, folderName, bucketName, onProgress, a
     
     // Check existing files first
     onProgress(0, totalFiles, 'Checking existing files...');
-    const existingFiles = await checkExistingFiles(folderData, folderName, bucketName);
+    const existingFiles = await checkExistingFiles(folderData, folderName, audioBucketName);
     
     // Upload audio files
     for (const file of folderData.audioFiles) {
@@ -67,7 +67,7 @@ async function uploadFilesToS3(folderData, folderName, bucketName, onProgress, a
             throw new Error('Upload cancelled');
         }
         
-        const key = `testing/uploaded/${folderName}/${folderData.audioSubfolder}/${file.name}`;
+        const key = `${folderName}/${folderData.audioSubfolder}/${file.name}`;
         const existingSize = existingFiles.get(file.name);
         
         // Check if file already exists with same size
@@ -86,7 +86,7 @@ async function uploadFilesToS3(folderData, folderName, bucketName, onProgress, a
         try {
             const fileContent = await readFileAsArrayBuffer(file);
             await s3.upload({
-                Bucket: bucketName,
+                Bucket: audioBucketName,
                 Key: key,
                 Body: fileContent,
                 ContentType: getContentType(file.name)
@@ -113,7 +113,7 @@ async function uploadFilesToS3(folderData, folderName, bucketName, onProgress, a
             throw new Error('Upload cancelled');
         }
         
-        const key = `testing/uploaded/${folderName}/${folderData.textSubfolder}/${file.name}`;
+        const key = `${folderName}/${folderData.textSubfolder}/${file.name}`;
         const existingSize = existingFiles.get(file.name);
         
         // Check if file already exists with same size
@@ -132,7 +132,7 @@ async function uploadFilesToS3(folderData, folderName, bucketName, onProgress, a
         try {
             const fileContent = await readFileAsArrayBuffer(file);
             await s3.upload({
-                Bucket: bucketName,
+                Bucket: audioBucketName,
                 Key: key,
                 Body: fileContent,
                 ContentType: 'text/xml' // USX files are XML
@@ -188,11 +188,11 @@ function getContentType(filename) {
 /**
  * Generate YAML content for the request
  */
-function generateUploadYAML(folderData, folderInfo, bucketName) {
-    const datasetName = folderInfo.datasetName;
-    const iso = folderInfo.iso;
-    const audioPath = `s3://${bucketName}/uploaded/${folderData.folderName}/${folderData.audioSubfolder}/*.{mp3,wav}`;
-    const textPath = `s3://${bucketName}/uploaded/${folderData.folderName}/${folderData.textSubfolder}/*.usx`;
+function generateUploadYAML(folderData, folderInfo, audioBucketName) {
+    const datasetName = document.getElementById('datasetName').value || folderInfo.datasetName;
+    const iso = document.getElementById('languageIso').value || folderInfo.iso;
+    const audioPath = `s3://${audioBucketName}/${folderData.folderName}/${folderData.audioSubfolder}/*.{mp3,wav}`;
+    const textPath = `s3://${audioBucketName}/${folderData.folderName}/${folderData.textSubfolder}/*.usx`;
     
     // Get current form values or use defaults
     const username = document.getElementById('username').value || 'uploaded_user';
@@ -275,7 +275,7 @@ function generateUploadYAML(folderData, folderInfo, bucketName) {
 /**
  * Upload YAML file to S3
  */
-async function uploadYAMLToS3(yamlData, datasetName, bucketName) {
+async function uploadYAMLToS3(yamlData, datasetName, yamlBucketName) {
     const s3 = new AWS.S3();
     
     // Convert to YAML string
@@ -287,10 +287,10 @@ async function uploadYAMLToS3(yamlData, datasetName, bucketName) {
         yamlString = generateSimpleYAML(yamlData);
     }
     
-    const key = `testing/input/${datasetName}.yaml`;
+    const key = `input/${datasetName}.yaml`;
     
     await s3.upload({
-        Bucket: bucketName,
+        Bucket: yamlBucketName,
         Key: key,
         Body: yamlString,
         ContentType: 'text/yaml'
@@ -342,11 +342,11 @@ function generateSimpleYAML(obj) {
 /**
  * Main upload function
  */
-async function performUpload(folderData, folderInfo, bucketName, onProgress, abortSignal = null) {
+async function performUpload(folderData, folderInfo, audioBucketName, yamlBucketName, onProgress, abortSignal = null) {
     try {
         // Step 1: Upload files
         onProgress(0, 100, 'Starting file upload...');
-        const uploadResult = await uploadFilesToS3(folderData, folderData.folderName, bucketName, 
+        const uploadResult = await uploadFilesToS3(folderData, folderData.folderName, audioBucketName, 
             (current, total, message) => {
                 const percentage = Math.round((current / total) * 80); // Files upload = 80% of progress
                 onProgress(percentage, 100, message);
@@ -356,10 +356,11 @@ async function performUpload(folderData, folderInfo, bucketName, onProgress, abo
         
         // Step 2: Generate and upload YAML
         onProgress(85, 100, 'Generating YAML...');
-        const yamlData = generateUploadYAML(folderData, folderInfo, bucketName);
+        const yamlData = generateUploadYAML(folderData, folderInfo, audioBucketName);
         
         onProgress(90, 100, 'Uploading YAML...');
-        const yamlKey = await uploadYAMLToS3(yamlData, folderInfo.datasetName, bucketName);
+        const currentDatasetName = document.getElementById('datasetName').value || folderInfo.datasetName;
+        const yamlKey = await uploadYAMLToS3(yamlData, currentDatasetName, yamlBucketName);
         
         onProgress(100, 100, 'Upload complete!');
         

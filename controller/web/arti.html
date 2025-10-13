@@ -765,8 +765,8 @@
 
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1500.0.min.js"></script>
     <script src="arti-validation.js?v=23"></script>
-    <script src="arti-upload.js?v=24"></script>
-    <script src="arti-main.js?v=50"></script>
+    <script src="arti-upload.js?v=29"></script>
+    <script src="arti-main.js?v=54"></script>
     <script>
         // AWS Configuration - loaded from credentials file
         let AWS_CONFIG = {
@@ -795,6 +795,18 @@
             }
             
             // Fallback to hardcoded bucket for local development
+            return 'dataset-queue';
+        }
+
+        // Get audio bucket name (for content folder uploads)
+        function getAudioBucketName() {
+            // Always use pretest-audio for content uploads, regardless of where the web interface is hosted
+            return 'pretest-audio';
+        }
+
+        // Get YAML bucket name (for YAML file uploads)
+        function getYamlBucketName() {
+            // Always use dataset-queue for YAML uploads, regardless of where the web interface is hosted
             return 'dataset-queue';
         }
 
