@@ -16,12 +16,15 @@ from dataset import *
 from debug import *
 from safetensors.torch import save_file as safe_save_file
 from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
+sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GOPROJ'], 'logger')))
+from exception_handler import setup_error_handler
+
 
 #
 # https://docs.pytorch.org/tutorials/beginner/introyt/trainingyt.html
 #
 
-# Setup logging
+setup_error_handler()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

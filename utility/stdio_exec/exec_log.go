@@ -31,6 +31,7 @@ func RunScriptWithLogging(ctx context.Context, python string, args ...string) *l
 	if err != nil {
 		return log.Error(ctx, 500, err, `Unable to execute command`, cmd.String())
 	}
+	var pythonErr *log.Status
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
@@ -44,33 +45,16 @@ func RunScriptWithLogging(ctx context.Context, python string, args ...string) *l
 		defer wg.Done()
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
-			log.Warn(ctx, "PY:", scanner.Text())
+			status := log.ExecError(ctx, 500, scanner.Text())
+			if status != nil {
+				pythonErr = status
+			}
 		}
 	}()
+	wg.Wait()        // Wait for goroutines to finish reading any remaining output
 	err = cmd.Wait() // Wait for process to complete
 	if err != nil {
 		return log.Error(ctx, 500, err, `Error occurred in final wait of cmd`, cmd.String())
 	}
-	wg.Wait() // Wait for goroutines to finish reading any remaining output
-	return nil
+	return pythonErr
 }
-
-/**
-// This code splits on CR and LF, but the idea could be used to split on larger pieces.
-scanner := bufio.NewScanner(stdout)
-scanner.Split(splitOnNewlineOrCarriageReturn)
-
-func splitOnNewlineOrCarriageReturn(data []byte, atEOF bool) (advance int, token []byte, err error) {
-    if atEOF && len(data) == 0 {
-        return 0, nil, nil
-    }
-    // Look for \n or \r
-    if i := bytes.IndexAny(data, "\n\r"); i >= 0 {
-        return i + 1, data[0:i], nil
-    }
-    if atEOF {
-        return len(data), data, nil
-    }
-    return 0, nil, nil
-}
-*/
