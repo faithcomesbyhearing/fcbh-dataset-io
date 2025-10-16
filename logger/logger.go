@@ -128,7 +128,6 @@ func ErrorNoErr(ctx context.Context, http int, param ...any) *Status {
 }
 
 func ExecError(ctx context.Context, http int, stderr string, param ...any) *Status {
-	stderr = strings.TrimSpace(stderr)
 	if strings.HasPrefix(stderr, `{"status"`) {
 		var s Status
 		jsonErr := json.Unmarshal([]byte(stderr), &s)
