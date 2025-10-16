@@ -16,7 +16,7 @@ from dataset import *
 from debug import *
 from model import getWav2Vec2ForCTCModel
 sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GOPROJ'], 'logger')))
-from exception_handler import setup_error_handler
+from error_handler import setup_error_handler
 
 #
 # https://docs.pytorch.org/tutorials/beginner/introyt/trainingyt.html

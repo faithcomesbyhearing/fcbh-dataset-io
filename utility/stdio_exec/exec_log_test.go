@@ -16,8 +16,7 @@ func TestRunScriptWithLogging(t *testing.T) {
 	var execLogTest = `import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GOPROJ'], 'logger')))
-print("sys.path", sys.path, "\n", "\n", "\n")
-from error_handler import setup_error_handler#, exception_handler
+from error_handler import setup_error_handler
 setup_error_handler()
 print("12", 2 * 6, file=sys.stdout, flush=True)
 #sys.exit(10)
