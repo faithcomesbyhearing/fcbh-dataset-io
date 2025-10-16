@@ -5,6 +5,7 @@ import (
 	"context"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"os/exec"
+	"strings"
 	"sync"
 )
 
@@ -38,23 +39,30 @@ func RunScriptWithLogging(ctx context.Context, python string, args ...string) *l
 		defer wg.Done()
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
-			log.Info(ctx, "PY:", scanner.Text())
+			line := strings.TrimSpace(scanner.Text())
+			if len(line) > 0 {
+				log.Info(ctx, "PY:", line)
+			}
 		}
 	}()
 	go func() {
 		defer wg.Done()
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
-			status := log.ExecError(ctx, 500, scanner.Text())
-			if status != nil {
-				pythonErr = status
+			line := strings.TrimSpace(scanner.Text())
+			if len(line) > 0 {
+				status := log.ExecError(ctx, 500, line)
+				if status != nil {
+					pythonErr = status
+				}
 			}
 		}
 	}()
-	wg.Wait()        // Wait for goroutines to finish reading any remaining output
-	err = cmd.Wait() // Wait for process to complete
+	wg.Wait() // Wait for goroutines to finish reading any remaining output
+	err = cmd.Wait()
 	if err != nil {
-		return log.Error(ctx, 500, err, `Error occurred in final wait of cmd`, cmd.String())
+		// Log, but discard so that error caught in python is returned
+		_ = log.Error(ctx, 500, err, `Module failed`, cmd.String())
 	}
 	return pythonErr
 }
