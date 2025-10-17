@@ -187,19 +187,73 @@ func (d *DBPAdapter) SelectFilesetLicenseInfo(filesetId string) (int, *int, bool
 	return modeID, licenseGroupID, publishedSNM, nil
 }
 
-func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
-	// First remove any existing HLS data for this fileset
-	status := d.RemoveHLSFileset(hlsData.Fileset.ID)
-	if status != nil {
-		return status
+// removeHLSFilesetTx removes HLS fileset data within a transaction
+func (d *DBPAdapter) removeHLSFilesetTx(tx *sql.Tx, filesetID string) error {
+	// Get hash_id for the fileset
+	var hashID string
+	query := `SELECT hash_id FROM bible_filesets WHERE id = ?`
+	err := tx.QueryRow(query, filesetID).Scan(&hashID)
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			// Fileset doesn't exist, that's fine
+			return nil
+		}
+		return err
 	}
 
+	// Delete in reverse dependency order
+	// 1. Delete stream bytes
+	_, err = tx.Exec(`DELETE FROM bible_file_stream_bytes WHERE stream_bandwidth_id IN (SELECT id FROM bible_file_stream_bandwidths WHERE bible_file_id IN (SELECT id FROM bible_files WHERE hash_id = ?))`, hashID)
+	if err != nil {
+		return err
+	}
+
+	// 2. Delete stream bandwidths
+	_, err = tx.Exec(`DELETE FROM bible_file_stream_bandwidths WHERE bible_file_id IN (SELECT id FROM bible_files WHERE hash_id = ?)`, hashID)
+	if err != nil {
+		return err
+	}
+
+	// 3. Delete bible files
+	_, err = tx.Exec(`DELETE FROM bible_files WHERE hash_id = ?`, hashID)
+	if err != nil {
+		return err
+	}
+
+	// 4. Delete fileset connections
+	_, err = tx.Exec(`DELETE FROM bible_fileset_connections WHERE hash_id = ?`, hashID)
+	if err != nil {
+		return err
+	}
+
+	// 5. Delete fileset tags
+	_, err = tx.Exec(`DELETE FROM bible_fileset_tags WHERE hash_id = ?`, hashID)
+	if err != nil {
+		return err
+	}
+
+	// 6. Delete the fileset
+	_, err = tx.Exec(`DELETE FROM bible_filesets WHERE hash_id = ?`, hashID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
 	// Start transaction
 	tx, err := d.conn.Begin()
 	if err != nil {
 		return log.Error(d.ctx, 500, err, "Failed to begin transaction")
 	}
 	defer tx.Rollback()
+
+	// Remove any existing HLS data for this fileset within the transaction
+	err = d.removeHLSFilesetTx(tx, hlsData.Fileset.ID)
+	if err != nil {
+		return log.Error(d.ctx, 500, err, "Failed to remove existing HLS data")
+	}
 
 	// Insert fileset
 	isSA := strings.HasSuffix(strings.ToUpper(hlsData.Fileset.ID), "SA")
