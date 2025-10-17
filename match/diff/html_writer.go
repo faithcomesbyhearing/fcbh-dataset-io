@@ -2,6 +2,7 @@ package diff
 
 import (
 	"context"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"os"
@@ -29,13 +30,25 @@ func NewHTMLWriter(ctx context.Context, datasetName string) HTMLWriter {
 	return h
 }
 
-func (h *HTMLWriter) WriteReport(baseDataset string, records []Pair, languageISO string, fileMap string) (string, *log.Status) {
+func (h *HTMLWriter) WriteReport(baseDataset string, records []Pair, languageISO string, fileMap string,
+	asr request.SpeechToText) (string, *log.Status) {
 	var err error
+	var model string
+	switch asr {
+	case request.SpeechToText{MMS: true}:
+		model = "Model: MMS"
+	case request.SpeechToText{MMSAdapter: true}:
+		model = "Model: MMS Adapter"
+	case request.SpeechToText{Wav2Vec2ASR: true}:
+		model = "Model: WAV2Vec2 Word"
+	default:
+		model = ""
+	}
 	h.out, err = os.Create(filepath.Join(os.Getenv(`FCBH_DATASET_TMP`), h.datasetName+"_compare.html"))
 	if err != nil {
 		return "", log.Error(h.ctx, 500, err, `Error creating output file for diff`)
 	}
-	filename := h.WriteHeading(baseDataset, languageISO)
+	filename := h.WriteHeading(baseDataset, languageISO, model)
 	for _, pair := range records {
 		h.WriteLine(pair)
 	}
@@ -43,7 +56,7 @@ func (h *HTMLWriter) WriteReport(baseDataset string, records []Pair, languageISO
 	return filename, nil
 }
 
-func (h *HTMLWriter) WriteHeading(baseDataset string, languageISO string) string {
+func (h *HTMLWriter) WriteHeading(baseDataset string, languageISO string, model string) string {
 	head := `<!DOCTYPE html>
 <html>
  <head>
@@ -57,9 +70,12 @@ func (h *HTMLWriter) WriteHeading(baseDataset string, languageISO string) string
 	_, _ = h.out.WriteString(baseDataset)
 	_, _ = h.out.WriteString(` to `)
 	_, _ = h.out.WriteString(h.datasetName)
-	_, _ = h.out.WriteString(` in `)
-	_, _ = h.out.WriteString(languageISO)
 	_, _ = h.out.WriteString("</h2>\n")
+	_, _ = h.out.WriteString(`<h3 style="text-align:center">`)
+	_, _ = h.out.WriteString(model)
+	_, _ = h.out.WriteString(`   ASR ISO `)
+	_, _ = h.out.WriteString(languageISO)
+	_, _ = h.out.WriteString(`</h3>`)
 	_, _ = h.out.WriteString(`<h3 style="text-align:center">`)
 	loc, _ := time.LoadLocation("America/Denver")
 	_, _ = h.out.WriteString(time.Now().In(loc).Format(`Mon Jan 2 2006 03:04:05 pm MST`))

@@ -546,7 +546,8 @@ func (c *Controller) matchText() (string, *log.Status) {
 	tempFilePath := filepath.Join(os.TempDir(), c.database.Project+"_compare.json")
 	c.bucket.AddJson(records, tempFilePath)
 	writer := diff.NewHTMLWriter(c.ctx, c.database.Project)
-	filename, status := writer.WriteReport(c.req.Compare.BaseDataset, records, languageISO, fileMap)
+	filename, status := writer.WriteReport(c.req.Compare.BaseDataset, records, languageISO, fileMap,
+		c.req.SpeechToText)
 	return filename, status
 }
 
