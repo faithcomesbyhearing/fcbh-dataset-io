@@ -136,8 +136,8 @@ func (d *DBPAdapter) RemoveHLSFileset(filesetID string) *log.Status {
 	return nil
 }
 
-// SelectFATimestampsFromDBP gets timestamps from MySQL database with actual timestamp IDs
-func (d *DBPAdapter) SelectFATimestampsFromDBP(bookId string, chapter int, filesetId string) ([]Timestamp, *log.Status) {
+// SelectTimestampsByBook gets timestamps from MySQL database by book and chapter
+func (d *DBPAdapter) SelectTimestampsByBook(bookId string, chapter int, filesetId string) ([]Timestamp, *log.Status) {
 	// Get the hash_id for the fileset
 	hashId, status := d.SelectHashId(filesetId)
 	if status != nil {
@@ -168,8 +168,8 @@ func (d *DBPAdapter) SelectFATimestampsFromDBP(bookId string, chapter int, files
 	return timestamps, nil
 }
 
-// SelectFilesetLicenseInfo gets mode_id, license_group_id and published_snm from a fileset
-func (d *DBPAdapter) SelectFilesetLicenseInfo(filesetId string) (int, *int, bool, *log.Status) {
+// SelectFilesetInfo gets mode_id, license_group_id and published_snm from a fileset
+func (d *DBPAdapter) SelectFilesetInfo(filesetId string) (int, *int, bool, *log.Status) {
 	query := `SELECT mode_id, license_group_id, published_snm FROM bible_filesets WHERE id = ?`
 
 	var modeID int

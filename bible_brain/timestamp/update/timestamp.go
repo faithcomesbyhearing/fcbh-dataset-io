@@ -57,7 +57,7 @@ func (d *UpdateTimestamps) Process() *log.Status {
 		timestampsData := make(map[string]map[int][]Timestamp)
 		for _, ch := range chapters {
 			var timestamps []Timestamp
-			timestamps, status := d.SelectFATimestamps(ch.BookId, ch.ChapterNum)
+			timestamps, status := d.SelectTimestampsFromSQLite(ch.BookId, ch.ChapterNum)
 			if status != nil {
 				return status
 			}
@@ -96,7 +96,7 @@ func (d *UpdateTimestamps) Process() *log.Status {
 	return nil
 }
 
-func (d *UpdateTimestamps) SelectFATimestamps(bookId string, chapter int) ([]Timestamp, *log.Status) {
+func (d *UpdateTimestamps) SelectTimestampsFromSQLite(bookId string, chapter int) ([]Timestamp, *log.Status) {
 	var result []Timestamp
 	datasetTS, status := d.conn.SelectFAScriptTimestamps(bookId, chapter)
 	if status != nil {

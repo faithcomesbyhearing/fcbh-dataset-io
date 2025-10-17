@@ -36,7 +36,7 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status 
 	}
 
 	// Get mode_id and license info from the source timestamps fileset
-	modeID, licenseGroupID, publishedSNM, status := d.dbpConn.SelectFilesetLicenseInfo(timestampsFilesetID)
+	modeID, licenseGroupID, publishedSNM, status := d.dbpConn.SelectFilesetInfo(timestampsFilesetID)
 	if status != nil {
 		return status
 	}
@@ -79,7 +79,7 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status 
 	// Process each chapter and create file groups
 	for _, ch := range chapters {
 		// Get timestamps for this chapter from MySQL (not SQLite)
-		timestamps, status := d.dbpConn.SelectFATimestampsFromDBP(ch.BookId, ch.ChapterNum, timestampsFilesetID)
+		timestamps, status := d.dbpConn.SelectTimestampsByBook(ch.BookId, ch.ChapterNum, timestampsFilesetID)
 		if status != nil {
 			return status
 		}

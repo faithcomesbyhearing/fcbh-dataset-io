@@ -56,8 +56,9 @@ export PATH="/opt/homebrew/bin:$PATH"
 # export FCBH_DBP_KEY="your_api_key_here"
 
 # Set DBP MySQL connection (only needed if updating DBP timestamps)
-export DBP_MYSQL_DSN="root:@tcp(localhost:3306)/dbp_localtest"
 # export DBP_MYSQL_DSN="user:password@tcp(hostname:port)/database"
+ export DBP_MYSQL_DSN="root:@tcp(localhost:3306)/dbp_localtest"
+# export DBP_MYSQL_DSN=sa:jxcnf97\?Rr\?tjjG@tcp\(localhost:3310\)/dbp_TEST
 
 echo "Environment variables set:"
 echo "GOPROJ: $GOPROJ"
