@@ -302,15 +302,34 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status 
 		return status
 	}
 
+	// Get asset_id for hash generation
+	// For SA filesets, use the parent DA fileset's asset_id
+	var assetID string
+	if isSAFileset(hlsFilesetID) {
+		// Convert SA fileset ID to DA fileset ID (replace "SA" with "DA")
+		daFilesetID := strings.TrimSuffix(hlsFilesetID, "SA") + "DA"
+		assetID, status = d.dbpConn.SelectAssetId(daFilesetID)
+		if status != nil {
+			return log.Error(d.ctx, 500, nil, "Failed to get DA fileset asset_id for SA fileset: "+hlsFilesetID)
+		}
+	} else {
+		// For non-SA filesets, use the timestamps fileset's asset_id
+		assetID, status = d.dbpConn.SelectAssetId(timestampsFilesetID)
+		if status != nil {
+			return log.Error(d.ctx, 500, nil, "Failed to get timestamps fileset asset_id: "+timestampsFilesetID)
+		}
+	}
+
 	// Collect all HLS data
 	var hlsData HLSData
 	now := time.Now().Format("2006-01-02 15:04:05")
 	hlsData.Fileset = HLSFileset{
 		ID:             hlsFilesetID,
-		SetTypeCode:    "audio_stream",                               // Default to audio_stream, could be made configurable
-		SetSizeCode:    "NT",                                         // Default to NT, could be made configurable
-		ModeID:         modeID,                                       // Copy from source timestamps fileset
-		HashID:         generateHashID(hlsFilesetID, "audio_stream"), // Generate a unique hash ID
+		SetTypeCode:    "audio_stream",                                        // Default to audio_stream, could be made configurable
+		SetSizeCode:    "NT",                                                  // Default to NT, could be made configurable
+		ModeID:         modeID,                                                // Copy from source timestamps fileset
+		HashID:         generateHashID(hlsFilesetID, "audio_stream", assetID), // Generate a unique hash ID using asset_id as bucket
+		AssetID:        assetID,                                               // Use the asset_id from parent DA fileset or timestamps fileset
 		BibleID:        bibleID,
 		LicenseGroupID: licenseGroupID, // Copy from source timestamps fileset
 		PublishedSNM:   publishedSNM,   // Copy from source timestamps fileset
@@ -451,10 +470,9 @@ func (d *UpdateTimestamps) InsertTimestampsForFileset(filesetID, bookID string, 
 	return nil
 }
 
-func generateHashID(filesetID, setTypeCode string) string {
+func generateHashID(filesetID, setTypeCode, bucket string) string {
 	// Generate hash_id using the same method as DBP: MD5(filesetID + bucket + setTypeCode)[:12]
-	// bucket is typically "dbp-prod"
-	bucket := "dbp-prod"
+	// bucket is typically "dbp-prod" or the asset_id from parent DA fileset
 
 	// Create MD5 hash
 	hash := md5.Sum([]byte(filesetID + bucket + setTypeCode))

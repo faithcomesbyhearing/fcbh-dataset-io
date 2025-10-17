@@ -61,6 +61,28 @@ func (d *DBPAdapter) SelectHashId(filesetId string) (string, *log.Status) {
 	return result, nil
 }
 
+// SelectAssetId gets the asset_id for a given fileset ID
+func (d *DBPAdapter) SelectAssetId(filesetId string) (string, *log.Status) {
+	var result string
+	query := `SELECT asset_id FROM bible_filesets WHERE id = ?`
+	rows, err := d.conn.Query(query, filesetId)
+	if err != nil {
+		return result, log.Error(d.ctx, 500, err, query)
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err = rows.Scan(&result)
+		if err != nil {
+			return result, log.Error(d.ctx, 500, err, query)
+		}
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Warn(d.ctx, err, query)
+	}
+	return result, nil
+}
+
 func (d *DBPAdapter) SelectFileId(hashId string, bookId string, chapterNum int) (int64, string, *log.Status) {
 	var result int64
 	var filename string
@@ -331,6 +353,7 @@ type HLSFileset struct {
 	SetSizeCode    string
 	ModeID         int
 	HashID         string
+	AssetID        string
 	BibleID        string
 	LicenseGroupID *int
 	PublishedSNM   bool
@@ -717,9 +740,9 @@ func (d *DBPAdapter) insertHLSFilesetTx(tx *sql.Tx, fileset HLSFileset, isSA boo
 	}
 
 	query := `INSERT INTO bible_filesets (id, set_type_code, set_size_code, mode_id, hash_id, asset_id, license_group_id, published_snm, content_loaded, created_at, updated_at) 
-			  VALUES (?, ?, ?, ?, ?, 'dbp-prod', ?, ?, ?, ?, ?)`
+			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	result, err := tx.Exec(query, fileset.ID, fileset.SetTypeCode, fileset.SetSizeCode, fileset.ModeID, fileset.HashID, fileset.LicenseGroupID, fileset.PublishedSNM, contentLoaded, fileset.CreatedAt, fileset.UpdatedAt)
+	result, err := tx.Exec(query, fileset.ID, fileset.SetTypeCode, fileset.SetSizeCode, fileset.ModeID, fileset.HashID, fileset.AssetID, fileset.LicenseGroupID, fileset.PublishedSNM, contentLoaded, fileset.CreatedAt, fileset.UpdatedAt)
 	if err != nil {
 		return 0, err
 	}

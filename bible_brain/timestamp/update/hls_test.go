@@ -425,7 +425,8 @@ func TestHLSStreamGenerationForDAFilesetInSQLite(t *testing.T) {
 		ID:             "ENGNIVN1SA",
 		SetTypeCode:    "audio_stream",
 		SetSizeCode:    "NT",
-		HashID:         generateHashID("ENGNIVN1SA", "audio_stream"),
+		HashID:         generateHashID("ENGNIVN1SA", "audio_stream", "dbp-prod"),
+		AssetID:        "dbp-prod",
 		BibleID:        "ENGNIV",
 		LicenseGroupID: nil,   // Test with no license group
 		PublishedSNM:   false, // Test with not published
