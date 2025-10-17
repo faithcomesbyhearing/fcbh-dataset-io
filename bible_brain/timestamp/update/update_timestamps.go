@@ -56,138 +56,48 @@ func (d *UpdateTimestamps) Process() *log.Status {
 		return status
 	}
 
-	// Check if we have both timestamps and HLS stanzas
-	hasTimestamps := d.req.UpdateDBP.Timestamps != ""
-	hasHLS := d.req.UpdateDBP.HLS != ""
-
-	if hasTimestamps && hasHLS {
-		// Both stanzas present - single transaction for both
-		status = d.ProcessBothTimestampsAndHLS(chapters)
-		if status != nil {
-			return status
-		}
-	} else if hasTimestamps {
-		// Only timestamps - single transaction for timestamps
-		status = d.ProcessTimestampsOnly(chapters)
-		if status != nil {
-			return status
-		}
-	} else if hasHLS {
-		// Only HLS - single transaction for HLS
-		status = d.ProcessHLSOnly()
-		if status != nil {
-			return status
-		}
-	}
-
-	return nil
-}
-
-func (d *UpdateTimestamps) ProcessBothTimestampsAndHLS(chapters []db.Script) *log.Status {
-	log.Info(d.ctx, "Processing both timestamps and HLS in single transaction")
-
-	// Remove all existing timestamps for the fileset once (not per chapter)
-	status := d.dbpConn.RemoveTimestampsForFileset(d.req.UpdateDBP.Timestamps)
-	if status != nil {
-		return status
-	}
-
-	// Process timestamps first
-	for _, ch := range chapters {
-		var timestamps []Timestamp
-		timestamps, status := d.SelectFATimestamps(ch.BookId, ch.ChapterNum)
-		if status != nil {
-			return status
-		}
-		if len(timestamps) > 0 {
-			// Round timestamps to 3 decimal places
-			for i := range timestamps {
-				timestamps[i].BeginTS = math.Round(timestamps[i].BeginTS*1000.0) / 1000.0
-				timestamps[i].EndTS = math.Round(timestamps[i].EndTS*1000.0) / 1000.0
-			}
-
-			// Insert new timestamps (removal already done above)
-			status = d.InsertTimestampsForFileset(d.req.UpdateDBP.Timestamps, ch.BookId, ch.ChapterNum, timestamps)
+	// Process timestamps if specified
+	if d.req.UpdateDBP.Timestamps != "" {
+		// Collect all timestamps for all chapters
+		timestampsData := make(map[string]map[int][]Timestamp)
+		for _, ch := range chapters {
+			var timestamps []Timestamp
+			timestamps, status := d.SelectFATimestamps(ch.BookId, ch.ChapterNum)
 			if status != nil {
 				return status
 			}
+			if len(timestamps) > 0 {
+				// Round timestamps to 3 decimal places
+				for i := range timestamps {
+					timestamps[i].BeginTS = math.Round(timestamps[i].BeginTS*1000.0) / 1000.0
+					timestamps[i].EndTS = math.Round(timestamps[i].EndTS*1000.0) / 1000.0
+				}
+
+				// Add to map
+				if timestampsData[ch.BookId] == nil {
+					timestampsData[ch.BookId] = make(map[int][]Timestamp)
+				}
+				timestampsData[ch.BookId][ch.ChapterNum] = timestamps
+			}
 		}
-	}
 
-	// Set timing estimation tag for timestamps fileset
-	hashId, status := d.dbpConn.SelectHashId(d.req.UpdateDBP.Timestamps)
-	if status != nil {
-		return status
-	}
-	_, status = d.dbpConn.UpdateFilesetTimingEstTag(hashId, mmsAlignTimingEstErr)
-	if status != nil {
-		return status
-	}
-
-	// Now process HLS with the newly inserted timestamps
-	status = d.ProcessHLS(d.req.UpdateDBP.HLS, d.req.BibleId)
-	if status != nil {
-		return status
-	}
-
-	log.Info(d.ctx, "Both timestamps and HLS updated successfully")
-	return nil
-}
-
-func (d *UpdateTimestamps) ProcessTimestampsOnly(chapters []db.Script) *log.Status {
-	log.Info(d.ctx, "Processing timestamps only")
-
-	// Remove all existing timestamps for the fileset once (not per chapter)
-	status := d.dbpConn.RemoveTimestampsForFileset(d.req.UpdateDBP.Timestamps)
-	if status != nil {
-		return status
-	}
-
-	for _, ch := range chapters {
-		var timestamps []Timestamp
-		timestamps, status := d.SelectFATimestamps(ch.BookId, ch.ChapterNum)
+		// Process timestamps in a single transaction (removes SA files, removes/inserts DA timestamps, updates tag)
+		status = d.dbpConn.ProcessTimestampsWithTag(d.req.UpdateDBP.Timestamps, mmsAlignTimingEstErr, chapters, timestampsData)
 		if status != nil {
 			return status
 		}
-		if len(timestamps) > 0 {
-			// Round timestamps to 3 decimal places
-			for i := range timestamps {
-				timestamps[i].BeginTS = math.Round(timestamps[i].BeginTS*1000.0) / 1000.0
-				timestamps[i].EndTS = math.Round(timestamps[i].EndTS*1000.0) / 1000.0
-			}
+		log.Info(d.ctx, "Timestamps updated successfully")
+	}
 
-			// Insert new timestamps (removal already done above)
-			status = d.InsertTimestampsForFileset(d.req.UpdateDBP.Timestamps, ch.BookId, ch.ChapterNum, timestamps)
-			if status != nil {
-				return status
-			}
+	// Process HLS if specified
+	if d.req.UpdateDBP.HLS != "" {
+		status = d.ProcessHLS(d.req.UpdateDBP.HLS, d.req.BibleId)
+		if status != nil {
+			return status
 		}
+		log.Info(d.ctx, "HLS updated successfully")
 	}
 
-	// Set timing estimation tag for timestamps fileset
-	hashId, status := d.dbpConn.SelectHashId(d.req.UpdateDBP.Timestamps)
-	if status != nil {
-		return status
-	}
-	_, status = d.dbpConn.UpdateFilesetTimingEstTag(hashId, mmsAlignTimingEstErr)
-	if status != nil {
-		return status
-	}
-
-	log.Info(d.ctx, "Timestamps updated successfully")
-	return nil
-}
-
-func (d *UpdateTimestamps) ProcessHLSOnly() *log.Status {
-	log.Info(d.ctx, "Processing HLS only")
-
-	// Process HLS using the existing ProcessHLS function
-	status := d.ProcessHLS(d.req.UpdateDBP.HLS, d.req.BibleId)
-	if status != nil {
-		return status
-	}
-
-	log.Info(d.ctx, "HLS updated successfully")
 	return nil
 }
 
@@ -290,8 +200,8 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status 
 	// Create HLS processor
 	processor := NewLocalHLSProcessor(d.ctx, bibleID, timestampsFilesetID)
 
-	// Get all chapters that have timestamps from MySQL (not SQLite)
-	chapters, status := d.dbpConn.SelectBookChapterFromDBP(timestampsFilesetID)
+	// Get chapters from SQLite (only process books that have timestamps in the dataset)
+	chapters, status := d.conn.SelectBookChapter()
 	if status != nil {
 		return status
 	}
@@ -378,7 +288,7 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status 
 			if isSAFileset(hlsFilesetID) {
 				// For SA filesets, we need to ensure verse_start is always 1
 				// This is handled in the database insertion logic
-				log.Info(d.ctx, "Processing SA fileset:", hlsFilesetID, "for chapter:", ch.ChapterNum)
+				log.Info(d.ctx, "Creating HLS for:", hlsFilesetID, " ", ch.BookId, " ", ch.ChapterNum)
 			}
 
 			// Add file group to HLS data
