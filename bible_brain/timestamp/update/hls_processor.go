@@ -169,7 +169,13 @@ func (p *LocalHLSProcessor) getAudioDuration(audioPath string) (duration float64
 	return duration, nil
 }
 
-// getBoundaries uses FFmpeg to get byte offsets for timestamps (following AudioHLS.py approach)
+// AudioFrame represents a single frame from ffprobe output
+type AudioFrame struct {
+	Time float64
+	Pos  float64
+}
+
+// getBoundaries uses FFmpeg to get byte offsets for timestamps by finding the closest frame to each timestamp
 func (p *LocalHLSProcessor) getBoundaries(audioPath string, timestamps []Timestamp) ([]HLSStreamBytes, error) {
 	// Get audio duration for validation
 	audioDuration, err := p.getAudioDuration(audioPath)
@@ -184,17 +190,85 @@ func (p *LocalHLSProcessor) getBoundaries(audioPath string, timestamps []Timesta
 		return nil, fmt.Errorf("ffprobe failed: %v", err)
 	}
 
-	// Parse the output to find byte positions for each timestamp
-	lines := strings.Split(string(output), "\n")
+	// Parse all frames first
+	frames, err := p.parseFrames(string(output))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse frames: %v", err)
+	}
+
+	if len(frames) == 0 {
+		return nil, fmt.Errorf("no frames found in audio file")
+	}
+
+	// Find closest frame for each timestamp
+	offsets := make([]float64, len(timestamps))
+	for i, timestamp := range timestamps {
+		closestFrame := p.findClosestFrame(frames, timestamp.BeginTS)
+		offsets[i] = closestFrame.Pos
+	}
+
+	// Get file size for last segment calculation
+	cmd = exec.Command("ffprobe", "-v", "error", "-show_entries", "format=size", "-of", "csv=p=0", audioPath)
+	sizeOutput, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file size: %v", err)
+	}
+
+	fileSize, err := strconv.ParseFloat(strings.TrimSpace(string(sizeOutput)), 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse file size: %v", err)
+	}
+
+	// Calculate bytes and create HLSStreamBytes
 	var streamBytes []HLSStreamBytes
+	for i, timestamp := range timestamps {
+		var bytes float64
+		if i < len(timestamps)-1 {
+			// bytes = offset[next] - offset[current]
+			bytes = offsets[i+1] - offsets[i]
+		} else {
+			// Last segment: bytes = file_size - offset[current]
+			bytes = fileSize - offsets[i]
+		}
+
+		// Runtime should be the duration of the corresponding timestamp
+		runtime := timestamp.EndTS - timestamp.BeginTS
+		timestampID := timestamp.TimestampId
+
+		streamByte := HLSStreamBytes{
+			Runtime:     runtime,
+			Bytes:       int64(bytes),
+			Offset:      int64(offsets[i]),
+			TimestampID: timestampID,
+			CreatedAt:   time.Now().Format("2006-01-02 15:04:05"),
+			UpdatedAt:   time.Now().Format("2006-01-02 15:04:05"),
+		}
+		streamBytes = append(streamBytes, streamByte)
+	}
+
+	// Validate that sum of all runtime values equals the audio duration
+	totalRuntimeDuration := 0.0
+	for _, streamByte := range streamBytes {
+		totalRuntimeDuration += streamByte.Runtime
+	}
+
+	// Allow for small floating point differences (within 2 seconds)
+	if math.Abs(audioDuration-totalRuntimeDuration) > 2.0 {
+		return nil, fmt.Errorf("runtime duration mismatch: audio=%.2fs, sum of runtimes=%.2fs, difference=%.2fs",
+			audioDuration, totalRuntimeDuration, math.Abs(audioDuration-totalRuntimeDuration))
+	}
+
+	return streamBytes, nil
+}
+
+// parseFrames parses ffprobe output into a list of frames
+func (p *LocalHLSProcessor) parseFrames(output string) ([]AudioFrame, error) {
+	lines := strings.Split(output, "\n")
+	var frames []AudioFrame
 
 	// Regex to match: frame|best_effort_timestamp_time=123.456|pkt_pos=789012
 	timePosRegex := regexp.MustCompile(`best_effort_timestamp_time=([0-9.]+)\|pkt_pos=([0-9]+)`)
 
-	var prevPos float64
-	var currentTimestampIndex int
-
-	// Process all frames to find boundaries
 	for _, line := range lines {
 		matches := timePosRegex.FindStringSubmatch(line)
 		if len(matches) != 3 {
@@ -210,85 +284,36 @@ func (p *LocalHLSProcessor) getBoundaries(audioPath string, timestamps []Timesta
 			continue
 		}
 
-		// Check if we've reached the next timestamp boundary
-		if currentTimestampIndex < len(timestamps) && timestamp >= timestamps[currentTimestampIndex].BeginTS {
-			// Calculate bytes and offset for this segment
-			var bytes, offset float64
-			var timestampID int64
+		frames = append(frames, AudioFrame{
+			Time: timestamp,
+			Pos:  pos,
+		})
+	}
 
-			if currentTimestampIndex == 0 {
-				// First timestamp - segment from 0 to current position
-				bytes = float64(pos - 0)
-				offset = 0
-			} else {
-				// Subsequent timestamps - segment from previous to current position
-				bytes = float64(pos - prevPos)
-				offset = prevPos
-			}
+	return frames, nil
+}
 
-			// Runtime should be the duration of the corresponding timestamp
-			runtime := timestamps[currentTimestampIndex].EndTS - timestamps[currentTimestampIndex].BeginTS
-			timestampID = timestamps[currentTimestampIndex].TimestampId
+// findClosestFrame finds the frame with the minimum distance to the target timestamp
+func (p *LocalHLSProcessor) findClosestFrame(frames []AudioFrame, targetTime float64) AudioFrame {
+	if len(frames) == 0 {
+		return AudioFrame{}
+	}
 
-			streamByte := HLSStreamBytes{
-				Runtime:     runtime,
-				Bytes:       int64(bytes),
-				Offset:      int64(offset),
-				TimestampID: timestampID,
-				CreatedAt:   time.Now().Format("2006-01-02 15:04:05"),
-				UpdatedAt:   time.Now().Format("2006-01-02 15:04:05"),
-			}
-			streamBytes = append(streamBytes, streamByte)
+	closestFrame := frames[0]
+	minDistance := math.Abs(frames[0].Time - targetTime)
 
-			prevPos = pos
-			currentTimestampIndex++
+	for _, frame := range frames[1:] {
+		distance := math.Abs(frame.Time - targetTime)
+		if distance < minDistance {
+			minDistance = distance
+			closestFrame = frame
+		} else if distance > minDistance {
+			// Frames are getting further away, we can break early
+			break
 		}
 	}
 
-	// Handle the last segment if we have remaining timestamps
-	if currentTimestampIndex < len(timestamps) {
-
-		// Use FFmpeg to get the byte position at the end of the file
-		cmd := exec.Command("ffprobe", "-v", "error", "-show_entries", "format=size", "-of", "csv=p=0", audioPath)
-		sizeOutput, err := cmd.Output()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get file size: %v", err)
-		}
-
-		fileSize, err := strconv.ParseFloat(strings.TrimSpace(string(sizeOutput)), 64)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse file size: %v", err)
-		}
-
-		// Runtime for the last segment should be the duration of the last timestamp
-		runtime := timestamps[currentTimestampIndex].EndTS - timestamps[currentTimestampIndex].BeginTS
-		bytes := int64(fileSize - prevPos)
-		offset := int64(prevPos)
-
-		streamByte := HLSStreamBytes{
-			Runtime:     runtime,
-			Bytes:       bytes,
-			Offset:      offset,
-			TimestampID: timestamps[currentTimestampIndex].TimestampId,
-			CreatedAt:   time.Now().Format("2006-01-02 15:04:05"),
-			UpdatedAt:   time.Now().Format("2006-01-02 15:04:05"),
-		}
-		streamBytes = append(streamBytes, streamByte)
-	}
-
-	// Validate that sum of all runtime values equals the audio duration
-	totalRuntimeDuration := 0.0
-	for _, streamByte := range streamBytes {
-		totalRuntimeDuration += streamByte.Runtime
-	}
-
-	// Allow for small floating point differences (within 0.1 seconds)
-	if math.Abs(audioDuration-totalRuntimeDuration) > 0.1 {
-		return nil, fmt.Errorf("runtime duration mismatch: audio=%.2fs, sum of runtimes=%.2fs, difference=%.2fs",
-			audioDuration, totalRuntimeDuration, math.Abs(audioDuration-totalRuntimeDuration))
-	}
-
-	return streamBytes, nil
+	return closestFrame
 }
 
 func replaceExtension(filename, newExt string) string {

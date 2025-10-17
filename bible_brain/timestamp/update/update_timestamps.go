@@ -434,8 +434,12 @@ func (d *UpdateTimestamps) InsertTimestampsForFileset(filesetID, bookID string, 
 			enhancedTimestamps = append(enhancedTimestamps, verse0Entry)
 			enhancedTimestamps = append(enhancedTimestamps, timestamps...)
 		} else {
-			// First verse starts at 0 or no timestamps, use as-is
-			enhancedTimestamps = timestamps
+			// First verse starts at 0 or no timestamps, adjust VerseSeq to start from 0
+			enhancedTimestamps = make([]Timestamp, len(timestamps))
+			for i, ts := range timestamps {
+				enhancedTimestamps[i] = ts
+				enhancedTimestamps[i].VerseSeq = i // Start from 0 instead of original VerseSeq
+			}
 		}
 
 		_, _, status = d.dbpConn.InsertTimestamps(bibleFileID, enhancedTimestamps)
