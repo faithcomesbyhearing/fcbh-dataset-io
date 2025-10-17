@@ -133,4 +133,3 @@ func MergeTimestamps(timestamps []Timestamp, dbpTimestamps []Timestamp) []Timest
 	}
 	return timestamps
 }
-

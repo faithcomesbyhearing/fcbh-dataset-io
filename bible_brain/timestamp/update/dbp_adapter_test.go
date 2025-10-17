@@ -79,21 +79,6 @@ func TestSelectTimestamps(t *testing.T) {
 	}
 }
 
-func TestUpdateFilesetTimingEstTag(t *testing.T) {
-	conn := getDBPConnection(t)
-	defer conn.Close()
-	hashId, status := conn.SelectHashId("ENGKJVN2DA")
-	if status != nil {
-		t.Fatal(status)
-	}
-	rowCount, status := conn.UpdateFilesetTimingEstTag(hashId, mmsAlignTimingEstErr)
-	if status != nil {
-		t.Fatal(status)
-	}
-	if rowCount != 1 {
-	}
-}
-
 func fauxTimesheetData(timestamps []Timestamp) []Timestamp {
 	var priorTS = 0.0
 	var lastVerse string

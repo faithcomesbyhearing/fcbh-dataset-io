@@ -117,3 +117,56 @@ func loadTimestampsFromCSVWithRealisticDurations(filename string) ([]Timestamp, 
 
 	return timestamps, nil
 }
+
+// ExpectedResult represents the expected output from the bytes CSV
+type ExpectedResult struct {
+	VerseStart int
+	Bytes      int64
+	Offset     int64
+}
+
+// loadExpectedBytesFromCSV loads expected results from the bytes CSV file
+func loadExpectedBytesFromCSV(filename string) ([]ExpectedResult, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	var results []ExpectedResult
+	for i, record := range records {
+		if i == 0 {
+			continue // Skip header
+		}
+		if len(record) < 3 {
+			continue
+		}
+
+		verseStart, err := strconv.Atoi(record[0])
+		if err != nil {
+			continue
+		}
+		bytes, err := strconv.ParseInt(record[1], 10, 64)
+		if err != nil {
+			continue
+		}
+		offset, err := strconv.ParseInt(record[2], 10, 64)
+		if err != nil {
+			continue
+		}
+
+		results = append(results, ExpectedResult{
+			VerseStart: verseStart,
+			Bytes:      bytes,
+			Offset:     offset,
+		})
+	}
+
+	return results, nil
+}

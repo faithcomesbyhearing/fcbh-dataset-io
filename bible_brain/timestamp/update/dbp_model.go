@@ -10,7 +10,4 @@ type Timestamp struct {
 	BeginTS     float64
 	EndTS       float64
 	AudioFile   string
-	Duration    float64
-	Position    int64
-	NumBytes    int64
 }
