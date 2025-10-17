@@ -10,6 +10,8 @@
 *.flac
 user-data.sh
 test_data/*
+venv/
+**/venv/
 
 build-ami/user-data-base64.txt
 build-ami/secrets*.*
