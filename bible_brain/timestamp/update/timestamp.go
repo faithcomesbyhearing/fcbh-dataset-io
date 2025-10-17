@@ -77,7 +77,7 @@ func (d *UpdateTimestamps) Process() *log.Status {
 		}
 
 		// Process timestamps in a single transaction (removes SA files, removes/inserts DA timestamps, updates tag)
-		status = d.dbpConn.ProcessTimestampsWithTag(d.req.UpdateDBP.Timestamps, mmsAlignTimingEstErr, chapters, timestampsData)
+		status = d.dbpConn.ProcessTimestamps(d.req.UpdateDBP.Timestamps, mmsAlignTimingEstErr, chapters, timestampsData)
 		if status != nil {
 			return status
 		}
@@ -118,18 +118,4 @@ func (d *UpdateTimestamps) SelectTimestampsFromSQLite(bookId string, chapter int
 		result = append(result, t)
 	}
 	return result, nil
-}
-
-func MergeTimestamps(timestamps []Timestamp, dbpTimestamps []Timestamp) []Timestamp {
-	var dbpMap = make(map[string]Timestamp)
-	for _, dbp := range dbpTimestamps {
-		dbpMap[dbp.VerseStr] = dbp
-	}
-	for i, ts := range timestamps {
-		dbp, ok := dbpMap[ts.VerseStr]
-		if ok {
-			timestamps[i].TimestampId = dbp.TimestampId
-		}
-	}
-	return timestamps
 }

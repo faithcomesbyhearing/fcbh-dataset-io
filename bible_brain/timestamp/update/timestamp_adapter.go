@@ -372,9 +372,9 @@ func (d *DBPAdapter) updateFilesetTimingEstTagTx(tx *sql.Tx, hashId, timingEstEr
 	return nil
 }
 
-// ProcessTimestampsWithTag processes timestamps for specific books/chapters in a single transaction
+// ProcessTimestamps processes timestamps for specific books/chapters in a single transaction
 // It removes affected SA files, removes/inserts DA timestamps, and updates the timing_est_err tag
-func (d *DBPAdapter) ProcessTimestampsWithTag(daFilesetID, timingEstErr string, chapters []db.Script, timestampsData map[string]map[int][]Timestamp) *log.Status {
+func (d *DBPAdapter) ProcessTimestamps(daFilesetID, timingEstErr string, chapters []db.Script, timestampsData map[string]map[int][]Timestamp) *log.Status {
 	// Extract unique book IDs
 	bookIDs := make(map[string]bool)
 	for _, ch := range chapters {
@@ -467,43 +467,3 @@ func (d *DBPAdapter) ProcessTimestampsWithTag(daFilesetID, timingEstErr string, 
 
 	return nil
 }
-
-// SelectBookChapterFromDBP gets chapters from MySQL database for a specific fileset
-func (d *DBPAdapter) SelectBookChapterFromDBP(filesetId string) ([]db.Script, *log.Status) {
-	var result []db.Script
-
-	// Get the hash_id for the fileset
-	hashId, status := d.SelectHashId(filesetId)
-	if status != nil {
-		return nil, status
-	}
-
-	query := `SELECT DISTINCT bf.book_id, bf.chapter_start, bf.chapter_end
-		FROM bible_files bf 
-		WHERE bf.hash_id = ?
-		ORDER BY bf.book_id, bf.chapter_start`
-
-	rows, err := d.conn.Query(query, hashId)
-	if err != nil {
-		return nil, log.Error(d.ctx, 500, err, query)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var script db.Script
-		var chapterEnd sql.NullInt32
-		err = rows.Scan(&script.BookId, &script.ChapterNum, &chapterEnd)
-		if err != nil {
-			return nil, log.Error(d.ctx, 500, err, query)
-		}
-		if chapterEnd.Valid {
-			script.ChapterEnd = int(chapterEnd.Int32)
-		}
-		result = append(result, script)
-	}
-
-	return result, nil
-}
-
-// HLS Data Structures
-
