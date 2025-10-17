@@ -3,7 +3,6 @@ package update
 import (
 	"context"
 	"crypto/md5"
-	"database/sql"
 	"fmt"
 	"math"
 	"strings"
@@ -101,47 +100,6 @@ func (d *UpdateTimestamps) Process() *log.Status {
 	return nil
 }
 
-func (d *UpdateTimestamps) UpdateFileset(filesetId string, bookId string, chapterNum int, timestamps []Timestamp) *log.Status {
-	var status *log.Status
-	var hashId string
-	hashId, status = d.dbpConn.SelectHashId(filesetId)
-	if status != nil {
-		return status
-	}
-	var bibleFileId int64
-	bibleFileId, _, status = d.dbpConn.SelectFileId(hashId, bookId, chapterNum)
-	if status != nil {
-		return status // what is the correct response for not found
-	}
-	if bibleFileId > 0 {
-		var dbpTimestamps []Timestamp
-		dbpTimestamps, status = d.dbpConn.SelectTimestamps(bibleFileId)
-		if status != nil {
-			return status
-		}
-		if len(dbpTimestamps) > 0 {
-			timestamps = MergeTimestamps(timestamps, dbpTimestamps)
-		}
-		// Update existing timestamps
-		_, status = d.dbpConn.UpdateTimestamps(timestamps)
-		if status != nil {
-			return status
-		}
-
-		// Insert new timestamps
-		_, _, status = d.dbpConn.InsertTimestamps(bibleFileId, timestamps)
-		if status != nil {
-			return status
-		}
-
-		// Only process HLS segments and timing estimation if not just doing timestamps
-		// TODO: Add HLS stanza check here when HLS processing is needed
-		// For now, skip HLS processing when only timestamps are requested
-		log.Info(d.ctx, "Skipping HLS processing - timestamps only mode")
-	}
-	return nil
-}
-
 func (d *UpdateTimestamps) SelectFATimestamps(bookId string, chapter int) ([]Timestamp, *log.Status) {
 	var result []Timestamp
 	datasetTS, status := d.conn.SelectFAScriptTimestamps(bookId, chapter)
@@ -215,7 +173,7 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status 
 	// Get asset_id for hash generation
 	// For SA filesets, use the parent DA fileset's asset_id
 	var assetID string
-	if isSAFileset(hlsFilesetID) {
+	if strings.HasSuffix(strings.ToUpper(hlsFilesetID), "SA") {
 		// Convert SA fileset ID to DA fileset ID (replace "SA" with "DA")
 		daFilesetID := strings.TrimSuffix(hlsFilesetID, "SA") + "DA"
 		assetID, status = d.dbpConn.SelectAssetId(daFilesetID)
@@ -285,7 +243,7 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status 
 			}
 
 			// Special handling for SA filesets: set verse_start to 1
-			if isSAFileset(hlsFilesetID) {
+			if strings.HasSuffix(strings.ToUpper(hlsFilesetID), "SA") {
 				// For SA filesets, we need to ensure verse_start is always 1
 				// This is handled in the database insertion logic
 				log.Info(d.ctx, "Creating HLS for:", hlsFilesetID, " ", ch.BookId, " ", ch.ChapterNum)
@@ -306,80 +264,6 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status 
 	return nil
 }
 
-func (d *UpdateTimestamps) ReplaceTimestampsForFileset(filesetID, bookID string, chapterNum int, timestamps []Timestamp) *log.Status {
-	// Remove existing timestamps for this fileset
-	status := d.dbpConn.RemoveTimestampsForFileset(filesetID)
-	if status != nil {
-		return status
-	}
-
-	// Insert new timestamps
-	hashID, status := d.dbpConn.SelectHashId(filesetID)
-	if status != nil {
-		return status
-	}
-
-	bibleFileID, _, status := d.dbpConn.SelectFileId(hashID, bookID, chapterNum)
-	if status != nil {
-		return status
-	}
-
-	if bibleFileID > 0 {
-		_, _, status = d.dbpConn.InsertTimestamps(bibleFileID, timestamps)
-		if status != nil {
-			return status
-		}
-	}
-
-	return nil
-}
-
-func (d *UpdateTimestamps) InsertTimestampsForFileset(filesetID, bookID string, chapterNum int, timestamps []Timestamp) *log.Status {
-	// Insert new timestamps (removal already done outside this function)
-	hashID, status := d.dbpConn.SelectHashId(filesetID)
-	if status != nil {
-		return status
-	}
-
-	bibleFileID, _, status := d.dbpConn.SelectFileId(hashID, bookID, chapterNum)
-	if status != nil {
-		return status
-	}
-
-	if bibleFileID > 0 {
-		// Check if we need to add a verse 0 entry
-		var enhancedTimestamps []Timestamp
-		if len(timestamps) > 0 && timestamps[0].BeginTS > 0.0 {
-			// First verse starts after 0, add verse 0 entry to capture intro/header
-			enhancedTimestamps = make([]Timestamp, 0, len(timestamps)+1)
-			verse0Entry := Timestamp{
-				VerseStr:    "0",
-				VerseEnd:    sql.NullString{Valid: false},
-				BeginTS:     0.0,
-				EndTS:       timestamps[0].BeginTS,
-				VerseSeq:    0,
-				TimestampId: 0, // Will be set by InsertTimestamps
-			}
-			enhancedTimestamps = append(enhancedTimestamps, verse0Entry)
-			enhancedTimestamps = append(enhancedTimestamps, timestamps...)
-		} else {
-			// First verse starts at 0 or no timestamps, adjust VerseSeq to start from 0
-			enhancedTimestamps = make([]Timestamp, len(timestamps))
-			for i, ts := range timestamps {
-				enhancedTimestamps[i] = ts
-				enhancedTimestamps[i].VerseSeq = i // Start from 0 instead of original VerseSeq
-			}
-		}
-
-		_, _, status = d.dbpConn.InsertTimestamps(bibleFileID, enhancedTimestamps)
-		if status != nil {
-			return status
-		}
-	}
-
-	return nil
-}
-
 func generateHashID(filesetID, setTypeCode, bucket string) string {
 	// Generate hash_id using the same method as DBP: MD5(filesetID + bucket + setTypeCode)[:12]
 	// bucket is typically "dbp-prod" or the asset_id from parent DA fileset
@@ -389,10 +273,4 @@ func generateHashID(filesetID, setTypeCode, bucket string) string {
 
 	// Convert to hex string and truncate to 12 characters
 	return fmt.Sprintf("%x", hash)[:12]
-}
-
-// isSAFileset checks if a fileset ID represents an SA (Single Audio) fileset
-func isSAFileset(filesetID string) bool {
-	// SA filesets typically end with "SA" (e.g., ENGNIVN1SA)
-	return strings.HasSuffix(strings.ToUpper(filesetID), "SA")
 }

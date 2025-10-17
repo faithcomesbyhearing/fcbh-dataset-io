@@ -135,53 +135,6 @@ func (d *DBPAdapter) SelectTimestamps(fileId int64) ([]Timestamp, *log.Status) {
 	return result, nil
 }
 
-func (d *DBPAdapter) UpdateTimestamps(timestamps []Timestamp) (int, *log.Status) {
-	var rowCount int
-	var mustUpdate int
-	for _, rec := range timestamps {
-		if rec.TimestampId > 0 {
-			mustUpdate++
-		}
-	}
-	if mustUpdate > 0 {
-		query := `UPDATE bible_file_timestamps SET timestamp = ?, timestamp_end = ? 
-			WHERE id = ?`
-		tx, err := d.conn.Begin()
-		if err != nil {
-			return rowCount, log.Error(d.ctx, 500, err, query)
-		}
-		stmt, err := tx.Prepare(query)
-		if err != nil {
-			return rowCount, log.Error(d.ctx, 500, err, query)
-		}
-		defer stmt.Close()
-		var result sql.Result
-		var count int64
-		for _, rec := range timestamps {
-			if rec.TimestampId > 0 {
-				result, err = stmt.Exec(rec.BeginTS, rec.EndTS, rec.TimestampId)
-				if err != nil {
-					return rowCount, log.Error(d.ctx, 500, err, query)
-				}
-				count, err = result.RowsAffected()
-				if err != nil {
-					return rowCount, log.Error(d.ctx, 500, err, query)
-				}
-				rowCount += int(count)
-			}
-		}
-		err = tx.Commit()
-		if err != nil {
-			return rowCount, log.Error(d.ctx, 500, err, query)
-		}
-		if rowCount != mustUpdate {
-			return rowCount, log.ErrorNoErr(d.ctx, 500, "Row count expected:",
-				mustUpdate, "Actual Count:", rowCount, query)
-		}
-	}
-	return rowCount, nil
-}
-
 func (d *DBPAdapter) InsertTimestamps(bibleFileId int64, timestamps []Timestamp) ([]Timestamp, int, *log.Status) {
 	var rowCount int
 	var mustInsert int
@@ -231,80 +184,6 @@ func (d *DBPAdapter) InsertTimestamps(bibleFileId int64, timestamps []Timestamp)
 		}
 	}
 	return timestamps, rowCount, nil
-}
-
-func (d *DBPAdapter) UpdateSegments(segments []Timestamp) (int, *log.Status) {
-	var rowCount int
-	query := `UPDATE bible_file_stream_bytes SET runtime = ?, offset = ?, bytes = ?
-		WHERE timestamp_id = ?`
-	tx, err := d.conn.Begin()
-	if err != nil {
-		return rowCount, log.Error(d.ctx, 500, err, query)
-	}
-	stmt, err := tx.Prepare(query)
-	if err != nil {
-		return rowCount, log.Error(d.ctx, 500, err, query)
-	}
-	defer stmt.Close()
-	var result sql.Result
-	var count int64
-	for _, rec := range segments {
-		result, err = stmt.Exec(rec.Duration, rec.Position, rec.NumBytes, rec.TimestampId)
-		if err != nil {
-			return rowCount, log.Error(d.ctx, 500, err, `Error while inserting dbp timestamp.`)
-		}
-		count, err = result.RowsAffected()
-		if err != nil {
-			return rowCount, log.Error(d.ctx, 500, err, query)
-		}
-		rowCount += int(count)
-	}
-	err = tx.Commit()
-	if err != nil {
-		return rowCount, log.Error(d.ctx, 500, err, query)
-	}
-	return rowCount, nil
-}
-
-func (d *DBPAdapter) UpdateFilesetTimingEstTag(hashId string, timingEstErr string) (int, *log.Status) {
-	var rowCount int
-	query := `SELECT description FROM bible_fileset_tags WHERE hash_id = ? AND name = 'timing_est_err'`
-	var currEstErr string
-	err := d.conn.QueryRow(query, hashId).Scan(&currEstErr)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return 0, log.Error(d.ctx, 500, err, query)
-	}
-	var result sql.Result
-	var count int64
-	if errors.Is(err, sql.ErrNoRows) {
-		query = `INSERT INTO bible_fileset_tags (hash_id, name, description, admin_only, iso, language_id)
-		VALUES (?, 'timing_est_err', ?, 0, 'eng', 6414)`
-		result, err = d.conn.Exec(query, hashId, timingEstErr)
-		if err != nil {
-			return 0, log.Error(d.ctx, 500, err, query)
-		}
-		count, err = result.RowsAffected()
-		if err != nil {
-			return rowCount, log.Error(d.ctx, 500, err, query)
-		}
-		rowCount = int(count)
-	} else if currEstErr != timingEstErr {
-		query = `UPDATE bible_fileset_tags SET description = ? WHERE hash_id = ? AND name = 'timing_est_err'`
-		result, err = d.conn.Exec(query, timingEstErr, hashId)
-		if err != nil {
-			return rowCount, log.Error(d.ctx, 500, err, query)
-		}
-		count, err = result.RowsAffected()
-		if err != nil {
-			return rowCount, log.Error(d.ctx, 500, err, query)
-		}
-		rowCount += int(count)
-		if rowCount != 1 {
-			return rowCount, log.ErrorNoErr(d.ctx, 500,
-				"Row count expected:", 1, "Actual Count:", rowCount, query)
-		}
-	}
-	return rowCount, nil
 }
 
 // FindSAFilesetForBooks checks if any SA fileset has bible_files that reference DA timestamps for specific books
@@ -757,90 +636,6 @@ func (d *DBPAdapter) RemoveHLSFileset(filesetID string) *log.Status {
 	return nil
 }
 
-func (d *DBPAdapter) InsertHLSFileset(fileset HLSFileset) (int64, *log.Status) {
-	query := `INSERT INTO bible_filesets (id, set_type_code, set_size_code, hash_id, asset_id, created_at, updated_at) 
-			  VALUES (?, ?, ?, ?, ?, ?, ?)`
-
-	result, err := d.conn.Exec(query, fileset.ID, fileset.SetTypeCode, fileset.SetSizeCode, fileset.HashID, fileset.AssetID, fileset.CreatedAt, fileset.UpdatedAt)
-	if err != nil {
-		return 0, log.Error(d.ctx, 500, err, query)
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return 0, log.Error(d.ctx, 500, err, "Failed to get last insert ID")
-	}
-
-	return id, nil
-}
-
-func (d *DBPAdapter) InsertHLSFile(file HLSFile, isSA bool) (int64, *log.Status) {
-	var query string
-	var result sql.Result
-	var err error
-
-	if isSA {
-		// For SA filesets, set verse_start to "1" and verse_end to NULL
-		query = `INSERT INTO bible_files (hash_id, book_id, chapter_start, verse_start, verse_end, file_name, file_size, created_at, updated_at) 
-				  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		result, err = d.conn.Exec(query, file.HashID, file.BookID, file.ChapterNum, "1", nil, file.FileName, file.FileSize, file.CreatedAt, file.UpdatedAt)
-	} else {
-		// For non-SA filesets, don't set verse_start/verse_end
-		query = `INSERT INTO bible_files (hash_id, book_id, chapter_start, file_name, file_size, created_at, updated_at) 
-				  VALUES (?, ?, ?, ?, ?, ?, ?)`
-		result, err = d.conn.Exec(query, file.HashID, file.BookID, file.ChapterNum, file.FileName, file.FileSize, file.CreatedAt, file.UpdatedAt)
-	}
-
-	if err != nil {
-		return 0, log.Error(d.ctx, 500, err, query)
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return 0, log.Error(d.ctx, 500, err, "Failed to get last insert ID")
-	}
-
-	return id, nil
-}
-
-func (d *DBPAdapter) InsertHLSStreamBandwidth(bandwidth HLSStreamBandwidth) (int64, *log.Status) {
-	query := `INSERT INTO bible_file_stream_bandwidths (bible_file_id, file_name, bandwidth, resolution_width, resolution_height, codec, stream, created_at, updated_at) 
-			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-
-	result, err := d.conn.Exec(query, bandwidth.BibleFileID, bandwidth.FileName, bandwidth.Bandwidth,
-		bandwidth.ResolutionWidth, bandwidth.ResolutionHeight, bandwidth.Codec, bandwidth.Stream,
-		bandwidth.CreatedAt, bandwidth.UpdatedAt)
-	if err != nil {
-		return 0, log.Error(d.ctx, 500, err, query)
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return 0, log.Error(d.ctx, 500, err, "Failed to get last insert ID")
-	}
-
-	return id, nil
-}
-
-func (d *DBPAdapter) InsertHLSStreamBytes(streamBytes HLSStreamBytes) (int64, *log.Status) {
-	query := `INSERT INTO bible_file_stream_bytes (stream_bandwidth_id, runtime, bytes, offset, timestamp_id, created_at, updated_at) 
-			  VALUES (?, ?, ?, ?, ?, ?, ?)`
-
-	result, err := d.conn.Exec(query, streamBytes.StreamBandwidthID, streamBytes.Runtime,
-		streamBytes.Bytes, streamBytes.Offset, streamBytes.TimestampID,
-		streamBytes.CreatedAt, streamBytes.UpdatedAt)
-	if err != nil {
-		return 0, log.Error(d.ctx, 500, err, query)
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return 0, log.Error(d.ctx, 500, err, "Failed to get last insert ID")
-	}
-
-	return id, nil
-}
-
 // SelectFATimestampsFromDBP gets timestamps from MySQL database with actual timestamp IDs
 func (d *DBPAdapter) SelectFATimestampsFromDBP(bookId string, chapter int, filesetId string) ([]Timestamp, *log.Status) {
 	// Get the hash_id for the fileset
@@ -892,41 +687,6 @@ func (d *DBPAdapter) SelectFilesetLicenseInfo(filesetId string) (int, *int, bool
 	return modeID, licenseGroupID, publishedSNM, nil
 }
 
-func (d *DBPAdapter) RemoveTimestampsForFileset(filesetID string) *log.Status {
-	// Get hash_id for the fileset
-	var hashID string
-	query := `SELECT hash_id FROM bible_filesets WHERE id = ?`
-	err := d.conn.QueryRow(query, filesetID).Scan(&hashID)
-	if err != nil {
-		if err.Error() == "sql: no rows in result set" {
-			// Fileset doesn't exist, that's fine
-			return nil
-		}
-		return log.Error(d.ctx, 500, err, "Failed to get hash_id for fileset: "+filesetID)
-	}
-
-	// Start transaction
-	tx, err := d.conn.Begin()
-	if err != nil {
-		return log.Error(d.ctx, 500, err, "Failed to begin transaction")
-	}
-	defer tx.Rollback()
-
-	// Delete timestamps for all files in this fileset
-	_, err = tx.Exec(`DELETE FROM bible_file_timestamps WHERE bible_file_id IN (SELECT id FROM bible_files WHERE hash_id = ?)`, hashID)
-	if err != nil {
-		return log.Error(d.ctx, 500, err, "Failed to delete timestamps for fileset: "+filesetID)
-	}
-
-	// Commit transaction
-	err = tx.Commit()
-	if err != nil {
-		return log.Error(d.ctx, 500, err, "Failed to commit timestamp removal transaction")
-	}
-
-	return nil
-}
-
 func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
 	// First remove any existing HLS data for this fileset
 	status := d.RemoveHLSFileset(hlsData.Fileset.ID)
@@ -942,7 +702,7 @@ func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
 	defer tx.Rollback()
 
 	// Insert fileset
-	isSA := d.isSAFileset(hlsData.Fileset.ID)
+	isSA := strings.HasSuffix(strings.ToUpper(hlsData.Fileset.ID), "SA")
 	_, err = d.insertHLSFilesetTx(tx, hlsData.Fileset, isSA)
 	if err != nil {
 		return log.Error(d.ctx, 500, err, "Failed to insert HLS fileset")
@@ -954,7 +714,7 @@ func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
 		fileGroup.File.HashID = hlsData.Fileset.HashID
 
 		// 1. Insert file → get fileID
-		isSA := d.isSAFileset(hlsData.Fileset.ID)
+		isSA := strings.HasSuffix(strings.ToUpper(hlsData.Fileset.ID), "SA")
 		fileID, err := d.insertHLSFileTx(tx, fileGroup.File, isSA)
 		if err != nil {
 			return log.Error(d.ctx, 500, err, "Failed to insert HLS file")
@@ -1053,12 +813,6 @@ func (d *DBPAdapter) insertHLSFileTx(tx *sql.Tx, file HLSFile, isSA bool) (int64
 	}
 
 	return result.LastInsertId()
-}
-
-// isSAFileset checks if a fileset ID represents an SA (Single Audio) fileset
-func (d *DBPAdapter) isSAFileset(filesetID string) bool {
-	// SA filesets typically end with "SA" (e.g., ENGNIVN1SA)
-	return strings.HasSuffix(strings.ToUpper(filesetID), "SA")
 }
 
 // copyStockNoTagTx copies the stock_no tag from DA fileset to SA fileset

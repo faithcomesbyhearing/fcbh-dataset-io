@@ -3,9 +3,10 @@ package update
 import (
 	"context"
 	"fmt"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/safe"
 	"strconv"
 	"testing"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/safe"
 )
 
 func TestNewDBPAdapter(t *testing.T) {
@@ -76,70 +77,6 @@ func TestSelectTimestamps(t *testing.T) {
 	if timestamps[25].VerseStr != "25" {
 		t.Fatal("VerseStr should be 25")
 	}
-}
-
-func TestUpdateTimestamps(t *testing.T) {
-	conn := getDBPConnection(t)
-	defer conn.Close()
-	hashId, status := conn.SelectHashId("ENGKJVN2DA")
-	if status != nil {
-		t.Fatal(status)
-	}
-	fileId, _, status := conn.SelectFileId(hashId, "MAT", 1)
-	if status != nil {
-		t.Fatal(status)
-	}
-	dbpTimestamps, status := conn.SelectTimestamps(fileId)
-	if status != nil {
-		t.Fatal(status)
-	}
-	timestamps := fauxTimesheetData(dbpTimestamps)
-	// Remove some DBP Records
-	var dbp2Timestamps []Timestamp
-	for i := 0; i < len(dbpTimestamps); i += 2 {
-		dbp2Timestamps = append(dbp2Timestamps, dbpTimestamps[i])
-	}
-	timestamps = MergeTimestamps(timestamps, dbp2Timestamps)
-	rowCount, status := conn.UpdateTimestamps(timestamps)
-	if status != nil {
-		t.Fatal(status)
-	}
-	if rowCount != 12 {
-		t.Error("rowCount should be 12, but is", rowCount)
-	}
-	timestamps, rowCount, status = conn.InsertTimestamps(fileId, timestamps)
-	if status != nil {
-		t.Fatal(status)
-	}
-	if rowCount != 12 {
-		t.Error("rowCount should be 12, but is", rowCount)
-	}
-	for _, ts := range timestamps {
-		fmt.Println(ts)
-	}
-}
-
-func TestUpdateSegments(t *testing.T) {
-	var timestamps []Timestamp
-	timestampIds := []int64{}
-	for i, id := range timestampIds {
-		var ts Timestamp
-		ts.TimestampId = id
-		ts.Duration = float64(i + 10)
-		ts.Position = int64(i * 10)
-		ts.NumBytes = int64(ts.Duration) * 10
-		timestamps = append(timestamps, ts)
-	}
-	conn := getDBPConnection(t)
-	defer conn.Close()
-	rowCount, status := conn.UpdateSegments(timestamps)
-	if status != nil {
-		t.Fatal(status)
-	}
-	if rowCount != len(timestamps) {
-		t.Error("rowCount should be len", len(timestamps))
-	}
-
 }
 
 func TestUpdateFilesetTimingEstTag(t *testing.T) {
