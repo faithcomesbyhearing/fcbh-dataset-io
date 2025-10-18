@@ -15,10 +15,10 @@ def createTokenizer(database, targetLang):
         line = unicodedata.normalize("NFC", vs[0].lower())
         for ch in line:
             chars.add(ch)
-    # Possibly excluding or including hyphens should be a language option.
-    chars.discard('\u002d') # hyphen
-    chars.discard('\u2014') # another hyphen
-    chars.discard('\u2019') # right single quote
+    //# Possibly excluding or including hyphens should be a language option.
+    //chars.discard('\u002d') # hyphen
+    //chars.discard('\u2014') # another hyphen
+    //chars.discard('\u2019') # right single quote
     chars = sorted(chars)
     vocabDict = {}
     vocabDict["|"] = 0
