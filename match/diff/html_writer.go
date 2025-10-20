@@ -40,7 +40,7 @@ func (h *HTMLWriter) WriteReport(baseDataset string, records []Pair, languageISO
 	case request.SpeechToText{MMSAdapter: true}:
 		model = "Model: MMS Adapter"
 	case request.SpeechToText{Wav2Vec2ASR: true}:
-		model = "Model: WAV2Vec2 Word"
+		model = "Model: Wav2Vec2 Word"
 	default:
 		model = ""
 	}
