@@ -19,3 +19,6 @@ bible_brain/timestamp/gen_yaml/test_data/
 match/research/fa_error/data/
 mms/zero_shot_v1/data/
 mms/zero_shot_v1/kenlm/
+
+# Test data directory (too large for git, downloadable from Bible Brain API)
+input/
