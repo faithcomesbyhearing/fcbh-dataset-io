@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
 type Courier struct {
@@ -39,18 +40,51 @@ func NewCourier(ctx context.Context, yaml []byte) Courier {
 	b.yamlContent = string(yaml)
 	b.username = b.parseYaml(`username`)
 	b.dataset = b.parseYaml(`dataset_name`)
-	logFile := os.Getenv("FCBH_DATASET_LOG_FILE")
-	if logFile != `` {
-		b.AddLogFile(logFile)
+
+	// Check for new per-job logging directory first
+	logDir := os.Getenv("FCBH_DATASET_LOG_DIR")
+	if logDir != `` {
+		b.AddPerJobLogFile(logDir)
+	} else {
+		// Fall back to old single-file behavior for backward compatibility
+		logFile := os.Getenv("FCBH_DATASET_LOG_FILE")
+		if logFile != `` {
+			b.AddLogFile(logFile)
+		}
 	}
 	return b
 }
 
+// AddLogFile sets up single-file logging with truncation (legacy behavior)
+// Deprecated: Use AddPerJobLogFile with FCBH_DATASET_LOG_DIR instead
 func (b *Courier) AddLogFile(logPath string) {
 	b.logFile = logPath
 	if !b.IsUnitTest {
 		_ = os.Truncate(b.logFile, 0)
 	}
+}
+
+// AddPerJobLogFile creates a new log file for each job in the specified directory
+func (b *Courier) AddPerJobLogFile(logDir string) {
+	// Create logs directory if it doesn't exist
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		log.Warn(b.ctx, "Failed to create log directory:", err)
+		return
+	}
+
+	// Create per-job log file with timestamp first for easy sorting
+	timestamp := time.Now().Format("20060102_150405")
+	jobLogFile := filepath.Join(logDir, fmt.Sprintf("%s-%s-%s.log",
+		timestamp, b.username, b.dataset))
+
+	// Set this as the log file (no truncation needed!)
+	b.logFile = jobLogFile
+	log.SetOutput(jobLogFile)
+
+	// Create or update symlink to latest log for convenience
+	latestLink := filepath.Join(logDir, "latest.log")
+	_ = os.Remove(latestLink)                             // Ignore error if doesn't exist
+	_ = os.Symlink(filepath.Base(jobLogFile), latestLink) // Ignore error on systems without symlink support
 }
 
 func (b *Courier) AddDatabase(conn db.DBAdapter) {
