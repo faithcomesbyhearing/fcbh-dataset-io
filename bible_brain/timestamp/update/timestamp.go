@@ -111,7 +111,7 @@ func (d *UpdateTimestamps) SelectTimestampsFromSQLite(bookId string, chapter int
 			t.VerseEnd.String = db.VerseEnd
 			t.VerseEnd.Valid = true
 		}
-		t.VerseSeq = i + 1
+		t.VerseSeq = i // Fixed: verse_sequence should match verse_start (both start at 0)
 		t.BeginTS = db.BeginTS
 		t.EndTS = db.EndTS
 		t.AudioFile = db.AudioFile
