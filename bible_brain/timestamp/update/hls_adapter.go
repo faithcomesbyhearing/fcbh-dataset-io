@@ -299,7 +299,7 @@ func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
 		}
 	}
 
-	// For SA filesets, copy the stock_no tag from the corresponding DA fileset
+	// For SA filesets, copy metadata from the corresponding DA fileset
 	if isSA {
 		// Convert SA fileset ID to DA fileset ID (replace "SA" with "DA")
 		daFilesetID := strings.TrimSuffix(hlsData.Fileset.ID, "SA") + "DA"
@@ -307,13 +307,19 @@ func (d *DBPAdapter) InsertHLSData(hlsData HLSData) *log.Status {
 		// Get the DA fileset's hash_id
 		daHashID, status := d.SelectHashId(daFilesetID)
 		if status != nil {
-			return log.Error(d.ctx, 500, nil, "Failed to get DA fileset hash_id for stock_no tag copying")
+			return log.Error(d.ctx, 500, nil, "Failed to get DA fileset hash_id for metadata copying")
 		}
 
-		// Copy the stock_no tag
-		err = d.copyStockNoTagTx(tx, hlsData.Fileset.HashID, daHashID)
+		// Copy fileset tags (excluding 'bitrate')
+		err = d.copyFilesetTagsTx(tx, hlsData.Fileset.HashID, daHashID)
 		if err != nil {
-			return log.Error(d.ctx, 500, err, "Failed to copy stock_no tag from DA to SA fileset")
+			return log.Error(d.ctx, 500, err, "Failed to copy fileset tags from DA to SA fileset")
+		}
+
+		// Copy fileset connections
+		err = d.copyFilesetConnectionsTx(tx, hlsData.Fileset.HashID, daHashID)
+		if err != nil {
+			return log.Error(d.ctx, 500, err, "Failed to copy fileset connections from DA to SA fileset")
 		}
 	}
 
@@ -369,13 +375,23 @@ func (d *DBPAdapter) insertHLSFileTx(tx *sql.Tx, file HLSFile, isSA bool) (int64
 	return result.LastInsertId()
 }
 
-// copyStockNoTagTx copies the stock_no tag from DA fileset to SA fileset
-func (d *DBPAdapter) copyStockNoTagTx(tx *sql.Tx, saHashID, daHashID string) error {
-	// Copy the stock_no tag from DA fileset to SA fileset
+// copyFilesetTagsTx copies all tags (except 'bitrate') from DA fileset to SA fileset
+func (d *DBPAdapter) copyFilesetTagsTx(tx *sql.Tx, saHashID, daHashID string) error {
 	query := `INSERT INTO bible_fileset_tags (hash_id, name, description, admin_only, notes, iso, language_id)
 			  SELECT ?, name, description, admin_only, notes, iso, language_id
 			  FROM bible_fileset_tags
-			  WHERE hash_id = ? AND name = 'stock_no'`
+			  WHERE hash_id = ? AND name != 'bitrate'`
+
+	_, err := tx.Exec(query, saHashID, daHashID)
+	return err
+}
+
+// copyFilesetConnectionsTx copies bible_fileset_connections from DA fileset to SA fileset
+func (d *DBPAdapter) copyFilesetConnectionsTx(tx *sql.Tx, saHashID, daHashID string) error {
+	query := `INSERT INTO bible_fileset_connections (hash_id, bible_id)
+			  SELECT ?, bible_id
+			  FROM bible_fileset_connections
+			  WHERE hash_id = ?`
 
 	_, err := tx.Exec(query, saHashID, daHashID)
 	return err
