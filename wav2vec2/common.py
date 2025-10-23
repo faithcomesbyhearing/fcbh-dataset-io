@@ -27,10 +27,10 @@ def compress(tensor):
     return compressed
 
 
-def decompress(blob, dtype, numSamples=1):
+def decompress(blob, dtype, numSamples=0):
     decompressed = blosc.decompress(blob)
     numpy_array = np.frombuffer(decompressed, dtype=dtype).copy()
-    if numSamples != 1:
+    if numSamples != 0:
         if len(numpy_array) % numSamples != 0:
             print("Cannot reshape", len(numpy_array), "element into", numSamples, file=sys.stderr)
         numpy_array = numpy_array.reshape(numSamples, -1)
