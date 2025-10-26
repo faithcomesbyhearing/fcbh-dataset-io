@@ -502,6 +502,6 @@ function parseFolderName(folderName) {
         drama: drama,
         iso: iso,
         bibleId: bibleId,
-        datasetName: `${iso}${bibleId}${drama}DA`
+        datasetName: coreName  // Use folder name as-is (matches Python uploader)
     };
 }
