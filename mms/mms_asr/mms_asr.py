@@ -38,17 +38,10 @@ else:
     device = 'cpu'
 modelId = "facebook/mms-1b-all"
 if adapter:
-    #outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters')
-    #processor = AutoProcessor.from_pretrained(modelId)
-    #model = Wav2Vec2ForCTC.from_pretrained(modelId)
-    #processor.tokenizer.set_target_lang(lang)
-    #model.load_adapter(target_lang=lang, force_load=True, cache_dir=outputDir)
     outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters', lang)
     processorDir = os.path.join(outputDir, f"processor_{lang}")
     processor = AutoProcessor.from_pretrained(processorDir)
     model = Wav2Vec2ForCTC.from_pretrained(modelId)
-    #model.resize_token_embeddings(len(processor.tokenizer))
-    # Resize vocab
     vocabSize = len(processor.tokenizer)
     hiddenSize = model.lm_head.weight.shape[1]
     model.lm_head = torch.nn.Linear(hiddenSize, vocabSize)
@@ -64,7 +57,7 @@ else:
 
 model = model.to(device)
 for line in sys.stdin:
-    torch.cuda.empty_cache() # This will not be OK for concurrent processes
+    torch.cuda.empty_cache()
     audioFile = line.strip()
     fromDict = Dataset.from_dict({"audio": [audioFile]})
     streamData = fromDict.cast_column("audio", Audio(sampling_rate=16000))
