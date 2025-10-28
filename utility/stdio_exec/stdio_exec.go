@@ -8,60 +8,68 @@ import (
 	"io"
 	"os/exec"
 	"strings"
+	"sync"
 )
 
 type StdioExec struct {
-	ctx     context.Context
-	command string
-	args    []string
-	stdin   io.WriteCloser
-	stdout  io.ReadCloser
-	stderr  io.ReadCloser
-	writer  *bufio.Writer
-	reader  *bufio.Reader
+	ctx       context.Context
+	command   string
+	args      []string
+	cmd       *exec.Cmd
+	stdin     io.WriteCloser
+	stdout    io.ReadCloser
+	stderr    io.ReadCloser
+	writer    *bufio.Writer
+	reader    *bufio.Reader
+	stderrWg  sync.WaitGroup
+	pythonErr *log.Status
 }
 
-func NewStdioExec(ctx context.Context, command string, args ...string) (StdioExec, *log.Status) {
+func NewStdioExec(ctx context.Context, command string, args ...string) (*StdioExec, *log.Status) {
 	var stdio StdioExec
 	stdio.ctx = ctx
 	stdio.command = command
 	stdio.args = args
 	var err error
-	cmd := exec.Command(command, args...)
-	stdio.stdin, err = cmd.StdinPipe()
+	stdio.cmd = exec.CommandContext(ctx, command, args...)
+	stdio.stdin, err = stdio.cmd.StdinPipe()
 	if err != nil {
-		return stdio, log.Error(ctx, 500, err, `Unable to open stdin for reading`)
+		return &stdio, log.Error(ctx, 500, err, `Unable to open stdin for reading`)
 	}
-	stdio.stdout, err = cmd.StdoutPipe()
+	stdio.stdout, err = stdio.cmd.StdoutPipe()
 	if err != nil {
-		return stdio, log.Error(ctx, 500, err, `Unable to open stdout for writing`)
+		return &stdio, log.Error(ctx, 500, err, `Unable to open stdout for writing`)
 	}
-	stdio.stderr, err = cmd.StderrPipe()
+	stdio.stderr, err = stdio.cmd.StderrPipe()
 	if err != nil {
-		return stdio, log.Error(ctx, 500, err, `Unable to open stderr for writing`)
+		return &stdio, log.Error(ctx, 500, err, `Unable to open stderr for writing`)
 	}
-	err = cmd.Start()
+	err = stdio.cmd.Start()
 	if err != nil {
-		return stdio, log.Error(ctx, 500, err, `Unable to start writing`)
+		return &stdio, log.Error(ctx, 500, err, `Unable to start writing`)
 	}
-	handleStderr(ctx, stdio.stderr)
+	stdio.handleStderr()
 	stdio.writer = bufio.NewWriterSize(stdio.stdin, 4096)
 	stdio.reader = bufio.NewReaderSize(stdio.stdout, 4096)
-	return stdio, nil
+	return &stdio, nil
 }
 
-func handleStderr(ctx context.Context, stderr io.ReadCloser) {
+func (s *StdioExec) handleStderr() {
+	s.stderrWg.Add(1)
 	go func() {
-		stderrReader := bufio.NewReader(stderr)
-		for {
-			line, err := stderrReader.ReadString('\n')
-			if err != nil {
-				if err != io.EOF {
-					_ = log.Error(ctx, 500, err, "Error reading stderr")
+		defer s.stderrWg.Done()
+		scanner := bufio.NewScanner(s.stderr)
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if len(line) > 0 {
+				status := log.ExecError(s.ctx, 500, line)
+				if status != nil {
+					s.pythonErr = status
 				}
-				return
 			}
-			log.Warn(ctx, "Stderr: ", line)
+		}
+		if err := scanner.Err(); err != nil {
+			_ = log.Error(s.ctx, 500, err, "Error reading stderr")
 		}
 	}()
 }
@@ -108,7 +116,19 @@ func (s *StdioExec) ProcessBytes(input []byte) (string, *log.Status) {
 	return result, nil
 }
 
-func (s *StdioExec) Close() {
-	_ = s.stdin.Close()
-	_ = s.stdout.Close()
+func (s *StdioExec) Close() *log.Status {
+	if s.writer != nil {
+		_ = s.writer.Flush()
+	}
+	if s.stdin != nil {
+		_ = s.stdin.Close()
+	}
+	s.stderrWg.Wait()
+	if s.cmd != nil && s.cmd.Process != nil {
+		err := s.cmd.Wait()
+		if err != nil {
+			return log.Error(s.ctx, 500, err, "Error in final wait")
+		}
+	}
+	return s.pythonErr
 }

@@ -9,11 +9,15 @@ import psutil #probably not used
 #from safetensors.torch import load_file as safe_load_file
 from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
 from safetensors.torch import load_file
+sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GOPROJ'], 'logger')))
+from error_handler import setup_error_handler
 
 
 ## Documentation used to write this program
 ## https://huggingface.co/docs/transformers/main/en/model_doc/mms
 ## This program is NOT reentrant because of torch.cuda.empty_cache()
+
+setup_error_handler()
 
 def isSupportedLanguage(modelId:str, lang:str):
     processor = AutoProcessor.from_pretrained(modelId)

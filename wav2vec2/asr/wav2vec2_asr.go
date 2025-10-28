@@ -20,8 +20,8 @@ type Wav2Vec2ASR struct {
 	lang    string
 	sttLang string
 	adapter bool
-	asrPy   stdio_exec.StdioExec
-	uroman  stdio_exec.StdioExec
+	asrPy   *stdio_exec.StdioExec
+	uroman  *stdio_exec.StdioExec
 }
 
 func NewWav2Vec2ASR(ctx context.Context, conn db.DBAdapter, lang string, sttLang string) Wav2Vec2ASR {
@@ -34,8 +34,7 @@ func NewWav2Vec2ASR(ctx context.Context, conn db.DBAdapter, lang string, sttLang
 }
 
 // ProcessFiles will perform Auto Speech Recognition on these files
-func (a *Wav2Vec2ASR) ProcessFiles(files []input.InputFile) *log.Status {
-	var status *log.Status
+func (a *Wav2Vec2ASR) ProcessFiles(files []input.InputFile) (status *log.Status) {
 	tempDir, err := os.MkdirTemp(os.Getenv(`FCBH_DATASET_TMP`), "wav2vec2_asr_")
 	if err != nil {
 		return log.Error(a.ctx, 500, err, `Error creating temp dir`)
@@ -54,12 +53,16 @@ func (a *Wav2Vec2ASR) ProcessFiles(files []input.InputFile) *log.Status {
 	if status != nil {
 		return status
 	}
-	defer a.asrPy.Close()
+	defer func() {
+		status = a.asrPy.Close()
+	}()
 	a.uroman, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_FA_PYTHON`), uroman.ScriptPath(), "-l", a.lang)
 	if status != nil {
 		return status
 	}
-	defer a.uroman.Close()
+	defer func() {
+		status = a.uroman.Close()
+	}()
 	project := a.conn.Project
 	if strings.HasSuffix(project, "_audio") {
 		project = project[:len(project)-len("_audio")]

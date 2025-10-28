@@ -20,8 +20,8 @@ type MMSASR struct {
 	lang     string
 	sttLang  string
 	adapter  bool
-	mmsAsrPy stdio_exec.StdioExec
-	uroman   stdio_exec.StdioExec
+	mmsAsrPy *stdio_exec.StdioExec
+	uroman   *stdio_exec.StdioExec
 }
 
 func NewMMSASR(ctx context.Context, conn db.DBAdapter, lang string, sttLang string, adapter bool) MMSASR {
@@ -35,8 +35,7 @@ func NewMMSASR(ctx context.Context, conn db.DBAdapter, lang string, sttLang stri
 }
 
 // ProcessFiles will perform Auto Speech Recognition on these files
-func (a *MMSASR) ProcessFiles(files []input.InputFile) *log.Status {
-	var status *log.Status
+func (a *MMSASR) ProcessFiles(files []input.InputFile) (status *log.Status) {
 	tempDir, err := os.MkdirTemp(os.Getenv(`FCBH_DATASET_TMP`), "mms_asr_")
 	if err != nil {
 		return log.Error(a.ctx, 500, err, `Error creating temp dir`)
@@ -65,12 +64,16 @@ func (a *MMSASR) ProcessFiles(files []input.InputFile) *log.Status {
 	if status != nil {
 		return status
 	}
-	defer a.mmsAsrPy.Close()
+	defer func() {
+		status = a.mmsAsrPy.Close()
+	}()
 	a.uroman, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_FA_PYTHON`), uroman.ScriptPath(), "-l", a.lang)
 	if status != nil {
 		return status
 	}
-	defer a.uroman.Close()
+	defer func() {
+		status = a.uroman.Close()
+	}()
 	for _, file := range files {
 		log.Info(a.ctx, "MMS ASR", file.BookId, file.Chapter)
 		status = a.processFile(file, tempDir)

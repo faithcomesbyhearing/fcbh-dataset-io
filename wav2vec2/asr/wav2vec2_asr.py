@@ -10,8 +10,10 @@ from datasets import Dataset, Audio
 from transformers import Wav2Vec2ForCTC
 from transformers import Wav2Vec2Processor
 from transformers import AutoProcessor
+sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GOPROJ'], 'logger')))
+from error_handler import setup_error_handler
 
-
+setup_error_handler()
 if len(sys.argv) < 2:
     print("Usage: python -u wav2vec2_asr.py  {iso639-3}", file=sys.stderr)
     sys.exit(1)

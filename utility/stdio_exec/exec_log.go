@@ -19,7 +19,7 @@ func RunScriptWithLogging(ctx context.Context, python string, args ...string) *l
 	var newArgs []string
 	newArgs = append(newArgs, "-u")
 	newArgs = append(newArgs, args...)
-	cmd := exec.Command(python, newArgs...)
+	cmd := exec.CommandContext(ctx, python, newArgs...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return log.Error(ctx, 500, err, `Unable to open stdout for writing`, cmd.String())
@@ -56,6 +56,10 @@ func RunScriptWithLogging(ctx context.Context, python string, args ...string) *l
 					pythonErr = status
 				}
 			}
+		}
+		err = scanner.Err()
+		if err != nil {
+			_ = log.Error(ctx, 500, err, "Error reading stderr")
 		}
 	}()
 	wg.Wait() // Wait for goroutines to finish reading any remaining output

@@ -41,8 +41,8 @@ type MMSAlign struct {
 	lang     string
 	sttLang  string
 	tempDir  string
-	uroman   stdio_exec.StdioExec
-	mmsAlign stdio_exec.StdioExec
+	uroman   *stdio_exec.StdioExec
+	mmsAlign *stdio_exec.StdioExec
 }
 
 func NewMMSAlign(ctx context.Context, conn db.DBAdapter, lang string, sttLang string) MMSAlign {
@@ -55,8 +55,7 @@ func NewMMSAlign(ctx context.Context, conn db.DBAdapter, lang string, sttLang st
 }
 
 // ProcessFiles will perform Forced Alignment on these files
-func (m *MMSAlign) ProcessFiles(files []input.InputFile) *log.Status {
-	var status *log.Status
+func (m *MMSAlign) ProcessFiles(files []input.InputFile) (status *log.Status) {
 	var err error
 	m.tempDir, err = os.MkdirTemp(os.Getenv(`FCBH_DATASET_TMP`), "mms_fa_")
 	if err != nil {
@@ -67,13 +66,17 @@ func (m *MMSAlign) ProcessFiles(files []input.InputFile) *log.Status {
 	if status != nil {
 		return status
 	}
-	defer m.uroman.Close()
+	defer func() {
+		status = m.uroman.Close()
+	}()
 	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/mms_align/mms_align.py")
 	m.mmsAlign, status = stdio_exec.NewStdioExec(m.ctx, os.Getenv(`FCBH_MMS_FA_PYTHON`), pythonScript)
 	if status != nil {
 		return status
 	}
-	defer m.mmsAlign.Close()
+	defer func() {
+		status = m.mmsAlign.Close()
+	}()
 	for _, file := range files {
 		log.Info(m.ctx, "MMS Align", file.BookId, file.Chapter)
 		status = m.processFile(file)
