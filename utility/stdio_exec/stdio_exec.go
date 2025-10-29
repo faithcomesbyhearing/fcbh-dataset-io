@@ -68,7 +68,8 @@ func (s *StdioExec) handleStderr() {
 				}
 			}
 		}
-		if err := scanner.Err(); err != nil {
+		err := scanner.Err()
+		if err != nil {
 			_ = log.Error(s.ctx, 500, err, "Error reading stderr")
 		}
 	}()
@@ -127,7 +128,8 @@ func (s *StdioExec) Close() *log.Status {
 	if s.cmd != nil && s.cmd.Process != nil {
 		err := s.cmd.Wait()
 		if err != nil {
-			return log.Error(s.ctx, 500, err, "Error in final wait")
+			// Do not return error so that s.pythonErr is reported
+			_ = log.Error(s.ctx, 500, err, `Module failed`, s.cmd.String())
 		}
 	}
 	return s.pythonErr
