@@ -75,7 +75,6 @@ func (a *MMSASR) ProcessFiles(files []input.InputFile) (status *log.Status) {
 		status = a.uroman.Close()
 	}()
 	for _, file := range files {
-		log.Info(a.ctx, "MMS ASR", file.BookId, file.Chapter)
 		status = a.processFile(file, tempDir)
 		if status != nil {
 			return status
@@ -98,9 +97,14 @@ func (a *MMSASR) processFile(file input.InputFile, tempDir string) *log.Status {
 		if status != nil {
 			return status
 		}
+		if audioFile.ScriptEndTS == 0.0 {
+			return nil
+		}
+		log.Info(a.ctx, "MMS ASR", audioFile.BookId, audioFile.ChapterNum, file.ScriptLine)
 		audioFile.AudioVerseWav = wavFile
 		audioFiles = append(audioFiles, audioFile)
 	} else {
+		log.Info(a.ctx, "MMS ASR", file.BookId, file.Chapter)
 		audioFiles, status = a.conn.SelectFAScriptTimestamps(file.BookId, file.Chapter)
 		if status != nil {
 			return status
@@ -110,11 +114,12 @@ func (a *MMSASR) processFile(file input.InputFile, tempDir string) *log.Status {
 	for i, ts := range audioFiles {
 		audioFiles[i].AudioFile = file.Filename
 		audioFiles[i].AudioChapterWav = wavFile
+		fmt.Println(ts.BookId, ts.ChapterNum, ts.VerseStr, "sid:", ts.ScriptId)
 		response, status1 := a.mmsAsrPy.Process(ts.AudioVerseWav)
 		if status1 != nil {
 			return status1
 		}
-		fmt.Println(ts.BookId, ts.ChapterNum, ts.VerseStr, ts.ScriptId, response)
+		fmt.Println("response:", response)
 		audioFiles[i].Text = response
 		uRoman, status2 := a.uroman.Process(response)
 		if status2 != nil {
@@ -126,16 +131,16 @@ func (a *MMSASR) processFile(file input.InputFile, tempDir string) *log.Status {
 	var recCount int
 	recCount, status = a.conn.UpdateScriptText(audioFiles)
 	if recCount != len(audioFiles) {
-		log.Warn(a.ctx, "Timestamp update counts need investigation", recCount, len(audioFiles))
+		log.Warn(a.ctx, "Timestamp update counts needs investigation", recCount, len(audioFiles))
 	}
 	return status
 }
 
 func (a *MMSASR) selectScriptLine(scriptLine string) (db.Audio, *log.Status) {
 	var rec db.Audio
-	var query = `SELECT script_id, book_id, chapter_num, audio_file FROM scripts WHERE script_num = ?`
+	var query = `SELECT script_id, book_id, chapter_num, audio_file, script_begin_ts, script_end_ts FROM scripts WHERE script_num = ?`
 	row := a.conn.DB.QueryRow(query, scriptLine)
-	err := row.Scan(&rec.ScriptId, &rec.BookId, &rec.ChapterNum, &rec.AudioFile)
+	err := row.Scan(&rec.ScriptId, &rec.BookId, &rec.ChapterNum, &rec.AudioFile, &rec.ScriptBeginTS, &rec.ScriptEndTS)
 	if err != nil {
 		return rec, log.Error(a.ctx, 500, err, "Error during SelectScriptLine.")
 	}
