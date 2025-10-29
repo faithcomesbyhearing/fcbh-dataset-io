@@ -27,6 +27,19 @@ def isSupportedLanguage(modelId:str, lang:str):
             return True
     return False
 
+def ensureMinimumTensorSize(batch, minTensorLength, padValue):
+    tensor = batch.input_values
+    batch_size = tensor.shape[0]
+    originalLen = tensor.shape[-1]
+    if originalLen < minTensorLength:
+        paddingNeeded = minTensorLength - originalLen
+        tensor = torch.nn.functional.pad(tensor, (0, paddingNeeded), mode='constant', value=padValue)
+        batch['input_values'] = tensor
+        mask = torch.zeros((batch_size, minTensorLength), dtype=torch.long)
+        mask[:, :originalLen] = 1
+        batch['attention_mask'] = mask
+    return batch
+
 if len(sys.argv) < 2:
     print("Usage: mms_asr.py  {iso639-3}  adapter(optional)", file=sys.stderr)
     sys.exit(1)
@@ -64,6 +77,7 @@ for line in sys.stdin:
     sample = next(iter(streamData))["audio"]["array"]
 
     inputs = processor(sample, sampling_rate=16_000, return_tensors="pt")
+    inputs = ensureMinimumTensorSize(inputs, 3200, 0)
     inputs = {name: tensor.to(device) for name, tensor in inputs.items()}
     with torch.no_grad():
         outputs = model(**inputs).logits
