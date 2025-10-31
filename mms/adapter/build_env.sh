@@ -22,3 +22,6 @@ pip install evaluate
 #pip install unicodedata
 #pip install accelerate
 
+## Required environment variable in .bash_profile
+## export FCBH_MMS_ADAPTER_PYTHON=$PY_ENV/mms_adapter/bin/python
+

@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
@@ -49,7 +51,11 @@ func NewCourier(ctx context.Context, yaml []byte) Courier {
 func (b *Courier) AddLogFile(logPath string) {
 	b.logFile = logPath
 	if !b.IsUnitTest {
-		_ = os.Truncate(b.logFile, 0)
+		//_ = os.Truncate(b.logFile, 0)
+		err := os.Rename(logPath, "prior_"+logPath)
+		if err != nil {
+			log.Warn(b.ctx, "Log file rename failed", err)
+		}
 	}
 }
 
@@ -117,8 +123,10 @@ func (b *Courier) PersistToBucket() *log.Status {
 			allStatus = append(allStatus, status2)
 			b.outputKeys = append(b.outputKeys, outputKey)
 		}
+
 		loc, _ := time.LoadLocation("America/Denver")
-		_, status = b.uploadString(client, run, "runtime", b.start.In(loc).Format(`Mon Jan 2 2006 03:04:05 pm MST`), "")
+		info := b.ServerInfo(cfg)
+		_, status = b.uploadString(client, run, "runtime", b.start.In(loc).Format(`Mon Jan 2 2006 03:04:05 pm MST`), info)
 		allStatus = append(allStatus, status)
 		_, status = b.uploadString(client, run, "duration", time.Since(b.start).String(), "")
 		allStatus = append(allStatus, status)
@@ -216,4 +224,36 @@ func (b *Courier) createKey(run int, typ string, filename string) string {
 	runStr := fmt.Sprintf("%05d", run)
 	filename = filepath.Base(filename)
 	return b.username + "/" + b.dataset + "/" + runStr + "/" + typ + "/" + filename
+}
+
+func (b *Courier) ServerInfo(cfg aws.Config) string {
+	var results []string
+	paths := []string{
+		"instance-id",
+		"hostname",
+		"ami-id",
+		"instance-type",
+		"placement/availability-zone",
+		"placement/region",
+		"local-ipv4",
+		"public-ipv4",
+	}
+	client := imds.NewFromConfig(cfg)
+	for _, path := range paths {
+		result, err := client.GetMetadata(b.ctx, &imds.GetMetadataInput{
+			Path: path,
+		})
+		if err != nil {
+			if path == "instance-id" {
+				return ""
+			}
+			log.Info(b.ctx, "Could not get %s: %v", path, err)
+			continue
+		}
+		defer result.Content.Close()
+
+		var value string
+		results = append(results, path+": "+value)
+	}
+	return strings.Join(results, "\n")
 }

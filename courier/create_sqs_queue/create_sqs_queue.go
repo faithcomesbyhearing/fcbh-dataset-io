@@ -9,8 +9,6 @@ import (
 	"log"
 )
 
-// This is not used delete if SQS is deployed
-
 const SQSQueueName = "vessel_AP"
 
 func main() {

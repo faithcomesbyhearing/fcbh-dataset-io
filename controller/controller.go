@@ -102,6 +102,7 @@ func (c *Controller) processSteps() *log.Status {
 	if status != nil {
 		return status
 	}
+	courier.LongRunNotify(c.ctx, c.req)
 	c.ctx = context.WithValue(c.ctx, `request`, string(c.yamlRequest))
 	// Open Database
 	if c.req.Database.AWSS3 != "" {
