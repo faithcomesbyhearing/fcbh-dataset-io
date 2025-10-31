@@ -51,10 +51,21 @@ func NewCourier(ctx context.Context, yaml []byte) Courier {
 func (b *Courier) AddLogFile(logPath string) {
 	b.logFile = logPath
 	if !b.IsUnitTest {
-		//_ = os.Truncate(b.logFile, 0)
-		err := os.Rename(logPath, "prior_"+logPath)
+		content, err := os.ReadFile(logPath)
+		if err != nil && !os.IsNotExist(err) {
+			log.Warn(b.ctx, "Failed to read log file", err)
+			return
+		}
+		if len(content) > 0 {
+			err = os.WriteFile("prior_"+logPath, content, 0644)
+			if err != nil {
+				log.Warn(b.ctx, "Failed to write prior log", err)
+				return
+			}
+		}
+		err = os.Truncate(logPath, 0)
 		if err != nil {
-			log.Warn(b.ctx, "Log file rename failed", err)
+			log.Warn(b.ctx, "Failed to truncate log file", err)
 		}
 	}
 }
