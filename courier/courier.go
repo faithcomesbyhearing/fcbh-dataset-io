@@ -51,19 +51,19 @@ func NewCourier(ctx context.Context, yaml []byte) Courier {
 func (b *Courier) AddLogFile(logPath string) {
 	b.logFile = logPath
 	if !b.IsUnitTest {
-		content, err := os.ReadFile(logPath)
-		if err != nil && !os.IsNotExist(err) {
-			log.Warn(b.ctx, "Failed to read log file", err)
-			return
-		}
-		if len(content) > 0 {
-			err = os.WriteFile("prior_"+logPath, content, 0644)
-			if err != nil {
-				log.Warn(b.ctx, "Failed to write prior log", err)
-				return
-			}
-		}
-		err = os.Truncate(logPath, 0)
+		//content, err := os.ReadFile(logPath)
+		//if err != nil && !os.IsNotExist(err) {
+		//	log.Warn(b.ctx, "Failed to read log file", err)
+		//	return
+		//}
+		//if len(content) > 0 {
+		//	err = os.WriteFile("prior_"+logPath, content, 0644)
+		//	if err != nil {
+		//		log.Warn(b.ctx, "Failed to write prior log", err)
+		//		return
+		//	}
+		//}
+		err := os.Truncate(logPath, 0)
 		if err != nil {
 			log.Warn(b.ctx, "Failed to truncate log file", err)
 		}
@@ -264,6 +264,7 @@ func (b *Courier) ServerInfo(cfg aws.Config) string {
 		defer result.Content.Close()
 
 		var value string
+		_, _ = fmt.Fscanf(result.Content, "%s", &value)
 		results = append(results, path+": "+value)
 	}
 	return strings.Join(results, "\n")
