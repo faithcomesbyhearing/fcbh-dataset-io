@@ -23,6 +23,17 @@ notify_err: [gary@shortsands.com, sqs/vessel]
 	if status != nil {
 		t.Fatal(status)
 	}
-	LongRunNotify(ctx, request)
+	// Below this belongs in controller to be in production
+	notify := NewLongRunNotify(ctx, request)
+	done := make(chan struct{})
+	go func() {
+		select {
+		case <-time.After(notify.Threshold):
+			notify.SendEmail()
+		case <-done:
+			// Job completed before threshold - monitoring done
+		}
+	}()
+	// This above belongs in controller to be in production
 	time.Sleep(1 * time.Minute)
 }

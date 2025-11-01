@@ -51,18 +51,6 @@ func NewCourier(ctx context.Context, yaml []byte) Courier {
 func (b *Courier) AddLogFile(logPath string) {
 	b.logFile = logPath
 	if !b.IsUnitTest {
-		//content, err := os.ReadFile(logPath)
-		//if err != nil && !os.IsNotExist(err) {
-		//	log.Warn(b.ctx, "Failed to read log file", err)
-		//	return
-		//}
-		//if len(content) > 0 {
-		//	err = os.WriteFile("prior_"+logPath, content, 0644)
-		//	if err != nil {
-		//		log.Warn(b.ctx, "Failed to write prior log", err)
-		//		return
-		//	}
-		//}
 		err := os.Truncate(logPath, 0)
 		if err != nil {
 			log.Warn(b.ctx, "Failed to truncate log file", err)
@@ -258,7 +246,7 @@ func (b *Courier) ServerInfo(cfg aws.Config) string {
 			if path == "instance-id" {
 				return ""
 			}
-			log.Info(b.ctx, "Could not get %s: %v", path, err)
+			log.Info(b.ctx, "Could not get", path, err.Error())
 			continue
 		}
 		defer result.Content.Close()
