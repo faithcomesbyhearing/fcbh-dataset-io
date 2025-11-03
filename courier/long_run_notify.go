@@ -31,7 +31,7 @@ func NewLongRunNotify(ctx context.Context, request request.Request) LongRunNotif
 		estimateMin += 20.0
 	}
 	if l.isVesselJob(request.NotifyOk) {
-		estimateMin *= 0.1
+		estimateMin *= 0.3
 	} else {
 		estimateMin *= 2.0
 	}
