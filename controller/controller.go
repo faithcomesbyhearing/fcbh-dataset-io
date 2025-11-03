@@ -107,11 +107,12 @@ func (c *Controller) processSteps() *log.Status {
 	go func() {
 		select {
 		case <-time.After(notify.Threshold):
-			//notify.SendEmail() // Sends email if job exceeds threshold
+			notify.SendEmail() // Sends email if job exceeds threshold
 		case <-done:
 			// Job completed before threshold - monitoring done
 		}
 	}()
+	defer close(done)
 	c.ctx = context.WithValue(c.ctx, `request`, string(c.yamlRequest))
 	// Open Database
 	if c.req.Database.AWSS3 != "" {
