@@ -42,9 +42,14 @@ func NewForcedAlign(ctx context.Context, conn db.DBAdapter, lang string, sttLang
 
 // ProcessFiles will perform Forced Alignment on these files
 func (f *ForcedAlign) ProcessFiles(files []input.InputFile) *log.Status {
-	lang, status := CheckLanguage(f.ctx, f.lang, f.sttLang, "mms_asr") // is this correct for mms_fa
-	if status != nil {
-		return status
+	//lang, status := CheckLanguage(f.ctx, f.lang, f.sttLang, "mms_asr") // is this correct for mms_fa
+	//if status != nil {
+	//	return status
+	//}
+	var status *log.Status
+	lang := f.lang
+	if f.sttLang != "" {
+		lang = f.sttLang
 	}
 	for _, file := range files {
 		log.Info(f.ctx, "Word FA", file.BookId, file.Chapter)
