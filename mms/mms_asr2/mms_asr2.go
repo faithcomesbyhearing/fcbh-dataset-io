@@ -12,6 +12,7 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 type MMSASR2 struct {
@@ -55,7 +56,7 @@ func (a *MMSASR2) ProcessFiles(files []input.InputFile) (status *log.Status) {
 	if status != nil {
 		return status
 	}
-	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/mms_asr2/mms_asr.py")
+	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/mms_asr2/mms_asr2.py")
 	var useAdapter string
 	if a.adapter {
 		useAdapter = "adapter"
@@ -86,53 +87,34 @@ func (a *MMSASR2) ProcessFiles(files []input.InputFile) (status *log.Status) {
 // processFile
 func (a *MMSASR2) processFile(file input.InputFile, tempDir string) *log.Status {
 	var status *log.Status
+	fmt.Println("Process", file.FilePath())
 	wavFile, status := ffmpeg.ConvertMp3ToWav(a.ctx, tempDir, file.FilePath())
 	if status != nil {
 		return status
 	}
-	//var audioFiles []db.Audio
-	//if file.ScriptLine != "" {
-	//	var audioFile db.Audio
-	//	audioFile, status = a.selectScriptLine(file.ScriptLine)
-	//	if status != nil {
-	//		return status
-	//	}
-	//	if audioFile.ScriptEndTS == 0.0 {
-	//		return nil
-	//	}
-	//	log.Info(a.ctx, "MMS ASR", audioFile.BookId, audioFile.ChapterNum, file.ScriptLine)
-	//	audioFile.AudioVerseWav = wavFile
-	//	audioFiles = append(audioFiles, audioFile)
-	//} else {
-	//	log.Info(a.ctx, "MMS ASR", file.BookId, file.Chapter)
-	//	audioFiles, status = a.conn.SelectFAScriptTimestamps(file.BookId, file.Chapter)
-	//	if status != nil {
-	//		return status
-	//	}
-	//	audioFiles, status = ffmpeg.ChopByTimestamp(a.ctx, tempDir, wavFile, audioFiles)
-	//}
-	//for i, ts := range audioFiles {
 	var audioFile db.Audio
 	audioFile.AudioFile = file.Filename
 	audioFile.AudioChapterWav = wavFile
-	//fmt.Println(ts.BookId, ts.ChapterNum, ts.VerseStr, "sid:", ts.ScriptId)
 	response, status1 := a.mmsAsrPy.Process(wavFile)
 	if status1 != nil {
 		return status1
 	}
 	fmt.Println("response:", response)
+	err := os.WriteFile(file.MediaId+"_"+file.BookId+strconv.Itoa(file.Chapter), []byte(response), 0644)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	audioFile.Text = response
 	uRoman, status2 := a.uroman.Process(response)
 	if status2 != nil {
 		return status2
 	}
 	audioFile.Uroman = uRoman
-	//log.Debug(a.ctx, "Finished ASR", file.BookId, file.Chapter)
 	var recCount int
-	var audioFiles = []db.Audio{audioFile}
-	recCount, status = a.conn.UpdateScriptText(audioFiles)
-	if recCount != len(audioFiles) {
-		log.Warn(a.ctx, "Timestamp update counts needs investigation", recCount, len(audioFiles))
+	recCount, status = a.conn.UpdateScriptText([]db.Audio{audioFile})
+	if recCount != 1 {
+		log.Warn(a.ctx, "ASR update counts needs investigation", recCount, 1)
 	}
 	return status
 }

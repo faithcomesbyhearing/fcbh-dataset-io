@@ -2,29 +2,31 @@ package mms_asr
 
 import (
 	"context"
+	"fmt"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"os"
+	"path"
 	"testing"
 )
 
-func TestMMSASR_ProcessFiles(t *testing.T) {
+func TestMMSASR2_ProcessFiles(t *testing.T) {
 	ctx := context.Background()
+	log.SetOutput("stderr")
 	//conn := db.NewDBAdapter(ctx, ":memory:")
 	user := request.GetTestUser()
-	conn, status := db.NewerDBAdapter(ctx, false, user, "PlainTextEditScript_ENGWEB")
-	asr := NewMMSASR2(ctx, conn, "eng", "", false)
+	conn, status := db.NewerDBAdapter(ctx, true, user, "N2MZJSIM")
+	asr := NewMMSASR2(ctx, conn, "mzj", "", false)
 	var files []input.InputFile
 	var file input.InputFile
-	file.BookId = "MRK"
-	file.Chapter = 1
-	file.MediaId = "ENGWEBN2DA"
-	file.Directory = os.Getenv("FCBH_DATASET_FILES") + "/ENGWEB/ENGWEBN2DA-mp3-64/"
-	file.Filename = "B02___01_Mark________ENGWEBN2DA.mp3"
-	//file.MediaId = "ENGESVN1DA"
-	//file.Directory = os.Getenv("FCBH_DATASET_FILES") + "/ENGESV/ENGESVN1DA/"
-	//file.Filename = "B02___01_Mark________ENGESVN1DA.mp3"
+	file.BookId = "MAT"
+	file.Chapter = 12
+	file.MediaId = "N2MZJSIM"
+	file.Directory = path.Join(os.Getenv("FCBH_DATASET_FILES"), "N2MZJSIM", "N2MZJSIM Chapter VOX")
+	file.Filename = "N2_MZJ_SIM_012_MAT_012_VOX.mp3"
+	fmt.Println("audio file: ", file.FilePath())
 	files = append(files, file)
 	status = asr.ProcessFiles(files)
 	if status != nil {
