@@ -441,14 +441,18 @@ func (d *DBAdapter) insertMFCCS(query string, mfccs []MFCC) *log.Status {
 func (d *DBAdapter) CheckScriptInserts(records []Script) *log.Status {
 	var duplicates []string
 	var keyMap = make(map[generic.VerseRef]bool)
-	for _, rec := range records {
+	for i, rec := range records {
 		var key generic.VerseRef
 		key.BookId = rec.BookId
 		key.ChapterNum = rec.ChapterNum
 		key.VerseStr = rec.VerseStr
 		_, found := keyMap[key]
 		if found {
-			duplicates = append(duplicates, key.UniqueKey())
+			if rec.VerseStr == "0" {
+				records[i].VerseStr = "0s"
+			} else {
+				duplicates = append(duplicates, key.UniqueKey())
+			}
 		}
 		keyMap[key] = true
 	}
