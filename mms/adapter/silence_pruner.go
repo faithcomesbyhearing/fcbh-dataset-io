@@ -23,13 +23,37 @@ type SilenceRec struct {
 	Silence     float64
 }
 
-func SilencePruner(ctx context.Context, threshold int, conn db.DBAdapter) []int64 {
-	silences := findSilence(ctx, threshold, conn)
-	var scriptIds []int64
-	for _, s := range silences {
-		scriptIds = append(scriptIds, s.ScriptId)
+func SilencePruner(ctx context.Context, threshold int, conn db.DBAdapter) *log.Status {
+	_, err := conn.DB.Exec("DROP TABLE IF EXISTS pruned_silence")
+	if err != nil {
+		return log.Error(ctx, 500, err, "Error while dropping pruned silence.")
 	}
-	return scriptIds
+	_, err = conn.DB.Exec("CREATE TABLE pruned_silence (script_id INTEGER NOT NULL)")
+	if err != nil {
+		return log.Error(ctx, 500, err, "Error while creating pruned silence.")
+	}
+	silences := findSilence(ctx, threshold, conn)
+	query := `INSERT INTO pruned_silence(script_id) VALUES (?)`
+	tx, err := conn.DB.Begin()
+	if err != nil {
+		return log.Error(ctx, 500, err, query)
+	}
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		log.Fatal(ctx, err, query)
+	}
+	defer stmt.Close()
+	for _, s := range silences {
+		_, err2 := stmt.Exec(s.ScriptId)
+		if err2 != nil {
+			return log.Error(ctx, 500, err, query)
+		}
+	}
+	err = tx.Commit()
+	if err != nil {
+		return log.Error(ctx, 500, err, query)
+	}
+	return nil
 }
 
 func findSilence(ctx context.Context, threshold int, conn db.DBAdapter) []SilenceRec {

@@ -60,16 +60,15 @@ func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
 			return status
 		}
 	}
+	status := SilencePruner(t.ctx, 400, t.conn)
+	if status != nil {
+		return status
+	}
 	pythonPath := os.Getenv(`FCBH_MMS_ADAPTER_PYTHON`)
 	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/adapter/trainer.py")
-	//replacer := strings.NewReplacer(` `, `\ `,
-	//	`(`, `\(`,
-	//	`)`, `\)`,
-	//)
-	status := stdio_exec.RunScriptWithLogging(t.ctx, pythonPath, pythonScript,
+	status = stdio_exec.RunScriptWithLogging(t.ctx, pythonPath, pythonScript,
 		t.langISO,
 		t.conn.DatabasePath,
-		//replacer.Replace(tempDir),
 		`'`+tempDir+`'`,
 		strconv.Itoa(t.args.BatchMB),
 		strconv.Itoa(t.args.NumEpochs),

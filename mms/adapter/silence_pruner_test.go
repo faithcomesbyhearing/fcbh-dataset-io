@@ -19,13 +19,44 @@ func TestSilencePruner(t *testing.T) {
 	if status != nil {
 		t.Fatal(status)
 	}
-	silences := findSilence(ctx, 300, conn)
+	threshold := 400
+	status = SilencePruner(ctx, threshold, conn)
+	if status != nil {
+		t.Fatal(status)
+	}
+	rows, err := conn.DB.Query("SELECT script_id FROM pruned_silence")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var count int
+	var scriptId int64
+	for rows.Next() {
+		rows.Scan(&scriptId)
+		//fmt.Println(scriptId)
+		count++
+	}
+	err = rows.Err()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != threshold {
+		t.Error("Count should be ", threshold)
+	}
+}
+
+func TestFindSilence(t *testing.T) {
+	ctx := context.Background()
+	log.SetOutput("stderr")
+	user := request.GetTestUser()
+	conn, status := db.NewerDBAdapter(ctx, false, user, "N2MZJSIM")
+	if status != nil {
+		t.Fatal(status)
+	}
+	silences := findSilence(ctx, 400, conn)
 	sort.Slice(silences, func(i, j int) bool {
 		return silences[i].WordId < silences[j].WordId
 	})
-	//for _, s := range silences {
-	//	fmt.Println(s.Ref(), s.ScriptId, s.WordId, s.Silence)
-	//}
 	numMissing := findMissingVerses(silences)
 	fmt.Println("numMissing", numMissing)
 	//dumpTimestamps(silences)
