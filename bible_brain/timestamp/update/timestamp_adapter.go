@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
@@ -133,6 +135,152 @@ func (d *DBPAdapter) SelectTimestamps(fileId int64) ([]Timestamp, *log.Status) {
 		log.Warn(d.ctx, err, query)
 	}
 	return result, nil
+}
+
+// GetFilesetDurations returns a map[book][chapter]durationSeconds derived from bible_file_tags
+func (d *DBPAdapter) GetFilesetDurations(filesetID string) (map[string]map[int]float64, *log.Status) {
+	results := make(map[string]map[int]float64)
+
+	hashID, status := d.SelectHashId(filesetID)
+	if status != nil {
+		return nil, status
+	}
+
+	query := `
+		SELECT bf.book_id, bf.chapter_start, bft.value
+		FROM bible_files bf
+		LEFT JOIN bible_file_tags bft ON bf.id = bft.file_id AND bft.tag = 'duration'
+		WHERE bf.hash_id = ?
+	`
+
+	rows, err := d.conn.Query(query, hashID)
+	if err != nil {
+		return nil, log.Error(d.ctx, 500, err, "Failed to query fileset durations")
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			bookID      sql.NullString
+			chapter     sql.NullInt64
+			durationStr sql.NullString
+		)
+
+		if err := rows.Scan(&bookID, &chapter, &durationStr); err != nil {
+			return nil, log.Error(d.ctx, 500, err, "Failed to scan fileset duration row")
+		}
+
+		if !bookID.Valid || !chapter.Valid || !durationStr.Valid {
+			continue
+		}
+
+		value, err := strconv.ParseFloat(strings.TrimSpace(durationStr.String), 64)
+		if err != nil {
+			log.Warn(d.ctx, err, fmt.Sprintf("Invalid duration '%s' for %s %d in %s", durationStr.String, bookID.String, chapter.Int64, filesetID))
+			continue
+		}
+
+		bookMap, ok := results[bookID.String]
+		if !ok {
+			bookMap = make(map[int]float64)
+			results[bookID.String] = bookMap
+		}
+		bookMap[int(chapter.Int64)] = value
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, log.Error(d.ctx, 500, err, "Error iterating fileset durations")
+	}
+
+	// Ensure deterministic ordering by normalizing empty map
+	if len(results) == 0 {
+		return results, nil
+	}
+
+	return results, nil
+}
+
+// GetFilesetTimestamps returns timestamps grouped by book/chapter along with an ordered chapter list
+func (d *DBPAdapter) GetFilesetTimestamps(filesetID string) (map[string]map[int][]Timestamp, []db.Script, *log.Status) {
+	result := make(map[string]map[int][]Timestamp)
+	var chapters []db.Script
+
+	hashID, status := d.SelectHashId(filesetID)
+	if status != nil {
+		return nil, nil, status
+	}
+
+	query := `
+		SELECT DISTINCT book_id, chapter_start
+		FROM bible_files
+		WHERE hash_id = ?
+		  AND book_id <> ''
+		  AND chapter_start IS NOT NULL
+		ORDER BY book_id, chapter_start
+	`
+
+	rows, err := d.conn.Query(query, hashID)
+	if err != nil {
+		return nil, nil, log.Error(d.ctx, 500, err, "Failed to query fileset chapters")
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			bookID  sql.NullString
+			chapter sql.NullInt64
+		)
+
+		if err := rows.Scan(&bookID, &chapter); err != nil {
+			return nil, nil, log.Error(d.ctx, 500, err, "Failed to scan fileset chapter row")
+		}
+
+		if !bookID.Valid || !chapter.Valid {
+			continue
+		}
+
+		chapterNum := int(chapter.Int64)
+		fileID, filename, status := d.SelectFileId(hashID, bookID.String, chapterNum)
+		if status != nil {
+			return nil, nil, status
+		}
+		if fileID <= 0 {
+			continue
+		}
+
+		timestamps, status := d.SelectTimestamps(fileID)
+		if status != nil {
+			return nil, nil, status
+		}
+		if len(timestamps) == 0 {
+			continue
+		}
+
+		for i := range timestamps {
+			timestamps[i].AudioFile = filename
+		}
+
+		bookMap, ok := result[bookID.String]
+		if !ok {
+			bookMap = make(map[int][]Timestamp)
+			result[bookID.String] = bookMap
+		}
+		bookMap[chapterNum] = timestamps
+		chapters = append(chapters, db.Script{BookId: bookID.String, ChapterNum: chapterNum})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, nil, log.Error(d.ctx, 500, err, "Error iterating fileset chapters")
+	}
+
+	sort.Slice(chapters, func(i, j int) bool {
+		if chapters[i].BookId == chapters[j].BookId {
+			return chapters[i].ChapterNum < chapters[j].ChapterNum
+		}
+		return chapters[i].BookId < chapters[j].BookId
+	})
+
+	return result, chapters, nil
 }
 
 func (d *DBPAdapter) InsertTimestamps(bibleFileId int64, timestamps []Timestamp) ([]Timestamp, int, *log.Status) {

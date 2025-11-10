@@ -53,40 +53,53 @@ func (d *UpdateTimestamps) Process() *log.Status {
 
 	// Process timestamps if specified
 	if d.req.UpdateDBP.Timestamps != "" {
-		// Collect all timestamps for all chapters
-		timestampsData := make(map[string]map[int][]Timestamp)
-		for _, ch := range chapters {
-			var timestamps []Timestamp
-			timestamps, status := d.SelectTimestampsFromSQLite(ch.BookId, ch.ChapterNum)
-			if status != nil {
-				return status
-			}
-			if len(timestamps) > 0 {
-				// Round timestamps to 3 decimal places
-				for i := range timestamps {
-					timestamps[i].BeginTS = math.Round(timestamps[i].BeginTS*1000.0) / 1000.0
-					timestamps[i].EndTS = math.Round(timestamps[i].EndTS*1000.0) / 1000.0
-				}
-
-				// Add to map
-				if timestampsData[ch.BookId] == nil {
-					timestampsData[ch.BookId] = make(map[int][]Timestamp)
-				}
-				timestampsData[ch.BookId][ch.ChapterNum] = timestamps
-			}
-		}
-
-		// Process timestamps in a single transaction (removes SA files, removes/inserts DA timestamps, updates tag)
-		status = d.dbpConn.ProcessTimestamps(d.req.UpdateDBP.Timestamps, mmsAlignTimingEstErr, chapters, timestampsData)
+		duplicated, dupChapters, status := d.handleDuplicationIfNeeded(ident)
 		if status != nil {
 			return status
 		}
-		log.Info(d.ctx, "Timestamps updated successfully")
+
+		if duplicated {
+			log.Info(d.ctx, "Timestamp duplication completed; skipping dataset-based processing")
+			if len(dupChapters) > 0 {
+				chapters = dupChapters
+			}
+		} else {
+			// Collect all timestamps for all chapters
+			timestampsData := make(map[string]map[int][]Timestamp)
+			for _, ch := range chapters {
+				var timestamps []Timestamp
+				timestamps, status := d.SelectTimestampsFromSQLite(ch.BookId, ch.ChapterNum)
+				if status != nil {
+					return status
+				}
+				if len(timestamps) > 0 {
+					// Round timestamps to 3 decimal places
+					for i := range timestamps {
+						timestamps[i].BeginTS = math.Round(timestamps[i].BeginTS*1000.0) / 1000.0
+						timestamps[i].EndTS = math.Round(timestamps[i].EndTS*1000.0) / 1000.0
+					}
+
+					// Add to map
+					if timestampsData[ch.BookId] == nil {
+						timestampsData[ch.BookId] = make(map[int][]Timestamp)
+					}
+					timestampsData[ch.BookId][ch.ChapterNum] = timestamps
+				}
+			}
+
+			// Process timestamps in a single transaction (removes SA files, removes/inserts DA timestamps, updates tag).
+			// insertTimestampsTx only inserts rows with TimestampId == 0, which is why the duplication path zeroes ids first.
+			status = d.dbpConn.ProcessTimestamps(d.req.UpdateDBP.Timestamps, mmsAlignTimingEstErr, chapters, timestampsData)
+			if status != nil {
+				return status
+			}
+			log.Info(d.ctx, "Timestamps updated successfully")
+		}
 	}
 
 	// Process HLS if specified
 	if d.req.UpdateDBP.HLS != "" {
-		status = d.ProcessHLS(d.req.UpdateDBP.HLS, d.req.BibleId)
+		status = d.ProcessHLS(d.req.UpdateDBP.HLS, d.req.BibleId, d.req.UpdateDBP.Timestamps, chapters)
 		if status != nil {
 			return status
 		}

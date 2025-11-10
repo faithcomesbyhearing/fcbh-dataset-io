@@ -6,10 +6,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
-func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status {
+func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID, timestampsFilesetID string, chapters []db.Script) *log.Status {
 	// Initialize DBP connection if not already done
 	if d.dbpConn.conn == nil {
 		var status *log.Status
@@ -21,7 +22,6 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status 
 	defer d.dbpConn.Close()
 
 	// Get the timestamps fileset ID from the request
-	timestampsFilesetID := d.req.UpdateDBP.Timestamps
 	if timestampsFilesetID == "" {
 		return log.ErrorNoErr(d.ctx, 400, "Timestamps fileset ID required for HLS processing")
 	}
@@ -29,10 +29,12 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID string) *log.Status 
 	// Create HLS processor
 	processor := NewLocalHLSProcessor(d.ctx, bibleID, timestampsFilesetID)
 
-	// Get chapters from SQLite (only process books that have timestamps in the dataset)
-	chapters, status := d.conn.SelectBookChapter()
-	if status != nil {
-		return status
+	if len(chapters) == 0 {
+		var status *log.Status
+		chapters, status = d.conn.SelectBookChapter()
+		if status != nil {
+			return status
+		}
 	}
 
 	// Get mode_id and license info from the source timestamps fileset

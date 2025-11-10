@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/lang_tree/search"
@@ -107,27 +109,42 @@ func (g *YAMLGenerator) findMatchingLanguages() ([]BibleInfo, error) {
 
 	if g.config.BibleId != "" {
 		// Generate for specific Bible ID
-		query = g.buildSpecificBibleQuery()
-		args = []interface{}{
-			g.config.BibleId,
-			g.getAudioPattern(),
-			g.getTextPattern(),
-		}
-		// Add exclusion pattern if needed
-		if g.getTextExclusionPattern() != "" {
-			args = append(args, g.getTextExclusionPattern())
+		if g.config.Duplicate {
+			query = g.buildDuplicateSpecificBibleQuery()
+			args = []interface{}{
+				g.config.BibleId,
+				g.getAudioPattern(),
+			}
+		} else {
+			query = g.buildSpecificBibleQuery()
+			args = []interface{}{
+				g.config.BibleId,
+				g.getAudioPattern(),
+				g.getTextPattern(),
+			}
+			// Add exclusion pattern if needed
+			if g.getTextExclusionPattern() != "" {
+				args = append(args, g.getTextExclusionPattern())
+			}
 		}
 		args = append(args, g.getSAPattern())
 	} else {
 		// Generate for all matching languages
-		query = g.buildDiscoveryQuery()
-		args = []interface{}{
-			g.getAudioPattern(),
-			g.getTextPattern(),
-		}
-		// Add exclusion pattern if needed
-		if g.getTextExclusionPattern() != "" {
-			args = append(args, g.getTextExclusionPattern())
+		if g.config.Duplicate {
+			query = g.buildDuplicateDiscoveryQuery()
+			args = []interface{}{
+				g.getAudioPattern(),
+			}
+		} else {
+			query = g.buildDiscoveryQuery()
+			args = []interface{}{
+				g.getAudioPattern(),
+				g.getTextPattern(),
+			}
+			// Add exclusion pattern if needed
+			if g.getTextExclusionPattern() != "" {
+				args = append(args, g.getTextExclusionPattern())
+			}
 		}
 		args = append(args, g.getSAPattern())
 	}
@@ -146,8 +163,8 @@ func (g *YAMLGenerator) findMatchingLanguages() ([]BibleInfo, error) {
 			return nil, fmt.Errorf("failed to scan row: %v", err)
 		}
 
-		// Check MMS support using language tree
-		if !g.isMMSSupported(bible.LanguageISO) {
+		// Check MMS support using language tree (skip in duplicate mode)
+		if !g.config.Duplicate && !g.isMMSSupported(bible.LanguageISO) {
 			if g.config.Verbose {
 				fmt.Printf("Skipping %s: language %s not supported by MMS\n", bible.BibleId, bible.LanguageISO)
 			}
@@ -217,6 +234,34 @@ func (g *YAMLGenerator) buildDiscoveryQuery() string {
 	return query
 }
 
+func (g *YAMLGenerator) buildDuplicateDiscoveryQuery() string {
+	query := `
+		SELECT 
+			b.id as bible_id, 
+			l.iso as language_iso,
+			fs.id as fileset_id,
+			fs.id as audio_fileset,
+			'' as text_fileset
+		FROM bibles b
+		JOIN languages l ON b.language_id = l.id
+		JOIN bible_fileset_connections bfc ON b.id = bfc.bible_id
+		JOIN bible_filesets fs ON bfc.hash_id = fs.hash_id
+		WHERE fs.id LIKE ? 
+		AND fs.content_loaded = 1`
+
+	query += `
+		AND NOT EXISTS (
+			SELECT 1 FROM bible_filesets sa_fs 
+			JOIN bible_fileset_connections sa_bfc ON sa_fs.hash_id = sa_bfc.hash_id
+			WHERE sa_bfc.bible_id = b.id 
+			AND sa_fs.id LIKE ?
+		)`
+
+	query += ` GROUP BY b.id, l.iso, fs.id ORDER BY b.id, fs.id`
+
+	return query
+}
+
 func (g *YAMLGenerator) buildSpecificBibleQuery() string {
 	query := `
 		SELECT 
@@ -269,6 +314,35 @@ func (g *YAMLGenerator) buildSpecificBibleQuery() string {
 			AND n1sa_fs.id LIKE '%N1SA%'
 		)`
 	}
+
+	query += ` GROUP BY b.id, l.iso, fs.id ORDER BY b.id, fs.id`
+
+	return query
+}
+
+func (g *YAMLGenerator) buildDuplicateSpecificBibleQuery() string {
+	query := `
+		SELECT 
+			b.id as bible_id, 
+			l.iso as language_iso,
+			fs.id as fileset_id,
+			fs.id as audio_fileset,
+			'' as text_fileset
+		FROM bibles b
+		JOIN languages l ON b.language_id = l.id
+		JOIN bible_fileset_connections bfc ON b.id = bfc.bible_id
+		JOIN bible_filesets fs ON bfc.hash_id = fs.hash_id
+		WHERE b.id = ?
+		AND fs.id LIKE ? 
+		AND fs.content_loaded = 1`
+
+	query += `
+		AND NOT EXISTS (
+			SELECT 1 FROM bible_filesets sa_fs 
+			JOIN bible_fileset_connections sa_bfc ON sa_fs.hash_id = sa_bfc.hash_id
+			WHERE sa_bfc.bible_id = b.id 
+			AND sa_fs.id LIKE ?
+		)`
 
 	query += ` GROUP BY b.id, l.iso, fs.id ORDER BY b.id, fs.id`
 
@@ -366,6 +440,24 @@ func (g *YAMLGenerator) generateYAML(bible BibleInfo) error {
 	var content string
 	var filename string
 
+	if g.config.Duplicate {
+		if g.config.Only != "" {
+			return fmt.Errorf("duplicate mode does not support -only flag")
+		}
+		content, skip, err := g.generateDuplicationYAML(bible)
+		if err != nil {
+			return err
+		}
+		if skip {
+			if g.config.Verbose {
+				fmt.Printf("Skipping %s: duplication validation failed\n", bible.FilesetId)
+			}
+			return nil
+		}
+		filename = filepath.Join(g.config.OutputDir, bible.FilesetId+".yaml")
+		return os.WriteFile(filename, []byte(content), 0644)
+	}
+
 	switch g.config.Only {
 	case "timings":
 		content = g.generateTimingsOnlyYAML(bible)
@@ -434,11 +526,15 @@ func (g *YAMLGenerator) generateTimingsOnlyYAML(bible BibleInfo) string {
 func (g *YAMLGenerator) generateStreamsOnlyYAML(bible BibleInfo) string {
 	// Start with basic YAML structure
 	content := `is_new: no
-dataset_name: {{DATASET_NAME}}_TS
+dataset_name: {{DATASET_NAME}}
 bible_id: {{BIBLE_ID}}
 username: jrstear
 notify_ok: [jrstear@fcbhmail.org]
 notify_err: [jrstear@fcbhmail.org]
+audio_data: 
+  bible_brain: 
+    set_type_code: audio
+    mp3_64: yes
 update_dbp:
   timestamps: {{TIMESTAMPS_FILESET}}
   {{STREAM_STANZA}}
@@ -509,6 +605,195 @@ func (g *YAMLGenerator) generateHLSFileset(audioFileset string) string {
 	default:
 		return strings.ReplaceAll(audioFileset, "DA", "SA")
 	}
+}
+
+func (g *YAMLGenerator) generateDuplicationYAML(bible BibleInfo) (string, bool, error) {
+	sourceID := g.deriveSourceFileset(bible.AudioFileset)
+	if sourceID == "" {
+		return "", true, nil
+	}
+
+	hasTimestamps, err := g.sourceHasTimestamps(sourceID)
+	if err != nil {
+		return "", false, err
+	}
+	if !hasTimestamps {
+		if g.config.Verbose {
+			fmt.Printf("Skipping %s: source fileset %s has no timestamps\n", bible.FilesetId, sourceID)
+		}
+		return "", true, nil
+	}
+
+	sourceDurations, err := g.fetchChapterDurations(sourceID)
+	if err != nil {
+		return "", false, err
+	}
+	targetDurations, err := g.fetchChapterDurations(bible.AudioFileset)
+	if err != nil {
+		return "", false, err
+	}
+
+	matching, mismatches := compareDurationMaps(sourceDurations, targetDurations, g.config.DupTolerance)
+	if len(matching) == 0 {
+		return "", true, nil
+	}
+	if len(mismatches) > 0 {
+		if g.config.Verbose {
+			fmt.Printf("Skipping %s due to mismatched durations:\n", bible.FilesetId)
+			for _, mismatch := range mismatches {
+				fmt.Printf("  %s\n", mismatch)
+			}
+		}
+		return "", true, nil
+	}
+
+	content := g.generateBothYAML(bible)
+	content = removeTopLevelSection(content, "output:")
+	content = removeTopLevelSection(content, "text_data:")
+	content = removeTopLevelSection(content, "timestamps:")
+
+	streamKey := "hls"
+	if g.config.StreamType == "dash" {
+		streamKey = "dash"
+	}
+	streamValue := g.generateHLSFileset(bible.FilesetId)
+	target := fmt.Sprintf("update_dbp:\n  timestamps: %s\n  %s: %s", bible.AudioFileset, streamKey, streamValue)
+	replacement := fmt.Sprintf("update_dbp:\n  copy_timestamps_from: %s\n  timestamps: %s\n  %s: %s", sourceID, bible.AudioFileset, streamKey, streamValue)
+	content = strings.Replace(content, target, replacement, 1)
+
+	return content, false, nil
+}
+
+func (g *YAMLGenerator) deriveSourceFileset(targetID string) string {
+	upper := strings.ToUpper(targetID)
+	sourceSuffix := strings.ToUpper(g.config.DupSource)
+	switch {
+	case strings.Contains(upper, "N2") && sourceSuffix == "N1":
+		return strings.Replace(targetID, "N2", "N1", 1)
+	case strings.Contains(upper, "O2") && sourceSuffix == "O1":
+		return strings.Replace(targetID, "O2", "O1", 1)
+	default:
+		return ""
+	}
+}
+
+func (g *YAMLGenerator) fetchChapterDurations(filesetID string) (map[string]map[int]float64, error) {
+	durations := make(map[string]map[int]float64)
+
+	query := `
+		SELECT bf.book_id, bf.chapter_start, bft.value
+		FROM bible_filesets fs
+		JOIN bible_files bf ON fs.hash_id = bf.hash_id
+		LEFT JOIN bible_file_tags bft ON bft.file_id = bf.id AND bft.tag = 'duration'
+		WHERE fs.id = ?
+	`
+
+	rows, err := g.db.QueryContext(g.ctx, query, filesetID)
+	if err != nil {
+		return nil, fmt.Errorf("fetching durations for %s: %w", filesetID, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			bookID      sql.NullString
+			chapter     sql.NullInt64
+			durationStr sql.NullString
+		)
+
+		if err := rows.Scan(&bookID, &chapter, &durationStr); err != nil {
+			return nil, fmt.Errorf("scanning duration row for %s: %w", filesetID, err)
+		}
+
+		if !bookID.Valid || !chapter.Valid || !durationStr.Valid {
+			continue
+		}
+
+		value, err := strconv.ParseFloat(strings.TrimSpace(durationStr.String), 64)
+		if err != nil {
+			continue
+		}
+
+		bookMap, ok := durations[bookID.String]
+		if !ok {
+			bookMap = make(map[int]float64)
+			durations[bookID.String] = bookMap
+		}
+		bookMap[int(chapter.Int64)] = value
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating durations for %s: %w", filesetID, err)
+	}
+
+	return durations, nil
+}
+
+func (g *YAMLGenerator) sourceHasTimestamps(filesetID string) (bool, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM bible_filesets fs
+		JOIN bible_files bf ON fs.hash_id = bf.hash_id
+		JOIN bible_file_timestamps ts ON ts.bible_file_id = bf.id
+		WHERE fs.id = ?
+	`
+
+	var count int
+	if err := g.db.QueryRowContext(g.ctx, query, filesetID).Scan(&count); err != nil {
+		return false, fmt.Errorf("checking timestamps for %s: %w", filesetID, err)
+	}
+
+	return count > 0, nil
+}
+
+func compareDurationMaps(source, target map[string]map[int]float64, tolerance float64) ([]string, []string) {
+	const maxDiffLog = 5
+	matching := make([]string, 0)
+	mismatches := make([]string, 0)
+
+	for bookID, chapters := range source {
+		for chapter, src := range chapters {
+			tgt, ok := target[bookID][chapter]
+			if !ok {
+				if len(mismatches) < maxDiffLog {
+					mismatches = append(mismatches, fmt.Sprintf("%s %d missing target duration", bookID, chapter))
+				}
+				continue
+			}
+			if math.Abs(src-tgt) > tolerance {
+				if len(mismatches) < maxDiffLog {
+					mismatches = append(mismatches, fmt.Sprintf("%s %d src=%.2fs tgt=%.2fs", bookID, chapter, src, tgt))
+				}
+				continue
+			}
+			matching = append(matching, fmt.Sprintf("%s %d", bookID, chapter))
+		}
+	}
+
+	return matching, mismatches
+}
+
+func removeTopLevelSection(content, key string) string {
+	lines := strings.Split(content, "\n")
+	result := make([]string, 0, len(lines))
+	skip := false
+
+	for i := 0; i < len(lines); i++ {
+		line := lines[i]
+		if strings.HasPrefix(line, key) && !strings.HasPrefix(line, "  ") {
+			skip = true
+			continue
+		}
+		if skip {
+			if strings.HasPrefix(line, " ") || line == "" {
+				continue
+			}
+			skip = false
+		}
+		result = append(result, line)
+	}
+
+	return strings.TrimSpace(strings.Join(result, "\n")) + "\n"
 }
 
 func (g *YAMLGenerator) getSetTypeCode() string {

@@ -8,14 +8,17 @@ import (
 )
 
 type Config struct {
-	Testament  string
-	TextType   string
-	StreamType string
-	OutputDir  string
-	Template   string
-	BibleId    string
-	Verbose    bool
-	Only       string
+	Testament    string
+	TextType     string
+	StreamType   string
+	OutputDir    string
+	Template     string
+	BibleId      string
+	Verbose      bool
+	Only         string
+	Duplicate    bool
+	DupSource    string
+	DupTolerance float64
 }
 
 func main() {
@@ -29,6 +32,9 @@ func main() {
 	flag.StringVar(&config.BibleId, "bible", "", "Generate for specific Bible ID (optional)")
 	flag.BoolVar(&config.Verbose, "verbose", false, "Verbose output")
 	flag.StringVar(&config.Only, "only", "", "Processing mode: timings|streams (optional)")
+	flag.BoolVar(&config.Duplicate, "duplicate", false, "Generate duplication YAML (N2 from N1)")
+	flag.StringVar(&config.DupSource, "duplicate-source", "n1", "Source testament identifier for duplication (default: n1)")
+	flag.Float64Var(&config.DupTolerance, "duplicate-tolerance", 0, "Allowed duration difference in seconds when validating duplication")
 
 	flag.Parse()
 
@@ -43,6 +49,7 @@ func main() {
 		fmt.Println("  ./yaml_generator -testament n1 -text usx -bible ABPWBT -output ./single/")
 		fmt.Println("  ./yaml_generator -testament n1 -text usx -only timings -output ./n1_usx_timings/")
 		fmt.Println("  ./yaml_generator -testament n1 -text usx -only streams -output ./n1_usx_streams/")
+		fmt.Println("  ./yaml_generator -testament n2 -text usx -duplicate -output ./n2_dup/ -duplicate-tolerance 0.5")
 		os.Exit(1)
 	}
 

@@ -19,6 +19,9 @@ This tool generates YAML configuration files for processing languages that:
 # Generate N2DA filesets (with additional check for no N1SA)
 ./yaml_generator -testament n2 -text plain -output ./n2_plain/
 
+# Generate N2 duplication YAML (validates N1/N2 durations within tolerance)
+./yaml_generator -testament n2 -text usx -duplicate -output ./n2_dup/ -duplicate-tolerance 0.5
+
 # Use custom template
 ./yaml_generator -testament n1 -text usx -template ./my_template.yaml -output ./custom/
 
@@ -48,6 +51,13 @@ This tool generates YAML configuration files for processing languages that:
 - `-output`: Output directory (required)
   - Directory where YAML files will be written
   - Will be created if it doesn't exist
+- `-duplicate`: Generate YAML that duplicates timestamps from the paired N1/O1 fileset (optional)
+  - Emits YAML with `update_dbp.copy_timestamps_from` pointing to the source DA fileset
+  - Automatically validates per-chapter durations before writing
+- `-duplicate-source`: Override the source testament suffix for duplication (default: `n1`)
+  - Accepts values like `n1` or `o1`
+- `-duplicate-tolerance`: Allowable duration mismatch in seconds when validating duplication (default: `0`)
+  - Chapters exceeding the tolerance cause the YAML to be skipped
 
 - `-template`: Custom template file (optional)
   - Path to custom YAML template
@@ -97,6 +107,16 @@ You can provide custom templates using the `-template` argument. Custom template
 
 ### N2 Filesets
 When generating N2 filesets (`-testament n2`), the tool includes an additional check to ensure no corresponding N1SA fileset exists. This prevents conflicts in the system.
+
+### Duplication Mode
+When `-duplicate` is supplied the generator:
+1. Derives the paired source DA fileset (e.g., `N2DA` → `N1DA`)
+2. Compares per-chapter durations using `bible_file_tags` (respecting `-duplicate-tolerance`)
+3. Confirms the source fileset already has timestamps in MySQL
+4. Emits YAML that copies timestamps inside DBP by adding `update_dbp.copy_timestamps_from: <SOURCE_DA>`
+5. Removes the `timestamps:` stanza entirely, allowing the dataset run to rely solely on the N1 data in DBP
+
+This keeps the generated YAML aligned with the duplication safeguards inside `bible_brain/timestamp/update`.
 
 ### MMS Language Support
 Only languages supported by MMS ASR (as defined in the language tree) will have YAML files generated. Languages not supported by MMS are skipped with a warning in verbose mode.
