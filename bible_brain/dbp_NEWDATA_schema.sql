@@ -14,6 +14,14 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+SET @MYSQLDUMP_TEMP_LOG_BIN = @@SESSION.SQL_LOG_BIN;
+SET @@SESSION.SQL_LOG_BIN= 0;
+
+--
+-- GTID state at the beginning of the backup 
+--
+
+SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ '';
 
 --
 -- Table structure for table `languages`
@@ -61,7 +69,7 @@ CREATE TABLE `languages` (
   FULLTEXT KEY `ft_index_languages_name` (`name`),
   CONSTRAINT `FK_countries_languages` FOREIGN KEY (`country_id`) REFERENCES `countries` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `FK_language_status_languages` FOREIGN KEY (`status_id`) REFERENCES `language_status` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=34905 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=34963 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -184,7 +192,7 @@ CREATE TABLE `organizations` (
   UNIQUE KEY `organizations_abbreviation_unique` (`abbreviation`),
   KEY `organizations_country_foreign` (`country`),
   CONSTRAINT `FK_countries_organizations` FOREIGN KEY (`country`) REFERENCES `countries` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=4279 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4288 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -205,7 +213,7 @@ CREATE TABLE `permission_pattern` (
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=168 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=173 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -226,7 +234,7 @@ CREATE TABLE `permission_pattern_access_group` (
   KEY `access_groups_id` (`access_groups_id`),
   CONSTRAINT `permission_pattern_access_group_ibfk_1` FOREIGN KEY (`permission_pattern_id`) REFERENCES `permission_pattern` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `permission_pattern_access_group_ibfk_2` FOREIGN KEY (`access_groups_id`) REFERENCES `access_groups` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2217 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2301 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -327,7 +335,7 @@ CREATE TABLE `bible_translations` (
   FULLTEXT KEY `ft_index_bible_translations_name` (`name`),
   CONSTRAINT `FK_bibles_bible_translations` FOREIGN KEY (`bible_id`) REFERENCES `bibles` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `FK_languages_bible_translations` FOREIGN KEY (`language_id`) REFERENCES `languages` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=17541 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17605 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -454,7 +462,7 @@ CREATE TABLE `license_group` (
   UNIQUE KEY `unique_name` (`name`),
   KEY `FK_permission_pattern` (`permission_pattern_id`),
   CONSTRAINT `FK_permission_pattern` FOREIGN KEY (`permission_pattern_id`) REFERENCES `permission_pattern` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=24414 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=24572 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -475,7 +483,7 @@ CREATE TABLE `license_group_licensor` (
   KEY `FK_license_group_license_group_licensor` (`license_group_id`),
   CONSTRAINT `FK_license_group_license_group_licensor` FOREIGN KEY (`license_group_id`) REFERENCES `license_group` (`id`),
   CONSTRAINT `FK_organizations_license_group_licensor` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=16484 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=16689 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -570,7 +578,28 @@ CREATE TABLE `bible_files` (
   KEY `bible_files_book_id_foreign` (`book_id`),
   CONSTRAINT `FK_bible_filesets_bible_files` FOREIGN KEY (`hash_id`) REFERENCES `bible_filesets` (`hash_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `FK_books_bible_files` FOREIGN KEY (`book_id`) REFERENCES `books` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB AUTO_INCREMENT=5139444 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5355986 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `bible_file_tags`
+--
+
+DROP TABLE IF EXISTS `bible_file_tags`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `bible_file_tags` (
+  `file_id` int unsigned NOT NULL,
+  `tag` varchar(40) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `value` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `admin_only` tinyint(1) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`file_id`,`tag`),
+  UNIQUE KEY `unique_bible_file_tag` (`file_id`,`tag`,`value`),
+  KEY `index_tag` (`tag`),
+  CONSTRAINT `FK_bible_files_bible_file_tags` FOREIGN KEY (`file_id`) REFERENCES `bible_files` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -593,7 +622,7 @@ CREATE TABLE `bible_file_timestamps` (
   PRIMARY KEY (`id`),
   KEY `bible_file_timestamps_file_id_foreign` (`bible_file_id`),
   CONSTRAINT `FK_bible_files_bible_file_timestamps` FOREIGN KEY (`bible_file_id`) REFERENCES `bible_files` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=4424155 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9174077 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -617,7 +646,7 @@ CREATE TABLE `bible_file_stream_bandwidths` (
   PRIMARY KEY (`id`),
   KEY `bible_file_video_resolutions_bible_file_id_foreign` (`bible_file_id`),
   CONSTRAINT `FK_bible_files_bible_file_stream_bandwidths` FOREIGN KEY (`bible_file_id`) REFERENCES `bible_files` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=809354 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=959423 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -641,7 +670,7 @@ CREATE TABLE `bible_file_stream_bytes` (
   KEY `FK_bible_file_timestamp_stream_bytes` (`timestamp_id`),
   CONSTRAINT `FK_bible_file_bandwidth_stream_bytes` FOREIGN KEY (`stream_bandwidth_id`) REFERENCES `bible_file_stream_bandwidths` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `FK_bible_file_timestamp_stream_bytes` FOREIGN KEY (`timestamp_id`) REFERENCES `bible_file_timestamps` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=7182736 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11763141 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -749,6 +778,7 @@ CREATE TABLE `access_group_filesets` (
   CONSTRAINT `FK_bible_filesets_access_group_filesets` FOREIGN KEY (`hash_id`) REFERENCES `bible_filesets` (`hash_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -759,4 +789,4 @@ CREATE TABLE `access_group_filesets` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-02 13:15:29
+-- Dump completed on 2025-11-11  5:42:50

@@ -2,9 +2,7 @@
 
 # https://pytorch.org/audio/main/tutorials/forced_alignment_for_multilingual_data_tutorial.html
 
-# PREREQUISITE: Install system-level dependencies first
-# macOS: brew install ffmpeg sox
-# Ubuntu: sudo apt install ffmpeg sox
+# PREREQUISITE: Install ffmpeg and sox
 # CentOS: sudo yum install ffmpeg sox
 
 # PREREQUISITE: The MMS model will be downloaded automatically on first use

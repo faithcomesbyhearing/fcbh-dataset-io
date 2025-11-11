@@ -31,8 +31,16 @@ fi
 echo "✅ System dependencies verified"
 echo ""
 
-# Set log file
-export FCBH_DATASET_LOG_FILE="$HOME/tmp/artie/adataset.log"
+# Logging configuration
+# Option 1 (Recommended for production): Per-job logs in a directory
+export FCBH_DATASET_LOG_DIR="$HOME/tmp/artie/logs"
+# Creates: logs/20241023_153045-username-datasetname.log (one per job)
+# Timestamp first for easy sorting with 'ls -lt | head' to see recent jobs
+# Keeps all job logs for debugging, no truncation
+
+# Option 2 (Legacy): Single log file that gets truncated upon each job
+#export FCBH_DATASET_LOG_FILE="$HOME/tmp/artie/adataset.log"
+# Note: This file is truncated at the start of each job (old behavior)
 
 # Set log level (debug, info, warn, error)
 export FCBH_DATASET_LOG_LEVEL="info"
@@ -53,12 +61,11 @@ export FCBH_UROMAN_EXE="uroman"
 export PATH="/opt/homebrew/bin:$PATH"
 
 # Set Bible Brain API key (you'll need to get this)
-# export FCBH_DBP_KEY="your_api_key_here"
+export FCBH_DBP_KEY=""
 
 # Set DBP MySQL connection (only needed if updating DBP timestamps)
 # export DBP_MYSQL_DSN="user:password@tcp(hostname:port)/database"
- export DBP_MYSQL_DSN="root:@tcp(localhost:3306)/dbp_localtest"
-# export DBP_MYSQL_DSN=sa:jxcnf97\?Rr\?tjjG@tcp\(localhost:3310\)/dbp_TEST
+export DBP_MYSQL_DSN="root:@tcp(localhost:3306)/dbp_localtest2"
 
 echo "Environment variables set:"
 echo "GOPROJ: $GOPROJ"
