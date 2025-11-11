@@ -4,6 +4,11 @@ import (
 	"testing"
 )
 
+// This is not a test that is expected to run to completion.
+// It exists so that one can debug the initial parts of training
+// Monitor the process on $FCBH_DATASET_DB/dataset.log
+// This template says nt_books: [PHM], but I don't think the training module has the ability
+
 const mmsAdapterASR = `is_new: no
 dataset_name: 17a_mms_adapter
 username: GaryNTest
@@ -12,8 +17,8 @@ notify_ok: [gary@shortsands.com]
 notify_err: [gary@shortsands.com]
 testament:
   nt_books: [PHM]
-database:
-  file: /Users/gary/FCBH2024/GaryNTest/17a_mms_adapter.db
+#database:
+#  file: /Users/gary/FCBH2024/GaryNTest/17a_mms_adapter.db
 audio_data:
   file: /Users/gary/FCBH2024/GaryNTest/17a_mms_adapter/*.mp3
 speech_to_text:

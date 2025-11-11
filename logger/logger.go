@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -124,6 +125,26 @@ func Error(ctx context.Context, http int, err error, param ...any) *Status {
 
 func ErrorNoErr(ctx context.Context, http int, param ...any) *Status {
 	return errorImpl(ctx, http, ``, param...)
+}
+
+func ExecError(ctx context.Context, http int, stderr string, param ...any) *Status {
+	if strings.HasPrefix(stderr, `{"status"`) {
+		var s Status
+		jsonErr := json.Unmarshal([]byte(stderr), &s)
+		if jsonErr != nil {
+			Warn(ctx, jsonErr.Error())
+			Warn(ctx, param)
+			return nil
+		}
+		s.Status = http
+		s.Request = requestInfo(ctx)
+		errorLog.Printf("%+v", s)
+		return &s
+	} else {
+		param = append([]any{stderr}, param...)
+		Warn(ctx, param...)
+		return nil
+	}
 }
 
 func errorImpl(ctx context.Context, http int, err string, param ...any) *Status {

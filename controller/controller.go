@@ -21,6 +21,8 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/read"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/speech_to_text"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/timestamp"
+	asr2 "github.com/faithcomesbyhearing/fcbh-dataset-io/wav2vec2/asr"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/wav2vec2/train"
 	"os"
 	"path/filepath"
 	"time"
@@ -175,10 +177,23 @@ func (c *Controller) processSteps() *log.Status {
 	// Train MMS Adapter
 	if !c.req.Training.NoTraining {
 		log.Info(c.ctx, "Train", c.ident.LanguageISO)
-		trainer := adapter.NewTrainAdapter(c.ctx, c.database, c.ident.LanguageISO, c.req.Training.MMSAdapter)
-		status = trainer.Train(audioFiles)
-		if status != nil {
-			return status
+		if c.req.Training.MMSAdapter.NumEpochs != 0 {
+			trainer := adapter.NewTrainAdapter(c.ctx, c.database, c.ident.LanguageISO, c.req.Training.MMSAdapter)
+			if c.req.Training.RedoTraining || !trainer.HasModel() {
+				status = trainer.Train(audioFiles)
+				if status != nil {
+					return status
+				}
+			}
+		}
+		if c.req.Training.Wav2Vec2Word.NumEpochs != 0 {
+			trainer := train.NewWav2Vec2Trainer(c.ctx, c.database, c.ident.LanguageISO, c.req.Training.Wav2Vec2Word)
+			if c.req.Training.RedoTraining || !trainer.HasModel() {
+				status = trainer.Train(audioFiles)
+				if status != nil {
+					return status
+				}
+			}
 		}
 	}
 	// Copy for STT
@@ -440,6 +455,10 @@ func (c *Controller) speechToText(audioFiles []input.InputFile) *log.Status {
 		var asr mms_asr.MMSASR
 		asr = mms_asr.NewMMSASR(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage, true)
 		status = asr.ProcessFiles(audioFiles)
+	} else if c.req.SpeechToText.Wav2Vec2ASR {
+		var asr asr2.Wav2Vec2ASR
+		asr = asr2.NewWav2Vec2ASR(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage)
+		status = asr.ProcessFiles(audioFiles)
 	} else {
 		var whisperModel = c.req.SpeechToText.Whisper.Model.String()
 		if whisperModel != `` {
@@ -527,7 +546,8 @@ func (c *Controller) matchText() (string, *log.Status) {
 	tempFilePath := filepath.Join(os.TempDir(), c.database.Project+"_compare.json")
 	c.bucket.AddJson(records, tempFilePath)
 	writer := diff.NewHTMLWriter(c.ctx, c.database.Project)
-	filename, status := writer.WriteReport(c.req.Compare.BaseDataset, records, languageISO, fileMap)
+	filename, status := writer.WriteReport(c.req.Compare.BaseDataset, records, languageISO, fileMap,
+		c.req.SpeechToText)
 	return filename, status
 }
 

@@ -20,9 +20,9 @@ training:
   mms_adapter:
     batch_mb: 4
     num_epochs: 1
-    learning_rate: 3e-5
-    warmup_pct: 3.0
-    grad_norm_max: 1.0
+    learning_rate: 1e-4
+    warmup_pct: 12.0
+    grad_norm_max: 0.4
 speech_to_text:
   adapter_asr: y
 compare:

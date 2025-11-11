@@ -185,8 +185,10 @@ func (t MediaType) IsFrom(ttype string) bool {
 }
 
 type Training struct {
-	MMSAdapter MMSAdapter `yaml:"mms_adapter,omitempty"`
-	NoTraining bool       `yaml:"no_training,omitempty"`
+	RedoTraining bool       `yaml:"redo_training,omitempty"`
+	MMSAdapter   MMSAdapter `yaml:"mms_adapter,omitempty"`
+	Wav2Vec2Word Wav2Vec2   `yaml:"wav2vec2_word,omitempty"`
+	NoTraining   bool       `yaml:"no_training,omitempty"`
 }
 
 type MMSAdapter struct {
@@ -197,9 +199,20 @@ type MMSAdapter struct {
 	GradNormMax  float64 `yaml:"grad_norm_max,omitempty"`
 }
 
+type Wav2Vec2 struct {
+	BatchMB      int     `yaml:"batch_mb,omitempty"`
+	NumEpochs    int     `yaml:"num_epochs,omitempty"`
+	LearningRate float64 `yaml:"learning_rate,omitempty"`
+	WarmupPct    float64 `yaml:"warmup_pct,omitempty"`
+	GradNormMax  float64 `yaml:"grad_norm_max,omitempty"`
+	MinAudioSec  float64 `yaml:"min_audio_sec,omitempty"`
+	//LoggingSteps int     `yaml:"logging_steps,omitempty"`
+}
+
 type SpeechToText struct {
 	MMS            bool    `yaml:"mms_asr,omitempty"`
 	MMSAdapter     bool    `yaml:"adapter_asr,omitempty"`
+	Wav2Vec2ASR    bool    `yaml:"wav2vec2_asr,omitempty"`
 	Whisper        Whisper `yaml:"whisper,omitempty"`
 	NoSpeechToText bool    `yaml:"no_speech_to_text,omitempty"`
 }

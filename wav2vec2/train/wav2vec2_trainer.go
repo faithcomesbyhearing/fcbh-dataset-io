@@ -1,4 +1,4 @@
-package adapter
+package train
 
 import (
 	"context"
@@ -14,15 +14,15 @@ import (
 	"strconv"
 )
 
-type TrainAdapter struct {
+type Wav2Vec2Trainer struct {
 	ctx     context.Context
 	conn    db.DBAdapter
 	langISO string
-	args    req.MMSAdapter
+	args    req.Wav2Vec2
 }
 
-func NewTrainAdapter(ctx context.Context, conn db.DBAdapter, langISO string, train req.MMSAdapter) TrainAdapter {
-	var t TrainAdapter
+func NewWav2Vec2Trainer(ctx context.Context, conn db.DBAdapter, langISO string, train req.Wav2Vec2) Wav2Vec2Trainer {
+	var t Wav2Vec2Trainer
 	t.ctx = ctx
 	t.conn = conn
 	ident, status := t.conn.SelectIdent()
@@ -35,21 +35,20 @@ func NewTrainAdapter(ctx context.Context, conn db.DBAdapter, langISO string, tra
 	return t
 }
 
-func (t *TrainAdapter) HasModel() bool {
-	filename := "adapter." + t.langISO + ".safetensors"
-	model := filepath.Join(os.Getenv("FCBH_DATASET_DB"), "mms_adapter", t.langISO, filename)
+func (t *Wav2Vec2Trainer) HasModel() bool {
+	filename := "model.safetensors"
+	model := filepath.Join(os.Getenv("FCBH_DATASET_DB"), "wav2vec2_models", t.langISO, filename)
 	fileInfo, err := os.Stat(model)
 	if os.IsNotExist(err) {
 		return false
 	}
 	if err != nil {
 		log.Warn(t.ctx, err, "Failed to read model file")
-		return false
 	}
-	return fileInfo.Size() > 1000000 // must be GT 1Meg
+	return fileInfo.Size() > 10000000 // must be GT 10Meg
 }
 
-func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
+func (t *Wav2Vec2Trainer) Train(files []input.InputFile) *log.Status {
 	if len(files) == 0 {
 		return nil
 	}
@@ -61,20 +60,16 @@ func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
 		}
 	}
 	pythonPath := os.Getenv(`FCBH_MMS_ADAPTER_PYTHON`)
-	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/adapter/trainer.py")
-	//replacer := strings.NewReplacer(` `, `\ `,
-	//	`(`, `\(`,
-	//	`)`, `\)`,
-	//)
+	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "wav2vec2/train/trainer.py")
 	status := stdio_exec.RunScriptWithLogging(t.ctx, pythonPath, pythonScript,
 		t.langISO,
 		t.conn.DatabasePath,
-		//replacer.Replace(tempDir),
 		`'`+tempDir+`'`,
 		strconv.Itoa(t.args.BatchMB),
 		strconv.Itoa(t.args.NumEpochs),
 		strconv.FormatFloat(t.args.LearningRate, 'e', -1, 64),
 		strconv.FormatFloat(t.args.WarmupPct, 'f', -1, 64),
-		strconv.FormatFloat(t.args.GradNormMax, 'f', -1, 64))
+		strconv.FormatFloat(t.args.GradNormMax, 'f', -1, 64),
+		strconv.FormatFloat(t.args.MinAudioSec, 'f', -1, 64))
 	return status
 }

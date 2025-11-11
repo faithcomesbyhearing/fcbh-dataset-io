@@ -14,11 +14,9 @@ from sqlite_utility import *
 from data_preparation import *
 from dataset import *
 from debug import *
-from safetensors.torch import save_file as safe_save_file
-from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
+from model import getWav2Vec2ForCTCModel
 sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GOPROJ'], 'logger')))
 from error_handler import setup_error_handler
-
 
 #
 # https://docs.pytorch.org/tutorials/beginner/introyt/trainingyt.html
@@ -28,12 +26,12 @@ setup_error_handler()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def train_mms_adapter(model, dataset, num_epochs=3, lr=5e-5,
+def train_wav2vec2(model, dataset, num_epochs=3, lr=5e-5,
                      warmup_steps=100, max_grad_norm=1.0, log_steps=50):
     """
-    Train MMS adapter with PyTorch
+    Train Wav2Vec2 Model with PyTorch
     Args:
-        model: Your MMS model with adapter
+        model: Wav2Vec2 model
         dataset: Your custom dataset that returns padded batches as dicts
         num_epochs: Number of training epochs
         lr: Learning rate
@@ -41,7 +39,6 @@ def train_mms_adapter(model, dataset, num_epochs=3, lr=5e-5,
         max_grad_norm: Max gradient norm for clipping
         log_steps: Steps between logging
     """
-
     dataloader = DataLoader(dataset, batch_size=None, shuffle=True)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
@@ -78,11 +75,14 @@ def train_mms_adapter(model, dataset, num_epochs=3, lr=5e-5,
                     f"{step_label}: Loss = {loss.item():.4f}, "
                     f"Avg Loss = {avg_loss:.4f}, LR = {current_lr:.2e}"
                 )
-                memoryStatistics(logger, step_label)
-                modelMemoryStatistics(logger, model, step_label)
+                #memoryStatistics(logger, step_label)
+                #modelMemoryStatistics(logger, model, step_label)
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
-                    logger.warn("Cleared CUDA cache due to fragmentation")
+                    logger.warning("Cleared CUDA cache due to fragmentation")
+                elif torch.backends.mps.is_available():
+                    torch.mps.empty_cache()
+                    logger.warning("Cleared MPS cache due to fragmentation")
         avg_epoch_loss = epoch_loss / len(dataloader)
         logger.info(f"Epoch {epoch + 1} completed. Average loss: {avg_epoch_loss:.4f}")
 
@@ -90,9 +90,9 @@ def train_mms_adapter(model, dataset, num_epochs=3, lr=5e-5,
     return model
 
 
-if len(sys.argv) < 9:
+if len(sys.argv) < 10:
     usage = """Usage: python train_adapter.py {iso639-3} {databasePath} {audioDirectory}
-                    {batchMB} {numEpochs} {learningRage} {warmupPct} {gradNormMax}"""
+                    {batchMB} {numEpochs} {learningRage} {warmupPct} {gradNormMax} {minAudioSec}"""
     print(usage, file=sys.stderr)
     sys.exit(1)
 targetLang = sys.argv[1]
@@ -103,9 +103,10 @@ numEpochs = int(sys.argv[5])
 learningRate = float(sys.argv[6])
 warmupPct = float(sys.argv[7])
 gradNormMax = float(sys.argv[8])
+minAudioSec = float(sys.argv[9])
 
 print("BatchSizeMB", batchSizeMB, "NumEpochs", numEpochs, "learningRate", learningRate,
-    "warmupPct", warmupPct, "gradNormMax", gradNormMax)
+    "warmupPct", warmupPct, "gradNormMax", gradNormMax, "minAudioSec", minAudioSec)
 
 database = SqliteUtility(databasePath)
 tokenizer = createTokenizer(database, targetLang)
@@ -122,61 +123,48 @@ processor = Wav2Vec2Processor(
     feature_extractor=featureExtractor,
     tokenizer=tokenizer
 )
-
-sampleDB = dataPreparation(database, databasePath, audioDirectory, processor, 128, batchSizeMB)
+sampleDB = dataPreparation(database, databasePath, audioDirectory, processor, 512, batchSizeMB, minAudioSec, 0.1)
 database.close()
 
-model = Wav2Vec2ForCTC.from_pretrained(
-    "facebook/mms-1b-all",
-    ctc_loss_reduction="mean",
-    pad_token_id=processor.tokenizer.pad_token_id,
-    vocab_size=len(processor.tokenizer),
-    ignore_mismatched_sizes=True,   # accept tokenizer of different size (required)
-)
-model.init_adapter_layers()
-model.freeze_base_model()
+model = getWav2Vec2ForCTCModel(processor)
+#model = Wav2Vec2ForCTC.from_pretrained(
+#    "facebook/wav2vec2-base",  # or "facebook/wav2vec2-large" for better performance
+#    ctc_loss_reduction="mean",
+#    pad_token_id=processor.tokenizer.pad_token_id,
+#    vocab_size=len(processor.tokenizer),
+#    ignore_mismatched_sizes = True,   # accept tokenizer of different size (required)
+#    mask_time_prob = 0.01,         # Reduce masking probability 0.01 to 0.02
+#    mask_time_length = 2,          # Shorter mask length
+#    mask_feature_prob = 0.0,       # Disable feature masking
+#)
 
-adapter_weights = model._get_adapters()
-for param in adapter_weights.values():
-    param.requires_grad = True
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if torch.backends.mps.is_available():
+    device = torch.device("cpu")
+elif torch.cuda.is_available():
+    device = torch.device("cuda")
+else:
+    device = torch.device("cpu")
+print("device", device)
 model.to(device)
 
 dataset = MyDataset(sampleDB)
 warmupSteps = int(len(dataset) * numEpochs * warmupPct / 100.0)
 print("warmupSteps", warmupSteps)
-trainedModel = train_mms_adapter(
+trainedModel = train_wav2vec2(
         model,
         dataset,
         num_epochs = numEpochs,
         lr = learningRate,
         warmup_steps = warmupSteps,
         max_grad_norm = gradNormMax,
-        log_steps = 100
+        log_steps = 1
 )
 sampleDB.close()
-
-outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'mms_adapters', targetLang)
+logger.info("Training completed!")
+outputDir = os.path.join(os.getenv('FCBH_DATASET_DB'), 'wav2vec2_models', targetLang)
 os.makedirs(outputDir, exist_ok=True)
-adapterFile = WAV2VEC2_ADAPTER_SAFE_FILE.format(targetLang)
-adapterFile = os.path.join(outputDir, adapterFile)
-print("OutputDir for weights", adapterFile)
-safe_save_file(trainedModel._get_adapters(), adapterFile, metadata={"format": "pt"})
-processorDir = os.path.join(outputDir, "processor_" + targetLang)
-print("OutputDir for processor", processorDir)
-processor.save_pretrained(processorDir)
+model.save_pretrained(outputDir)
+processor.save_pretrained(outputDir)  # Saves both feature extractor and tokenizer
+logger.info(f"Model and processor saved to {outputDir}")
 
 
-"""
-# bf16 performance improvement
-for step, batch in enumerate(dataloader):
-    batch = {k: v.to(device) for k, v in batch.items()}
-    optimizer.zero_grad()
-    with autocast(dtype=torch.bfloat16):
-        outputs = model(**batch)
-        loss = outputs.loss
-    loss.backward()
-    torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
-    optimizer.step()
-"""
