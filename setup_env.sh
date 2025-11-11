@@ -18,12 +18,12 @@ mkdir -p "$FCBH_DATASET_TMP"
 # Verify system dependencies
 echo "Checking system dependencies..."
 if ! command -v ffmpeg &> /dev/null; then
-    echo "❌ FFmpeg not found. Install with: brew install ffmpeg (Mac) or sudo apt install ffmpeg (Ubuntu)"
+    echo "❌ FFmpeg not found."
     exit 1
 fi
 
 if ! command -v sox &> /dev/null; then
-    echo "❌ Sox not found. Install with: brew install sox (Mac) or sudo apt install sox (Ubuntu)"
+    echo "❌ Sox not found."
     exit 1
 fi
 
