@@ -12,11 +12,11 @@ We describe the process of aligning long audio files with their transcripts and 
   git clone git@github.com:isi-nlp/uroman.git
   ```
   
-- Step 3: Install a few other dependencies
+- Step 3: Install a few other dependencies 
   ```
-  apt-install ffmpeg sox
-  pip install sox dataclasses
-  ```
+  apt install sox 
+  pip install sox dataclasses 
+  ```  
 
 - Step 4: Create a text file containing the transcript for a (long) audio file. Each line in the text file will correspond to a separate audio segment that will be generated upon alignment.
 

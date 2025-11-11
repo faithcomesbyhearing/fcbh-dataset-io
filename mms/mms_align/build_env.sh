@@ -2,9 +2,6 @@
 
 # https://pytorch.org/audio/main/tutorials/forced_alignment_for_multilingual_data_tutorial.html
 
-# PREREQUISITE: Install ffmpeg and sox
-# CentOS: sudo yum install ffmpeg sox
-
 # PREREQUISITE: The MMS model will be downloaded automatically on first use
 # If download fails, manually download with:
 # python3 -c "from torchaudio.pipelines import MMS_FA as bundle; bundle.get_model(with_star=False)"
