@@ -1,8 +1,11 @@
 import sys
+import os
 import json
 import torch
 import torchaudio
 from torchaudio.pipelines import MMS_FA as bundle
+sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GOPROJ'], 'logger')))
+from error_handler import setup_error_handler
 #import multiprocessing
 
 
@@ -23,6 +26,7 @@ from torchaudio.pipelines import MMS_FA as bundle
 #    sys.stderr.write("Usage: mms_align.py  {iso639-3}\n")
 #    sys.exit(1)
 #lang = sys.argv[1]
+setup_error_handler()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = bundle.get_model(with_star=False)
 model.to(device)

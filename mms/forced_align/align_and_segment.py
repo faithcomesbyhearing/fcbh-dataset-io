@@ -1,10 +1,13 @@
 import os
+import sys
 import torch
 import torchaudio
 import sox
 import json
 import argparse
 import time
+sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GOPROJ'], 'logger')))
+from error_handler import setup_error_handler
 
 
 from text_normalization import text_normalize
@@ -20,6 +23,7 @@ import torchaudio.functional as F
 SAMPLING_FREQ = 16000
 EMISSION_INTERVAL = 30
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+setup_error_handler()
 
 def generate_emissions(model, audio_file):
     waveform, _ = torchaudio.load(audio_file)  # waveform: channels X T

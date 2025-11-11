@@ -7,6 +7,7 @@ import (
 const fAVerseTest = `is_new: yes
 dataset_name: 13d_fa_verse
 bible_id: ENGWEB
+alt_language: xxx
 username: GaryNTest
 output:
   sqlite: yes

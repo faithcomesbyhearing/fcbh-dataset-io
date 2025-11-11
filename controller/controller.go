@@ -102,6 +102,17 @@ func (c *Controller) processSteps() *log.Status {
 	if status != nil {
 		return status
 	}
+	notify := courier.NewLongRunNotify(c.ctx, c.req)
+	done := make(chan struct{})
+	go func() {
+		select {
+		case <-time.After(notify.Threshold):
+			notify.SendEmail() // Sends email if job exceeds threshold
+		case <-done:
+			// Job completed before threshold - monitoring done
+		}
+	}()
+	defer close(done)
 	c.ctx = context.WithValue(c.ctx, `request`, string(c.yamlRequest))
 	// Open Database
 	if c.req.Database.AWSS3 != "" {

@@ -1,5 +1,8 @@
 import sys
+import os
 import uroman as ur
+sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GOPROJ'], 'logger')))
+from error_handler import setup_error_handler
 
 # Uroman
 # https://aclanthology.org/P18-4003.pdf
@@ -10,6 +13,7 @@ import uroman as ur
 # I observed cases where a diacritical mark in NFD for was ignored,
 # but one in NFC format was used
 
+setup_error_handler()
 uroman = ur.Uroman()
 for line in sys.stdin:
     output = uroman.romanize_string(line)

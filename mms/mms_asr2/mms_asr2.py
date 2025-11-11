@@ -1,17 +1,13 @@
 import os
 import sys
-from datasets import Dataset, Audio
 from transformers import Wav2Vec2ForCTC
-from transformers import Wav2Vec2Processor
 from transformers import AutoProcessor
 import torch
-import psutil #probably not used
-#from safetensors.torch import load_file as safe_load_file
+import soundfile
 from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
 from safetensors.torch import load_file
 sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GOPROJ'], 'logger')))
 from error_handler import setup_error_handler
-
 
 ## Documentation used to write this program
 ## https://huggingface.co/docs/transformers/main/en/model_doc/mms
@@ -72,10 +68,7 @@ model = model.to(device)
 for line in sys.stdin:
     torch.cuda.empty_cache()
     audioFile = line.strip()
-    fromDict = Dataset.from_dict({"audio": [audioFile]})
-    streamData = fromDict.cast_column("audio", Audio(sampling_rate=16000))
-    sample = next(iter(streamData))["audio"]["array"]
-
+    sample, sr = soundfile.read(audioFile)
     inputs = processor(sample, sampling_rate=16_000, return_tensors="pt")
     inputs = ensureMinimumTensorSize(inputs, 3200, 0)
     inputs = {name: tensor.to(device) for name, tensor in inputs.items()}

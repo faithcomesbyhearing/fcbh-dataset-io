@@ -7,6 +7,7 @@ import (
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 type ProbeData struct {
@@ -33,10 +34,14 @@ func GetAudioDuration(ctx context.Context, directory string, filename string) (f
 	if status != nil {
 		return result, status
 	}
-	var err error
-	result, err = strconv.ParseFloat(probeData.Format.Duration, 64)
-	if err != nil {
-		return result, log.Error(ctx, 500, err, "Data conversion error in timestamp.GetAudioDuration")
+	if strings.TrimSpace(probeData.Format.Duration) == "" {
+		result = 0.0
+	} else {
+		var err error
+		result, err = strconv.ParseFloat(probeData.Format.Duration, 64)
+		if err != nil {
+			return result, log.Error(ctx, 500, err, "Data conversion error in timestamp.GetAudioDuration")
+		}
 	}
 	return result, nil
 }

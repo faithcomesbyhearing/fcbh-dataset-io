@@ -49,12 +49,15 @@ func UpdateUroman(conn db.DBAdapter, lang string) *log.Status {
 	return status
 }
 
-func SetUroman(ctx context.Context, lines []db.Script, lang string) ([]db.Script, *log.Status) {
+func SetUroman(ctx context.Context, linesIn []db.Script, lang string) (lines []db.Script, status *log.Status) {
+	lines = linesIn
 	uroman, status := stdio_exec.NewStdioExec(ctx, os.Getenv(`FCBH_MMS_FA_PYTHON`), ScriptPath(), "-l", lang)
 	if status != nil {
 		return lines, status
 	}
-	defer uroman.Close()
+	defer func() {
+		status = uroman.Close()
+	}()
 	for i := range lines {
 		lines[i].URoman, status = uroman.Process(lines[i].ScriptText)
 		if status != nil {

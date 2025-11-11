@@ -14,7 +14,7 @@ func TestMMSUtil_checkLanguagea(t *testing.T) {
 
 func checkLanguageTest(lang string, sttLang string, expectLang string, t *testing.T) {
 	ctx := context.Background()
-	resultLang, status := checkLanguage(ctx, lang, sttLang, "mms_asr")
+	resultLang, status := CheckLanguage(ctx, lang, sttLang, "mms_asr")
 	if status != nil {
 		t.Error(status)
 	}

@@ -10,6 +10,12 @@ from common import ensureMinimumTensorSize, compress, decompress
 import time
 import blosc
 
+"""
+NOTE: def dataPruner has a bug.  In a recent run it pruned out only 214 verses when it was
+given an input of 0.1, which should have eliminated 10%.
+As of 10/28/75, this model is not being used.  So, I have not bothered to fix it.
+"""
+
 # This file does all of the data preparation prior to training, and its content is also used for ASR
 # Each step performs a process and stores the result in a sqlite database in the TMP directory.
 # def prepareDataset() creates a table called samples that contains each word sample in the audio

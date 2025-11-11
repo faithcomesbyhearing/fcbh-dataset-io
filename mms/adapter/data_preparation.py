@@ -36,6 +36,7 @@ def prepareDataset(scriptsDB, samplesDB, audioDir, processor):
         FROM scripts s
         JOIN words w ON w.script_id = s.script_id
         WHERE w.ttype = 'W' AND s.script_id IN (SELECT script_id FROM pruned_data)
+        AND s.script_id NOT IN (SELECT script_id FROM pruned_silence)
         GROUP BY s.script_id, s.book_id, s.chapter_num, s.verse_str, s.audio_file, s.script_begin_ts, s.script_end_ts
         ORDER BY s.script_end_ts - s.script_begin_ts
         """
