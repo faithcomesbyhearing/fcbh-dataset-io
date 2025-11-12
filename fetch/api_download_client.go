@@ -40,12 +40,7 @@ func (d *APIDownloadClient) Download(info BibleInfoType) *log.Status {
 		}
 	}
 	var download []FilesetType
-	if info.AudioOTFileset.Id != `` {
-		download = append(download, info.AudioOTFileset)
-	}
-	if info.AudioNTFileset.Id != `` {
-		download = append(download, info.AudioNTFileset)
-	}
+	// Process text filesets first to fail early on access issues
 	if info.TextOTPlainFileset.Id != `` {
 		download = append(download, info.TextOTPlainFileset)
 	}
@@ -57,6 +52,13 @@ func (d *APIDownloadClient) Download(info BibleInfoType) *log.Status {
 	}
 	if info.TextNTUSXFileset.Id != `` {
 		download = append(download, info.TextNTUSXFileset)
+	}
+	// Then process audio filesets
+	if info.AudioOTFileset.Id != `` {
+		download = append(download, info.AudioOTFileset)
+	}
+	if info.AudioNTFileset.Id != `` {
+		download = append(download, info.AudioNTFileset)
 	}
 	for _, rec := range download {
 		if rec.Type == `text_plain` {

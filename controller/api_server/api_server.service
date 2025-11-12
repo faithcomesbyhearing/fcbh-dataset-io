@@ -11,8 +11,11 @@ Environment="FCBH_DATASET_FILES=/home/dataset/data/download"
 Environment="FCBH_DATASET_TMP=/home/dataset/data/tmp"
 Environment="PYTHON_EXE=/usr/bin/python3"
 Environment="WHISPER_EXE=/home/dataset/.local/bin/whisper"
-Environment="FCBH_DATASET_LOG_FILE=/home/dataset/dataset.log"
 Environment="FCBH_DATASET_LOG_LEVEL=DEBUG"
+# Below uses a single file logging (truncated each job)
+Environment="FCBH_DATASET_LOG_FILE=/home/dataset/dataset.log"
+# Option: Per-job logging (no truncation).  If set, overrules FCBH_DATASET_LOG_FILE
+# Environment="FCBH_DATASET_LOG_DIR=/home/dataset/logs"
 ExecStart=/home/dataset/go/bin/api_server
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always

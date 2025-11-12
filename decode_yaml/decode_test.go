@@ -28,7 +28,7 @@ func TestParser(t *testing.T) {
 	var test1 = `is_new: Yes
 dataset_name: Test1  # should be a unique name
 username: GaryNGriswold
-#bible_id: ENGWEB
+bible_id: ENGWEB
 language_iso: eng
 alt_language: en
 notify_ok: [emille@fcbhmail.org]
@@ -200,5 +200,25 @@ compare:
 	}
 	if len(req.NotifyErr) != 1 {
 		t.Error(`NotifyErr should have a length of 1, not`, len(req.NotifyErr))
+	}
+}
+
+func TestProcessAllowsBibleBrainTimestampsWithoutText(t *testing.T) {
+	yaml := `dataset_name: test
+bible_id: TESTBIBLE
+username: tester
+timestamps:
+  bible_brain: true
+audio_data:
+  bible_brain:
+    mp3_64: yes
+update_dbp:
+  timestamps: TESTN2DA
+  hls: TESTN2SA
+`
+	decoder := NewRequestDecoder(context.Background())
+	_, status := decoder.Process([]byte(yaml))
+	if status != nil {
+		t.Fatalf("expected no error, got: %v", status)
 	}
 }

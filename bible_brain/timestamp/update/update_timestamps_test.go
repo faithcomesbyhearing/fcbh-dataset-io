@@ -2,10 +2,11 @@ package update
 
 import (
 	"context"
+	"testing"
+
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
-	"testing"
 )
 
 func TestUpdateTimestamps_Process(t *testing.T) {
@@ -13,7 +14,7 @@ func TestUpdateTimestamps_Process(t *testing.T) {
 	ctx := context.Background()
 	req := request.Request{
 		UpdateDBP: request.UpdateDBP{
-			Timestamps: []string{"ENGESVN1DA", "ENGESVN1SA", "ENGESVN2DA", "ENGESVN2SA"},
+			Timestamps: "ENGESVN1DA",
 		},
 	}
 	conn := db.NewDBAdapter(ctx, "test_data/ENGESVN1DA_TS.db")
@@ -34,8 +35,7 @@ func TestInsertTimestamps_Process(t *testing.T) {
 	ctx := context.Background()
 	req := request.Request{
 		UpdateDBP: request.UpdateDBP{
-			Timestamps: []string{"AAAMLTN1DA", "AAAMLTN1DA-opus16", "AAAMLTN2DA",
-				"AAAMLTN2DA-opus16"},
+			Timestamps: "AAAMLTN1DA",
 		},
 	}
 	conn := db.NewDBAdapter(ctx, "test_data/ENGESVN1DA_TS.db")

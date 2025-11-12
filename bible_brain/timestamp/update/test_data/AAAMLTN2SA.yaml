@@ -1,0 +1,17 @@
+is_new: yes 
+dataset_name: AAAMLTN2SA
+bible_id: AAAMLT
+username: jrstear
+notify_ok: [jrstear@fcbhmail.org]
+notify_err: [jrstear@fcbhmail.org]
+audio_data:
+  bible_brain:
+    set_type_code: audio_drama
+    mp3_64: yes
+timestamps:
+  bible_brain: true
+update_dbp:
+  copy_timestamps_from: AAAMLTN1DA
+  timestamps: AAAMLTN2DA
+  hls: AAAMLTN2SA
+

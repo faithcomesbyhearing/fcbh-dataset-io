@@ -18,7 +18,7 @@ func (r *RequestDecoder) Depend(req request.Request) {
 		if req.AudioData.NoAudio {
 			r.errors = append(r.errors, `Timestamps are requested, but there is no audio`)
 		}
-		if req.TextData.NoText {
+		if req.TextData.NoText && !req.Timestamps.BibleBrain {
 			r.errors = append(r.errors, `Timestamps are requested, but there is no text`)
 			// The need for text is not a real requirement, but the system is coded to store timestamps
 			// in the scripts table, and it cannot do this unless there is text.  If this becomes

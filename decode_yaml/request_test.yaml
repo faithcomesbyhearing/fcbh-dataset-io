@@ -36,6 +36,7 @@ audio_data: # Choose one of the following
     mp3_64: yes # Mark Yes for 64 bit MP3
     mp3_16: # Mark Yes for 16 bit MP3
     opus: # Mark Yes for OPUS
+    set_type_code: audio # Optional: "audio" or "audio_drama" to prefer specific fileset type
   file: # e.g. /{directory}/{mediaId}/*.wav Note: include twice for OT and NT
   aws_s3: # e.g. s3://{bucket}/audio/{bibleId}/{mediaId}/*.mp3  Note: include twice for OT and NT
   post: # e.g. {mediaId}_{A/Bseq}_{book}_{chapter}_{verse}-{chapter_end}_{verse_end}, use detail as needed
@@ -129,3 +130,7 @@ compare: # To do a compare, put the names of the two projects here
       normalize_nfd: # Mark yes here for Normalization Form Decomposition
       normalize_nfkc: # Mark yes here for Normalization Form Compatibility Composition
       normalize_nfkd: # Mark yes here for Normalization Form Compatibility Decomposition
+
+update_dbp: # Update DBP database with processed data
+  timestamps: ENGNIVN1DA # Fileset ID to update timestamps for
+  hls: ENGNIVN1SA # Fileset ID for HLS stream generation
