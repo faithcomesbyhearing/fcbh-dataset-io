@@ -233,6 +233,10 @@ func (a *MMSASR2) ensureASRTable() *log.Status {
 }
 
 func (a *MMSASR2) insertASRText(scripts []asrScript) *log.Status {
+	_, err := a.conn.DB.Exec(`DELETE FROM asr`)
+	if err != nil {
+		return log.Error(a.ctx, 500, err, "could not delete asr")
+	}
 	query := `INSERT INTO asr (script_id, script_text, uroman) VALUES (?,?,?)`
 	tx, err := a.conn.DB.Begin()
 	if err != nil {

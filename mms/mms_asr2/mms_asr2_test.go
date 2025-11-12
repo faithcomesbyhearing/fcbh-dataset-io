@@ -7,8 +7,10 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/match/diff"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
+	"github.com/sergi/go-diff/diffmatchpatch"
 	"os"
 	"path"
 	"strconv"
@@ -58,6 +60,22 @@ func TestMMSASR2_ParseResult(t *testing.T) {
 	}()
 	response := readResultFile(file)
 	status = asr.parseResult(file, response)
+
+	//execute my internal compare routine
+	compare := Compare{ctx: ctx, user: user, baseDataset: "", database: conn, lang: "mzj"}
+	pairs, status2 := compare.compareToASRTable()
+	if status2 != nil {
+		t.Fatal(status2)
+	}
+	compare.diffMatch = diffmatchpatch.New()
+	compare.diffPairs(pairs)
+	fmt.Println("num pairs", len(pairs))
+	report := diff.NewHTMLWriter(ctx, "datasetName1")
+	filename, status := report.WriteReport("baseDataetName", pairs, "mzj", "", request.SpeechToText{MMS: true})
+	if status != nil {
+		t.Fatal(status)
+	}
+	fmt.Println("htmlFilename", filename)
 }
 
 func readResultFile(file input.InputFile) string {
