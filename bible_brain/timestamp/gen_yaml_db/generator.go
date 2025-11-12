@@ -22,6 +22,12 @@ type BibleInfo struct {
 	TextFileset  string
 }
 
+const (
+	audioAccessGroupID = 1013
+	textAccessGroupID  = 1011
+	dbpAssetID         = "dbp-prod"
+)
+
 type YAMLGenerator struct {
 	config     Config
 	db         *sql.DB
@@ -29,6 +35,11 @@ type YAMLGenerator struct {
 	mmssupport map[string]bool
 	ctx        context.Context
 	langTree   search.LanguageTree
+}
+
+type queryOptions struct {
+	specificBible bool
+	duplicate     bool
 }
 
 func NewYAMLGenerator(config Config) (*YAMLGenerator, error) {
@@ -104,49 +115,43 @@ func (g *YAMLGenerator) Generate() error {
 }
 
 func (g *YAMLGenerator) findMatchingLanguages() ([]BibleInfo, error) {
-	var query string
+	opts := queryOptions{
+		specificBible: g.config.BibleId != "",
+		duplicate:     g.config.Duplicate,
+	}
+
 	var args []interface{}
 
-	if g.config.BibleId != "" {
-		// Generate for specific Bible ID
-		if g.config.Duplicate {
-			query = g.buildDuplicateSpecificBibleQuery()
-			args = []interface{}{
-				g.config.BibleId,
-				g.getAudioPattern(),
-			}
-		} else {
-			query = g.buildSpecificBibleQuery()
-			args = []interface{}{
-				g.config.BibleId,
-				g.getAudioPattern(),
-				g.getTextPattern(),
-			}
-			// Add exclusion pattern if needed
-			if g.getTextExclusionPattern() != "" {
-				args = append(args, g.getTextExclusionPattern())
-			}
+	textPattern := ""
+	textExclusion := ""
+	includeTextExclusion := false
+
+	if !opts.duplicate {
+		textPattern = g.getTextPattern()
+		textExclusion = g.getTextExclusionPattern()
+		includeTextExclusion = textExclusion != ""
+	}
+
+	query := g.buildQuery(opts, includeTextExclusion)
+
+	if opts.specificBible {
+		args = append(args, g.config.BibleId)
+	}
+
+	args = append(args, g.getAudioPattern())
+
+	if !opts.duplicate {
+		args = append(args, textPattern)
+		if includeTextExclusion {
+			args = append(args, textExclusion)
 		}
-		args = append(args, g.getSAPattern())
-	} else {
-		// Generate for all matching languages
-		if g.config.Duplicate {
-			query = g.buildDuplicateDiscoveryQuery()
-			args = []interface{}{
-				g.getAudioPattern(),
-			}
-		} else {
-			query = g.buildDiscoveryQuery()
-			args = []interface{}{
-				g.getAudioPattern(),
-				g.getTextPattern(),
-			}
-			// Add exclusion pattern if needed
-			if g.getTextExclusionPattern() != "" {
-				args = append(args, g.getTextExclusionPattern())
-			}
-		}
-		args = append(args, g.getSAPattern())
+	}
+
+	args = append(args, g.getSAPattern())
+
+	if g.config.Verbose {
+		fmt.Println("Executing query:")
+		fmt.Println(formatQueryWithArgs(query, args))
 	}
 
 	rows, err := g.db.Query(query, args...)
@@ -177,176 +182,115 @@ func (g *YAMLGenerator) findMatchingLanguages() ([]BibleInfo, error) {
 	return bibles, nil
 }
 
-func (g *YAMLGenerator) buildDiscoveryQuery() string {
-	query := `
-		SELECT 
-			b.id as bible_id, 
-			l.iso as language_iso,
-			fs.id as fileset_id,
-			fs.id as audio_fileset,
-			MIN(text_fs.id) as text_fileset
-		FROM bibles b
-		JOIN languages l ON b.language_id = l.id
-		JOIN bible_fileset_connections bfc ON b.id = bfc.bible_id
-		JOIN bible_filesets fs ON bfc.hash_id = fs.hash_id
-		JOIN bible_fileset_connections text_bfc ON b.id = text_bfc.bible_id
-		JOIN bible_filesets text_fs ON text_bfc.hash_id = text_fs.hash_id
-		WHERE fs.id LIKE ? 
-		AND fs.content_loaded = 1`
+func (g *YAMLGenerator) buildQuery(opts queryOptions, includeTextExclusion bool) string {
+	var builder strings.Builder
 
-	query += `
-		AND text_fs.id LIKE ?
-		AND text_fs.content_loaded = 1`
-
-	// Add exclusion pattern for text filesets if needed
-	exclusionPattern := g.getTextExclusionPattern()
-	if exclusionPattern != "" {
-		query += `
-		AND NOT EXISTS (
-			SELECT 1 FROM bible_filesets excl_fs 
-			JOIN bible_fileset_connections excl_bfc ON excl_fs.hash_id = excl_bfc.hash_id
-			WHERE excl_bfc.bible_id = b.id 
-			AND excl_fs.id LIKE ?
-		)`
+	builder.WriteString("SELECT \n")
+	builder.WriteString("\tb.id as bible_id,\n")
+	builder.WriteString("\tl.iso as language_iso,\n")
+	builder.WriteString("\tfs.id as fileset_id,\n")
+	builder.WriteString("\tfs.id as audio_fileset,\n")
+	if opts.duplicate {
+		builder.WriteString("\t'' as text_fileset\n")
+	} else {
+		builder.WriteString("\tMIN(text_fs.id) as text_fileset\n")
+	}
+	builder.WriteString("FROM bibles b\n")
+	builder.WriteString("JOIN languages l ON b.language_id = l.id\n")
+	builder.WriteString("JOIN bible_fileset_connections bfc ON b.id = bfc.bible_id\n")
+	builder.WriteString("JOIN bible_filesets fs ON bfc.hash_id = fs.hash_id\n")
+	fmt.Fprintf(&builder, "JOIN access_group_filesets audio_agf ON audio_agf.hash_id = fs.hash_id AND audio_agf.access_group_id = %d\n", audioAccessGroupID)
+	if !opts.duplicate {
+		builder.WriteString("JOIN bible_fileset_connections text_bfc ON b.id = text_bfc.bible_id\n")
+		builder.WriteString("JOIN bible_filesets text_fs ON text_bfc.hash_id = text_fs.hash_id\n")
+		fmt.Fprintf(&builder, "JOIN access_group_filesets text_agf ON text_agf.hash_id = text_fs.hash_id AND text_agf.access_group_id = %d\n", textAccessGroupID)
 	}
 
-	query += `
-		AND NOT EXISTS (
-			SELECT 1 FROM bible_filesets sa_fs 
-			JOIN bible_fileset_connections sa_bfc ON sa_fs.hash_id = sa_bfc.hash_id
-			WHERE sa_bfc.bible_id = b.id 
-			AND sa_fs.id LIKE ?
-		)`
+	builder.WriteString("WHERE ")
+	if opts.specificBible {
+		builder.WriteString("b.id = ?\n")
+		builder.WriteString("AND ")
+	}
+	builder.WriteString("fs.id LIKE ?\n")
+	builder.WriteString("AND fs.content_loaded = 1\n")
+	fmt.Fprintf(&builder, "AND fs.asset_id = '%s'\n", dbpAssetID)
 
-	// Add N2 special case: no corresponding N1SA
+	if !opts.duplicate {
+		builder.WriteString("AND text_fs.id LIKE ?\n")
+		builder.WriteString("AND text_fs.content_loaded = 1\n")
+		fmt.Fprintf(&builder, "AND text_fs.asset_id = '%s'\n", dbpAssetID)
+		if includeTextExclusion {
+			builder.WriteString("AND NOT EXISTS (\n")
+			builder.WriteString("\tSELECT 1 FROM bible_filesets excl_fs \n")
+			builder.WriteString("\tJOIN bible_fileset_connections excl_bfc ON excl_fs.hash_id = excl_bfc.hash_id\n")
+			builder.WriteString("\tWHERE excl_bfc.bible_id = b.id \n")
+			builder.WriteString("\tAND excl_fs.id LIKE ?\n")
+			builder.WriteString(")\n")
+		}
+	}
+
+	builder.WriteString("AND NOT EXISTS (\n")
+	builder.WriteString("\tSELECT 1 FROM bible_filesets sa_fs \n")
+	builder.WriteString("\tJOIN bible_fileset_connections sa_bfc ON sa_fs.hash_id = sa_bfc.hash_id\n")
+	builder.WriteString("\tWHERE sa_bfc.bible_id = b.id \n")
+	builder.WriteString("\tAND sa_fs.id LIKE ?\n")
+	builder.WriteString(")\n")
+
 	if strings.HasPrefix(g.config.Testament, "n2") {
-		query += `
-		AND NOT EXISTS (
-			SELECT 1 FROM bible_filesets n1sa_fs 
-			JOIN bible_fileset_connections n1sa_bfc ON n1sa_fs.hash_id = n1sa_bfc.hash_id
-			WHERE n1sa_bfc.bible_id = b.id 
-			AND n1sa_fs.id LIKE '%N1SA%'
-		)`
+		builder.WriteString("AND NOT EXISTS (\n")
+		builder.WriteString("\tSELECT 1 FROM bible_filesets n1sa_fs \n")
+		builder.WriteString("\tJOIN bible_fileset_connections n1sa_bfc ON n1sa_fs.hash_id = n1sa_bfc.hash_id\n")
+		builder.WriteString("\tWHERE n1sa_bfc.bible_id = b.id \n")
+		builder.WriteString("\tAND n1sa_fs.id LIKE '%N1SA%'\n")
+		builder.WriteString(")\n")
 	}
 
-	query += ` GROUP BY b.id, l.iso, fs.id ORDER BY b.id, fs.id`
+	builder.WriteString("GROUP BY b.id, l.iso, fs.id ORDER BY b.id, fs.id")
 
-	return query
+	return builder.String()
 }
 
-func (g *YAMLGenerator) buildDuplicateDiscoveryQuery() string {
-	query := `
-		SELECT 
-			b.id as bible_id, 
-			l.iso as language_iso,
-			fs.id as fileset_id,
-			fs.id as audio_fileset,
-			'' as text_fileset
-		FROM bibles b
-		JOIN languages l ON b.language_id = l.id
-		JOIN bible_fileset_connections bfc ON b.id = bfc.bible_id
-		JOIN bible_filesets fs ON bfc.hash_id = fs.hash_id
-		WHERE fs.id LIKE ? 
-		AND fs.content_loaded = 1`
-
-	query += `
-		AND NOT EXISTS (
-			SELECT 1 FROM bible_filesets sa_fs 
-			JOIN bible_fileset_connections sa_bfc ON sa_fs.hash_id = sa_bfc.hash_id
-			WHERE sa_bfc.bible_id = b.id 
-			AND sa_fs.id LIKE ?
-		)`
-
-	query += ` GROUP BY b.id, l.iso, fs.id ORDER BY b.id, fs.id`
-
-	return query
-}
-
-func (g *YAMLGenerator) buildSpecificBibleQuery() string {
-	query := `
-		SELECT 
-			b.id as bible_id, 
-			l.iso as language_iso,
-			fs.id as fileset_id,
-			fs.id as audio_fileset,
-			MIN(text_fs.id) as text_fileset
-		FROM bibles b
-		JOIN languages l ON b.language_id = l.id
-		JOIN bible_fileset_connections bfc ON b.id = bfc.bible_id
-		JOIN bible_filesets fs ON bfc.hash_id = fs.hash_id
-		JOIN bible_fileset_connections text_bfc ON b.id = text_bfc.bible_id
-		JOIN bible_filesets text_fs ON text_bfc.hash_id = text_fs.hash_id
-		WHERE b.id = ?
-		AND fs.id LIKE ? 
-		AND fs.content_loaded = 1`
-
-	query += `
-		AND text_fs.id LIKE ?
-		AND text_fs.content_loaded = 1`
-
-	// Add exclusion pattern for text filesets if needed
-	exclusionPattern := g.getTextExclusionPattern()
-	if exclusionPattern != "" {
-		query += `
-		AND NOT EXISTS (
-			SELECT 1 FROM bible_filesets excl_fs 
-			JOIN bible_fileset_connections excl_bfc ON excl_fs.hash_id = excl_bfc.hash_id
-			WHERE excl_bfc.bible_id = b.id 
-			AND excl_fs.id LIKE ?
-		)`
+func formatQueryWithArgs(query string, args []interface{}) string {
+	if len(args) == 0 {
+		return query
 	}
 
-	query += `
-		AND NOT EXISTS (
-			SELECT 1 FROM bible_filesets sa_fs 
-			JOIN bible_fileset_connections sa_bfc ON sa_fs.hash_id = sa_bfc.hash_id
-			WHERE sa_bfc.bible_id = b.id 
-			AND sa_fs.id LIKE ?
-		)`
+	var builder strings.Builder
+	argIdx := 0
 
-	// Add N2 special case: no corresponding N1SA
-	if strings.HasPrefix(g.config.Testament, "n2") {
-		query += `
-		AND NOT EXISTS (
-			SELECT 1 FROM bible_filesets n1sa_fs 
-			JOIN bible_fileset_connections n1sa_bfc ON n1sa_fs.hash_id = n1sa_bfc.hash_id
-			WHERE n1sa_bfc.bible_id = b.id 
-			AND n1sa_fs.id LIKE '%N1SA%'
-		)`
+	for i := 0; i < len(query); i++ {
+		if query[i] == '?' && argIdx < len(args) {
+			builder.WriteString(formatQueryArg(args[argIdx]))
+			argIdx++
+			continue
+		}
+		builder.WriteByte(query[i])
 	}
 
-	query += ` GROUP BY b.id, l.iso, fs.id ORDER BY b.id, fs.id`
-
-	return query
+	return builder.String()
 }
 
-func (g *YAMLGenerator) buildDuplicateSpecificBibleQuery() string {
-	query := `
-		SELECT 
-			b.id as bible_id, 
-			l.iso as language_iso,
-			fs.id as fileset_id,
-			fs.id as audio_fileset,
-			'' as text_fileset
-		FROM bibles b
-		JOIN languages l ON b.language_id = l.id
-		JOIN bible_fileset_connections bfc ON b.id = bfc.bible_id
-		JOIN bible_filesets fs ON bfc.hash_id = fs.hash_id
-		WHERE b.id = ?
-		AND fs.id LIKE ? 
-		AND fs.content_loaded = 1`
+func formatQueryArg(arg interface{}) string {
+	if arg == nil {
+		return "NULL"
+	}
 
-	query += `
-		AND NOT EXISTS (
-			SELECT 1 FROM bible_filesets sa_fs 
-			JOIN bible_fileset_connections sa_bfc ON sa_fs.hash_id = sa_bfc.hash_id
-			WHERE sa_bfc.bible_id = b.id 
-			AND sa_fs.id LIKE ?
-		)`
-
-	query += ` GROUP BY b.id, l.iso, fs.id ORDER BY b.id, fs.id`
-
-	return query
+	switch v := arg.(type) {
+	case string:
+		return "'" + strings.ReplaceAll(v, "'", "''") + "'"
+	case []byte:
+		return "'" + strings.ReplaceAll(string(v), "'", "''") + "'"
+	case fmt.Stringer:
+		escaped := strings.ReplaceAll(v.String(), "'", "''")
+		return "'" + escaped + "'"
+	case bool:
+		if v {
+			return "TRUE"
+		}
+		return "FALSE"
+	default:
+		return fmt.Sprint(v)
+	}
 }
 
 func (g *YAMLGenerator) getAudioPattern() string {
