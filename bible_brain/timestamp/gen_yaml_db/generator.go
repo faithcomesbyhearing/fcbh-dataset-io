@@ -598,12 +598,12 @@ func (g *YAMLGenerator) generateHLSFileset(audioFileset string) string {
 	switch g.config.StreamType {
 	case "hls":
 		// e.g., ABPWBTN1DA -> ABPWBTN1SA
-		return strings.ReplaceAll(audioFileset, "DA", "SA")
+		return replaceSuffix(audioFileset, "DA", "SA")
 	case "dash":
 		// e.g., ABPWBTN1DA-opus16 -> ABPWBTN1SA-opus16
-		return strings.ReplaceAll(audioFileset, "DA-opus16", "SA-opus16")
+		return replaceSuffix(audioFileset, "DA-opus16", "SA-opus16")
 	default:
-		return strings.ReplaceAll(audioFileset, "DA", "SA")
+		return replaceSuffix(audioFileset, "DA", "SA")
 	}
 }
 
@@ -833,6 +833,13 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func replaceSuffix(value, oldSuffix, newSuffix string) string {
+	if strings.HasSuffix(value, oldSuffix) {
+		return value[:len(value)-len(oldSuffix)] + newSuffix
+	}
+	return value
 }
 
 func loadMMSSupportFromTree(langTree search.LanguageTree) (map[string]bool, error) {

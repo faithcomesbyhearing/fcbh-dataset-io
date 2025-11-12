@@ -14,22 +14,22 @@ This tool generates YAML configuration files for processing languages that:
 
 ```bash
 # Basic usage
-./yaml_generator -testament n1 -text usx -output ./n1_usx/
+./gen_yaml_db -testament n1 -text usx -output ./n1_usx/
 
 # Generate N2DA filesets (with additional check for no N1SA)
-./yaml_generator -testament n2 -text plain -output ./n2_plain/
+./gen_yaml_db -testament n2 -text plain -output ./n2_plain/
 
 # Generate N2 duplication YAML (validates N1/N2 durations within tolerance)
-./yaml_generator -testament n2 -text usx -duplicate -output ./n2_dup/ -duplicate-tolerance 0.5
+./gen_yaml_db -testament n2 -text usx -duplicate -output ./n2_dup/ -duplicate-tolerance 0.5
 
 # Use custom template
-./yaml_generator -testament n1 -text usx -template ./my_template.yaml -output ./custom/
+./gen_yaml_db -testament n1 -text usx -template ./my_template.yaml -output ./custom/
 
 # Generate for specific Bible ID
-./yaml_generator -testament n1 -text usx -bible ABPWBT -output ./single/
+./gen_yaml_db -testament n1 -text usx -bible ABPWBT -output ./single/
 
 # Verbose output
-./yaml_generator -testament n1 -text usx -output ./n1_usx/ -verbose
+./gen_yaml_db -testament n1 -text usx -output ./n1_usx/ -verbose
 ```
 
 ## Arguments
@@ -134,14 +134,14 @@ The tool validates that:
 
 ### Generate N1DA + USX YAMLs (HLS)
 ```bash
-./yaml_generator -testament n1 -text usx -output ./n1_usx/
+./gen_yaml_db -testament n1 -text usx -output ./n1_usx/
 ```
 
 This will find all languages with N1DA audio filesets and USX text filesets but no N1SA filesets, and generate YAML files for MMS-supported languages.
 
 ### Generate N2DA + Plain text YAMLs (DASH)
 ```bash
-./yaml_generator -testament n2 -text plain -stream dash -output ./n2_plain/
+./gen_yaml_db -testament n2 -text plain -stream dash -output ./n2_plain/
 ```
 
 This will find all languages with N2DA audio filesets and plain text filesets but no N2SA filesets, and also ensure no N1SA filesets exist.
@@ -178,5 +178,5 @@ update_dbp:
 ```bash
 cd bible_brain/timestamp/gen_yaml_db/
 go mod tidy
-go build -o yaml_generator
+go build -o gen_yaml_db
 ```
