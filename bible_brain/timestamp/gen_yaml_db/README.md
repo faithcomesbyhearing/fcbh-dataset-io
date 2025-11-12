@@ -103,6 +103,13 @@ You can provide custom templates using the `-template` argument. Custom template
   - `DBP_MYSQL_DSN`: MySQL connection string (e.g., `user:password@tcp(hostname:port)/database`)
   - Falls back to `root:@tcp(localhost:3306)/dbp_localtest?parseTime=true` if not set
 
+### Access Group Requirements
+
+- Audio filesets must belong to access group ID `1013`
+- Text filesets must belong to access group ID `1011`
+- Filesets outside those access groups are skipped during discovery
+- Only filesets served from the `dbp-prod` asset are considered
+
 ## Special Cases
 
 ### N2 Filesets
