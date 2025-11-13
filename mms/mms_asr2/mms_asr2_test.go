@@ -10,7 +10,6 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/match/diff"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
-	"github.com/sergi/go-diff/diffmatchpatch"
 	"os"
 	"path"
 	"strconv"
@@ -61,17 +60,18 @@ func TestMMSASR2_ParseResult(t *testing.T) {
 	response := readResultFile(file)
 	status = asr.parseResult(file, response)
 
-	//execute my internal compare routine
-	compare := Compare{ctx: ctx, user: user, baseDataset: "", database: conn, lang: "mzj"}
-	pairs, status2 := compare.compareToASRTable()
+	remove := request.CompareChoice{Remove: true}
+	nfc := request.DiacriticalChoice{NormalizeNFC: true}
+	compare := diff.NewCompare(ctx, user, "", conn, "mzj", request.Testament{NT: true},
+		request.CompareSettings{LowerCase: true, RemovePromptChars: true, RemovePunctuation: true,
+			DoubleQuotes: remove, Apostrophe: remove, Hyphen: remove, DiacriticalMarks: nfc})
+	pairs, fileMap, lang, status2 := compare.CompareASR2()
 	if status2 != nil {
 		t.Fatal(status2)
 	}
-	compare.diffMatch = diffmatchpatch.New()
-	compare.diffPairs(pairs)
 	fmt.Println("num pairs", len(pairs))
 	report := diff.NewHTMLWriter(ctx, "datasetName1")
-	filename, status := report.WriteReport("baseDataetName", pairs, "mzj", "", request.SpeechToText{MMS: true})
+	filename, status := report.WriteReport("baseDataetName", pairs, lang, fileMap, request.SpeechToText{MMS: true})
 	if status != nil {
 		t.Fatal(status)
 	}

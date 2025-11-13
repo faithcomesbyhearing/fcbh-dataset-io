@@ -1,38 +1,33 @@
-package mms_asr
+package diff
 
 import (
-	"context"
 	"database/sql"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/match/diff"
-	"github.com/sergi/go-diff/diffmatchpatch"
-	"regexp"
 	"strings"
 )
 
-type Compare struct {
-	ctx         context.Context
-	user        string
-	baseDataset string
-	dataset     string
-	baseDb      db.DBAdapter
-	database    db.DBAdapter
-	lang        string
-	baseIdent   db.Ident
-	compIdent   db.Ident
-	testament   request.Testament
-	settings    request.CompareSettings
-	replacer    *strings.Replacer
-	verseRm     *regexp.Regexp
-	isLatin     sql.NullBool
-	diffMatch   *diffmatchpatch.DiffMatchPatch
-	results     []diff.Pair
+/*
+This code is in development as of Nov 12, 2025 GNG
+*/
+
+func (a *Compare) CompareASR2() ([]Pair, string, string, *log.Status) {
+	pairs, status := a.selectASRPairs()
+	if status != nil {
+		return pairs, "", "", status
+	}
+	for i := range pairs {
+		pairs[i].Base.Text = a.cleanup(pairs[i].Base.Text)
+		pairs[i].Base.Uroman = a.cleanup(pairs[i].Base.Uroman)
+		pairs[i].Comp.Text = a.cleanup(pairs[i].Comp.Text)
+		pairs[i].Comp.Uroman = a.cleanup(pairs[i].Comp.Uroman)
+	}
+	a.diffPairs(pairs)
+	fileMap, status := a.generateBookChapterFilenameMap()
+	return pairs, fileMap, a.lang, status
 }
 
-func (a *Compare) compareToASRTable() ([]diff.Pair, *log.Status) {
-	var results []diff.Pair
+func (a *Compare) selectASRPairs() ([]Pair, *log.Status) {
+	var results []Pair
 	query := `SELECT s.script_id, s.book_id, s.chapter_num, s.verse_str, s.script_num,
 			s.audio_file, s.script_begin_ts, s.script_end_ts, s.script_text, s.uroman,
 			a.script_text, a.uroman
@@ -43,7 +38,7 @@ func (a *Compare) compareToASRTable() ([]diff.Pair, *log.Status) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var p diff.Pair
+		var p Pair
 		var uRoman sql.NullString
 		var text sql.NullString
 		err = rows.Scan(&p.Base.ScriptId, &p.Ref.BookId, &p.Ref.ChapterNum, &p.Ref.VerseStr, &p.ScriptNum,
@@ -51,6 +46,7 @@ func (a *Compare) compareToASRTable() ([]diff.Pair, *log.Status) {
 		if err != nil {
 			return results, log.Error(a.ctx, 500, err, query)
 		}
+		p.ScriptNum = "" // non-blank script num will display as line num on report
 		p.Comp.ScriptId = p.Base.ScriptId
 		if text.Valid {
 			p.Comp.Text = text.String
@@ -71,7 +67,7 @@ func (a *Compare) compareToASRTable() ([]diff.Pair, *log.Status) {
 	return results, nil
 }
 
-func (a *Compare) diffPairs(pairs []diff.Pair) {
+func (a *Compare) diffPairs(pairs []Pair) {
 	for i, p := range pairs {
 		if len(p.Base.Text) > 0 || len(p.Comp.Text) > 0 {
 			baseText := strings.TrimSpace(p.Base.Text)
@@ -84,15 +80,4 @@ func (a *Compare) diffPairs(pairs []diff.Pair) {
 			pairs[i].Diffs = aDiff
 		}
 	}
-}
-
-func (c *Compare) isMatch(diffs []diffmatchpatch.Diff) bool {
-	for _, diff := range diffs {
-		if diff.Type == diffmatchpatch.DiffInsert || diff.Type == diffmatchpatch.DiffDelete {
-			if len(strings.TrimSpace(diff.Text)) > 0 {
-				return false
-			}
-		}
-	}
-	return true
 }
