@@ -47,6 +47,9 @@ func (b *Courier) failureMsg(status *log.Status, duration time.Duration) string 
 	var message []string
 	message = append(message, "FAILED: "+b.dataset)
 	message = append(message, "Message: "+status.Message)
+	if status.Err != "" {
+		message = append(message, "Error: "+status.Err)
+	}
 	message = append(message, "Duration: "+duration.Round(100*time.Millisecond).String())
 	message = append(message, "Stack Trace: "+status.Trace)
 	message = append(message, "Request: "+status.Request)
