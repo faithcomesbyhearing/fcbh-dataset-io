@@ -40,7 +40,7 @@ func (a *MMSASR) ProcessFiles(files []input.InputFile) (status *log.Status) {
 	if err != nil {
 		return log.Error(a.ctx, 500, err, `Error creating temp dir`)
 	}
-	defer os.RemoveAll(tempDir)
+	//defer os.RemoveAll(tempDir)
 	var lang = a.lang
 	if a.sttLang != "" {
 		lang = a.sttLang
