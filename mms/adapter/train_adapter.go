@@ -37,7 +37,7 @@ func NewTrainAdapter(ctx context.Context, conn db.DBAdapter, langISO string, tra
 
 func (t *TrainAdapter) HasModel() bool {
 	filename := "adapter." + t.langISO + ".safetensors"
-	model := filepath.Join(os.Getenv("FCBH_DATASET_DB"), "mms_adapter", t.langISO, filename)
+	model := filepath.Join(os.Getenv("FCBH_DATASET_DB"), "mms_adapters", t.langISO, filename)
 	fileInfo, err := os.Stat(model)
 	if os.IsNotExist(err) {
 		return false
