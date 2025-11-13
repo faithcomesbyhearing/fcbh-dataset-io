@@ -20,7 +20,7 @@ This document provides comprehensive documentation for all available configurati
   - [Audio Encoding](#audio-encoding)
   - [Text Encoding](#text-encoding)
   - [Database Configuration](#database-configuration)
-  - [Update DBP (Planned Feature)](#update-dbp-planned-feature)
+  - [Update DBP](#update-dbp)
 - [Validation Rules](#validation-rules)
 - [Default Values](#default-values)
 
@@ -435,29 +435,21 @@ database:
 
 ### Update DBP
 
-Update the DBP database with processed data:
+Use this section to create timestamps and HLS streams in biblebrain.
+It requires access to biblebrain's database, so is of very limited use outside Faith Comes By Hearing.
 
 ```yaml
 update_dbp:
-  timestamps: ENGNIVN1DA       # Fileset ID to update timestamps for
-  hls: ENGNIVN1SA              # Fileset ID for HLS stream generation
+  copy_timestamps_from: ENGWEBN1DA   # Optional (for copying eg N1 to N2)
+  timestamps: ENGNIVN2DA             # fileset to which timestamps are saved
+  hls: ENGNIVN2SA                    # New HLS fileset
 ```
 
 **Fields:**
-- **`timestamps`**: Fileset ID to update timestamp data in DBP
-- **`hls`**: Fileset ID for generating HTTP Live Streaming (HLS) streams
+- **`copy_timestamps_from` (optional)** – Copies biblebrain timestamps from this fileset to the target.  Intended for N1→N2 or O1→O2.  Will fail/refuse if chapter durations do not match exactly.
+- **`timestamps`** – Fileset ID whose timestamps will be written or overwritten in DBP.
+- **`hls`** – Fileset ID for generating HTTP Live Streaming (HLS) streams; typically the paired SA fileset.
 
-**HLS Stream Generation:**
-- **Purpose**: Generate HLS streams for the specified fileset
-- **Use case**: When you need to create streaming audio content from existing fileset data
-- **Value**: Fileset ID (e.g., `ENGNIVN1SA`, `ENGWEBN2SA`)
-
-**Example:**
-```yaml
-update_dbp:
-  timestamps: ENGNIVN1DA       # Update timestamps for ENGNIVN1DA
-  hls: ENGNIVN1SA              # Generate HLS streams for ENGNIVN1SA
-```
 
 ## Validation Rules
 
