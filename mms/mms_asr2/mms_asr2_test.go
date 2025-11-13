@@ -2,6 +2,7 @@ package mms_asr
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
@@ -76,6 +77,9 @@ func TestMMSASR2_ParseResult(t *testing.T) {
 		t.Fatal(status)
 	}
 	fmt.Println("htmlFilename", filename)
+	jsonFilename := path.Join(os.Getenv("FCBH_DATASET_TMP"), "N2MZJSIM_asr2.json")
+	writeJson(pairs, jsonFilename, t)
+	fmt.Println("jsonFilename", jsonFilename)
 }
 
 func readResultFile(file input.InputFile) string {
@@ -85,4 +89,16 @@ func readResultFile(file input.InputFile) string {
 		os.Exit(1)
 	}
 	return string(content)
+}
+
+func writeJson(records any, filePath string, t *testing.T) {
+	jsonData, err := json.MarshalIndent(records, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	} else {
+		err = os.WriteFile(filePath, jsonData, 0644)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 }

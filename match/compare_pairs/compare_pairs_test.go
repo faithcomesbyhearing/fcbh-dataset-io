@@ -26,3 +26,22 @@ func TestComparePairs(t *testing.T) {
 		t.Fatal(status)
 	}
 }
+
+func TestN2MZJSIM_MAT12(t *testing.T) {
+	var list PairList
+	list.DatasetName = "N2MZJSIM"
+	var asr2 OnePair
+	asr2.Description = "N2MZJSIM_ASR2"
+	asr2.Path = "s3://dataset-io/GaryNTest/N2MZJSIM/00001/output/N2MZJSIM_asr2.json"
+	list.Pairs = append(list.Pairs, asr2)
+	var mms OnePair
+	mms.Description = "N2MZJSIM_MMS_noadapter"
+	mms.Path = "s3://dataset-io/GaryNTest/N2MZJSIM/00001/output/N2MZJSIM_audio_compare.json"
+	list.Pairs = append(list.Pairs, mms)
+	// 1) modify compare_pairs to take book_id and chapter
+	// 2) pass these to preparePairMap
+	// 3) ignore book_id if blank, or chapter_num 0, but if not delete all other data
+	// 4) Delete everything, but chapter MAT 12
+	// 5) Process through ComparePairs and view report.
+	// 6) Do the same thing for mms_adapter?
+}
