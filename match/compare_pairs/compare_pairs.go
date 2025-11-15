@@ -24,10 +24,10 @@ type OnePair struct {
 	PairMap     map[int]diff.Pair
 }
 
-func ComparePairs(ctx context.Context, pairs PairList) *log.Status {
+func ComparePairs(ctx context.Context, bookId string, chapterNum int, pairs PairList) *log.Status {
 	for i, p := range pairs.Pairs {
 		if p.PairMap == nil {
-			status := preparePairsMap(ctx, &p)
+			status := preparePairsMap(ctx, bookId, chapterNum, &p)
 			if status != nil {
 				return status
 			}
@@ -56,7 +56,7 @@ func ComparePairs(ctx context.Context, pairs PairList) *log.Status {
 	return status
 }
 
-func preparePairsMap(ctx context.Context, onePair *OnePair) *log.Status {
+func preparePairsMap(ctx context.Context, bookId string, chapterNum int, onePair *OnePair) *log.Status {
 	var status *log.Status
 	if onePair.Path == "" {
 		return log.ErrorNoErr(ctx, 500, "Path to Pairs data is required.")
@@ -75,12 +75,27 @@ func preparePairsMap(ctx context.Context, onePair *OnePair) *log.Status {
 	if err != nil {
 		return log.ErrorNoErr(ctx, 500, "Failed to parse file.")
 	}
+	if bookId != "" {
+		pairs = selectBookChapter(bookId, chapterNum, pairs)
+	}
 	onePair.PairMap = make(map[int]diff.Pair)
 	for i := range pairs {
 		pairs[i].HTML = ""
 		onePair.PairMap[pairs[i].ScriptId()] = pairs[i]
 	}
 	return nil
+}
+
+func selectBookChapter(bookId string, chapterNum int, pairs []diff.Pair) []diff.Pair {
+	var result []diff.Pair
+	for _, p := range pairs {
+		if p.Ref.BookId == bookId {
+			if chapterNum == 0 || p.Ref.ChapterNum == chapterNum {
+				result = append(result, p)
+			}
+		}
+	}
+	return result
 }
 
 type ExcelReport struct {
