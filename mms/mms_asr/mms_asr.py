@@ -1,12 +1,12 @@
 import os
 import sys
-from datasets import Dataset, Audio
+import json
 from transformers import Wav2Vec2ForCTC
-from transformers import Wav2Vec2Processor
+#from transformers import Wav2Vec2Processor
 from transformers import AutoProcessor
 import torch
-import psutil #probably not used
-#from safetensors.torch import load_file as safe_load_file
+import torchaudio
+#import psutil #probably not used
 from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
 from safetensors.torch import load_file
 sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GOPROJ'], 'logger')))
@@ -71,12 +71,29 @@ else:
 model = model.to(device)
 for line in sys.stdin:
     torch.cuda.empty_cache()
-    audioFile = line.strip()
-    fromDict = Dataset.from_dict({"audio": [audioFile]})
-    streamData = fromDict.cast_column("audio", Audio(sampling_rate=16000))
-    sample = next(iter(streamData))["audio"]["array"]
-
-    inputs = processor(sample, sampling_rate=16_000, return_tensors="pt")
+    data = json.loads(line)
+    audioFile = data["audio_file"]
+    beginTS = data.get("begin_ts", None)
+    endTS = data.get("end_ts", None)
+    info = torchaudio.info(audioFile, format="wav")
+    if info.sample_rate != 16000:
+        print("Audio sample rate must be 16000", file=sys.stderr, flush=True)
+        sys.exit(1)
+    if beginTS != None and endTS != None:
+        speech, sample_rate = torchaudio.load(
+            audioFile,
+            frame_offset = int(beginTS * 16000),
+            num_frames = int((endTS - beginTS) * 16000)
+        )
+    else:
+        speech, sample_rate = torchaudio.load(audioFile)
+#    speech = speech.squeeze()
+    inputs = processor(
+        speech,
+        sampling_rate=16000,
+        return_tensors="pt",
+        padding=False)
+    inputs["input_values"] = inputs["input_values"].squeeze(0)
     inputs = ensureMinimumTensorSize(inputs, 3200, 0)
     inputs = {name: tensor.to(device) for name, tensor in inputs.items()}
     with torch.no_grad():

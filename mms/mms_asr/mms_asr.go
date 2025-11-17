@@ -2,7 +2,10 @@ package mms_asr
 
 import (
 	"context"
-	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
+
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
@@ -10,8 +13,6 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/ffmpeg"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
-	"os"
-	"path/filepath"
 )
 
 type MMSASR struct {
@@ -40,7 +41,7 @@ func (a *MMSASR) ProcessFiles(files []input.InputFile) (status *log.Status) {
 	if err != nil {
 		return log.Error(a.ctx, 500, err, `Error creating temp dir`)
 	}
-	//defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir)
 	var lang = a.lang
 	if a.sttLang != "" {
 		lang = a.sttLang
@@ -102,6 +103,7 @@ func (a *MMSASR) processFile(file input.InputFile, tempDir string) *log.Status {
 		}
 		log.Info(a.ctx, "MMS ASR", audioFile.BookId, audioFile.ChapterNum, file.ScriptLine)
 		audioFile.AudioVerseWav = wavFile
+		audioFile.AudioVerseWav = `{"audio_file":"` + wavFile + `"}`
 		audioFiles = append(audioFiles, audioFile)
 	} else {
 		log.Info(a.ctx, "MMS ASR", file.BookId, file.Chapter)
@@ -109,17 +111,20 @@ func (a *MMSASR) processFile(file input.InputFile, tempDir string) *log.Status {
 		if status != nil {
 			return status
 		}
-		audioFiles, status = ffmpeg.ChopByTimestamp(a.ctx, tempDir, wavFile, audioFiles)
+		for i, ts := range audioFiles {
+			audioFiles[i].AudioVerseWav = `{"audio_file":"` + wavFile + `",` +
+				`"begin_ts":` + strconv.FormatFloat(ts.BeginTS, 'f', 4, 64) + `,` +
+				`"end_ts":` + strconv.FormatFloat(ts.EndTS, 'f', 4, 64) + `}`
+		}
 	}
 	for i, ts := range audioFiles {
 		audioFiles[i].AudioFile = file.Filename
 		audioFiles[i].AudioChapterWav = wavFile
-		fmt.Println(ts.BookId, ts.ChapterNum, ts.VerseStr, "sid:", ts.ScriptId)
 		response, status1 := a.mmsAsrPy.Process(ts.AudioVerseWav)
 		if status1 != nil {
 			return status1
 		}
-		fmt.Println("response:", response)
+		log.Info(a.ctx, ts.BookId, ts.ChapterNum, ts.VerseStr, "sid:", ts.ScriptId, response)
 		audioFiles[i].Text = response
 		uRoman, status2 := a.uroman.Process(response)
 		if status2 != nil {
