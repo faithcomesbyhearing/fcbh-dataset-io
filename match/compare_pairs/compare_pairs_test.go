@@ -21,8 +21,30 @@ func TestComparePairs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	status := ComparePairs(ctx, p)
+	status := ComparePairs(ctx, "", 0, p)
 	if status != nil {
 		t.Fatal(status)
 	}
+}
+
+func TestN2MZJSIM_MAT12(t *testing.T) {
+	var list PairList
+	list.DatasetName = "N2MZJSIM"
+	var asr2 OnePair
+	asr2.Description = "N2MZJSIM_ASR2"
+	asr2.Path = "s3://dataset-io/GaryNTest/N2MZJSIM/00001/output/N2MZJSIM_asr2.json"
+	list.Pairs = append(list.Pairs, asr2)
+	var mms OnePair
+	mms.Description = "N2MZJSIM_MMS_only"
+	mms.Path = "s3://dataset-io/GaryNTest/N2MZJSIM/00001/output/N2MZJSIM_audio_compare.json"
+	list.Pairs = append(list.Pairs, mms)
+	var adapter OnePair
+	adapter.Description = "N2MZJSIM_adapter"
+	adapter.Path = "s3://dataset-io/GaryNTest/N2MZJSIM/00003/output/N2MZJSIM_audio_compare.json"
+	list.Pairs = append(list.Pairs, adapter)
+	status := ComparePairs(context.TODO(), "MAT", 12, list)
+	if status != nil {
+		t.Fatal(status)
+	}
+	/// Add mms_adapter run
 }
