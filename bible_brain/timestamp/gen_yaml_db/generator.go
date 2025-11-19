@@ -7,7 +7,6 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/lang_tree/search"
@@ -625,11 +624,10 @@ func (g *YAMLGenerator) fetchChapterDurations(filesetID string) (map[string]map[
 	durations := make(map[string]map[int]float64)
 
 	query := `
-		SELECT bf.book_id, bf.chapter_start, bft.value
+		SELECT bf.book_id, bf.chapter_start, bf.duration
 		FROM bible_filesets fs
 		JOIN bible_files bf ON fs.hash_id = bf.hash_id
-		LEFT JOIN bible_file_tags bft ON bft.file_id = bf.id AND bft.tag = 'duration'
-		WHERE fs.id = ?
+		WHERE fs.id = ? AND bf.duration IS NOT NULL
 	`
 
 	rows, err := g.db.QueryContext(g.ctx, query, filesetID)
@@ -640,21 +638,16 @@ func (g *YAMLGenerator) fetchChapterDurations(filesetID string) (map[string]map[
 
 	for rows.Next() {
 		var (
-			bookID      sql.NullString
-			chapter     sql.NullInt64
-			durationStr sql.NullString
+			bookID   sql.NullString
+			chapter  sql.NullInt64
+			duration sql.NullInt64
 		)
 
-		if err := rows.Scan(&bookID, &chapter, &durationStr); err != nil {
+		if err := rows.Scan(&bookID, &chapter, &duration); err != nil {
 			return nil, fmt.Errorf("scanning duration row for %s: %w", filesetID, err)
 		}
 
-		if !bookID.Valid || !chapter.Valid || !durationStr.Valid {
-			continue
-		}
-
-		value, err := strconv.ParseFloat(strings.TrimSpace(durationStr.String), 64)
-		if err != nil {
+		if !bookID.Valid || !chapter.Valid || !duration.Valid {
 			continue
 		}
 
@@ -663,7 +656,8 @@ func (g *YAMLGenerator) fetchChapterDurations(filesetID string) (map[string]map[
 			bookMap = make(map[int]float64)
 			durations[bookID.String] = bookMap
 		}
-		bookMap[int(chapter.Int64)] = value
+		// Convert int to float64 for consistency with existing code
+		bookMap[int(chapter.Int64)] = float64(duration.Int64)
 	}
 
 	if err := rows.Err(); err != nil {

@@ -5,7 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -137,7 +140,7 @@ func (d *DBPAdapter) SelectTimestamps(fileId int64) ([]Timestamp, *log.Status) {
 	return result, nil
 }
 
-// GetFilesetDurations returns a map[book][chapter]durationSeconds derived from bible_file_tags
+// GetFilesetDurations returns a map[book][chapter]durationSeconds derived from bible_files.duration
 func (d *DBPAdapter) GetFilesetDurations(filesetID string) (map[string]map[int]float64, *log.Status) {
 	results := make(map[string]map[int]float64)
 
@@ -147,10 +150,9 @@ func (d *DBPAdapter) GetFilesetDurations(filesetID string) (map[string]map[int]f
 	}
 
 	query := `
-		SELECT bf.book_id, bf.chapter_start, bft.value
+		SELECT bf.book_id, bf.chapter_start, bf.duration
 		FROM bible_files bf
-		LEFT JOIN bible_file_tags bft ON bf.id = bft.file_id AND bft.tag = 'duration'
-		WHERE bf.hash_id = ?
+		WHERE bf.hash_id = ? AND bf.duration IS NOT NULL
 	`
 
 	rows, err := d.conn.Query(query, hashID)
@@ -161,22 +163,16 @@ func (d *DBPAdapter) GetFilesetDurations(filesetID string) (map[string]map[int]f
 
 	for rows.Next() {
 		var (
-			bookID      sql.NullString
-			chapter     sql.NullInt64
-			durationStr sql.NullString
+			bookID   sql.NullString
+			chapter  sql.NullInt64
+			duration sql.NullInt64
 		)
 
-		if err := rows.Scan(&bookID, &chapter, &durationStr); err != nil {
+		if err := rows.Scan(&bookID, &chapter, &duration); err != nil {
 			return nil, log.Error(d.ctx, 500, err, "Failed to scan fileset duration row")
 		}
 
-		if !bookID.Valid || !chapter.Valid || !durationStr.Valid {
-			continue
-		}
-
-		value, err := strconv.ParseFloat(strings.TrimSpace(durationStr.String), 64)
-		if err != nil {
-			log.Warn(d.ctx, err, fmt.Sprintf("Invalid duration '%s' for %s %d in %s", durationStr.String, bookID.String, chapter.Int64, filesetID))
+		if !bookID.Valid || !chapter.Valid || !duration.Valid {
 			continue
 		}
 
@@ -185,19 +181,47 @@ func (d *DBPAdapter) GetFilesetDurations(filesetID string) (map[string]map[int]f
 			bookMap = make(map[int]float64)
 			results[bookID.String] = bookMap
 		}
-		bookMap[int(chapter.Int64)] = value
+		// Convert int to float64 for consistency with existing code
+		bookMap[int(chapter.Int64)] = float64(duration.Int64)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, log.Error(d.ctx, 500, err, "Error iterating fileset durations")
 	}
 
-	// Ensure deterministic ordering by normalizing empty map
-	if len(results) == 0 {
-		return results, nil
+	return results, nil
+}
+
+// GetBibleFileDuration gets the duration field from bible_files for a specific file
+func (d *DBPAdapter) GetBibleFileDuration(filesetID string, bookID string, chapterNum int, filename string) (*int, *log.Status) {
+	hashID, status := d.SelectHashId(filesetID)
+	if status != nil {
+		return nil, status
 	}
 
-	return results, nil
+	query := `
+		SELECT bf.duration
+		FROM bible_files bf
+		WHERE bf.hash_id = ? AND bf.book_id = ? AND bf.chapter_start = ? AND bf.file_name = ?
+	`
+
+	var duration sql.NullInt64
+	err := d.conn.QueryRow(query, hashID, bookID, chapterNum, filename).Scan(&duration)
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			// File not found in database, return nil (no duration available)
+			return nil, nil
+		}
+		return nil, log.Error(d.ctx, 500, err, "Failed to get bible_files.duration")
+	}
+
+	if !duration.Valid {
+		// Duration is NULL in database
+		return nil, nil
+	}
+
+	result := int(duration.Int64)
+	return &result, nil
 }
 
 // GetFilesetTimestamps returns timestamps grouped by book/chapter along with an ordered chapter list
@@ -520,9 +544,75 @@ func (d *DBPAdapter) updateFilesetTimingEstTagTx(tx *sql.Tx, hashId, timingEstEr
 	return nil
 }
 
+// DurationUpdate represents a single duration update to be applied
+type DurationUpdate struct {
+	FilesetID string
+	BookID    string
+	Chapter   int
+	Filename  string
+	Duration  int
+}
+
+// getAudioDuration uses FFmpeg to get the actual audio duration
+func (d *DBPAdapter) getAudioDuration(audioPath string) (float64, error) {
+	cmd := exec.Command("ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", audioPath)
+	output, err := cmd.Output()
+	if err != nil {
+		return 0, fmt.Errorf("ffprobe failed: %v", err)
+	}
+
+	durationStr := strings.TrimSpace(string(output))
+	duration, err := strconv.ParseFloat(durationStr, 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse duration: %v", err)
+	}
+
+	return duration, nil
+}
+
+// validateDuration validates duration and returns authoritative duration, current db duration, and error
+func (d *DBPAdapter) validateDuration(audioPath string, timestamps []Timestamp, filesetID, bookID string, chapterNum int, filename string) (int, *int, *log.Status) {
+	// Get current duration from database
+	dbDuration, status := d.GetBibleFileDuration(filesetID, bookID, chapterNum, filename)
+	if status != nil {
+		return 0, nil, status
+	}
+
+	// Get audio duration from format metadata
+	audioDuration, err := d.getAudioDuration(audioPath)
+	if err != nil {
+		return 0, nil, log.Error(d.ctx, 500, err, fmt.Sprintf("Failed to get audio duration for %s", audioPath))
+	}
+
+	// Calculate sum of verse durations
+	totalVerseDuration := 0.0
+	for _, timestamp := range timestamps {
+		totalVerseDuration += (timestamp.EndTS - timestamp.BeginTS)
+	}
+
+	// Round all values to int (seconds) for comparison
+	roundedFormatDuration := int(math.Round(audioDuration))
+	roundedSumVerses := int(math.Round(totalVerseDuration))
+
+	// Critical validation: Format duration must match sum of verses
+	// If they don't match, we can't trust either value and must fail
+	if roundedFormatDuration != roundedSumVerses {
+		return 0, nil, log.ErrorNoErr(d.ctx, 500, fmt.Sprintf("Audio duration mismatch for %s %s %d %s: format(%ds) vs sum_verses(%ds) - these must match",
+			filesetID, bookID, chapterNum, filename, roundedFormatDuration, roundedSumVerses))
+	}
+
+	// Format and sum agree - use format as authoritative
+	authoritativeDuration := roundedFormatDuration
+
+	// Note: If dbDuration differs from authoritativeDuration, we'll update it later
+	// We don't fail here because format and sum agree, so we trust that value
+
+	return authoritativeDuration, dbDuration, nil
+}
+
 // ProcessTimestamps processes timestamps for specific books/chapters in a single transaction
-// It removes affected SA files, removes/inserts DA timestamps, and updates the timing_est_err tag
-func (d *DBPAdapter) ProcessTimestamps(daFilesetID, timingEstErr string, chapters []db.Script, timestampsData map[string]map[int][]Timestamp) *log.Status {
+// It removes affected SA files, removes/inserts DA timestamps, updates the timing_est_err tag, and updates durations
+func (d *DBPAdapter) ProcessTimestamps(daFilesetID, timingEstErr, bibleID string, chapters []db.Script, timestampsData map[string]map[int][]Timestamp) *log.Status {
 	// Extract unique book IDs
 	bookIDs := make(map[string]bool)
 	for _, ch := range chapters {
@@ -543,6 +633,52 @@ func (d *DBPAdapter) ProcessTimestamps(daFilesetID, timingEstErr string, chapter
 	hashID, status := d.SelectHashId(daFilesetID)
 	if status != nil {
 		return status
+	}
+
+	// Validate durations and collect updates (before transaction)
+	filesDir := os.Getenv("FCBH_DATASET_FILES")
+	if filesDir == "" {
+		filesDir = "/tmp/artie/files"
+	}
+	filesDir = filepath.Join(filesDir, bibleID, daFilesetID)
+
+	var durationUpdates []DurationUpdate
+
+	// Validate durations for each chapter
+	for _, ch := range chapters {
+		// Get timestamps for this chapter
+		if bookTimestamps, ok := timestampsData[ch.BookId]; ok {
+			if chapterTimestamps, ok := bookTimestamps[ch.ChapterNum]; ok && len(chapterTimestamps) > 0 {
+				// Get filename from database
+				_, filename, status := d.SelectFileId(hashID, ch.BookId, ch.ChapterNum)
+				if status != nil {
+					return status
+				}
+				if filename == "" {
+					continue
+				}
+
+				// Construct audio file path
+				audioPath := filepath.Join(filesDir, filename)
+
+				// Validate duration (this will fail if mismatches found)
+				authoritativeDuration, dbDuration, status := d.validateDuration(audioPath, chapterTimestamps, daFilesetID, ch.BookId, ch.ChapterNum, filename)
+				if status != nil {
+					return status
+				}
+
+				// Collect update if needed
+				if dbDuration == nil || *dbDuration != authoritativeDuration {
+					durationUpdates = append(durationUpdates, DurationUpdate{
+						FilesetID: daFilesetID,
+						BookID:    ch.BookId,
+						Chapter:   ch.ChapterNum,
+						Filename:  filename,
+						Duration:  authoritativeDuration,
+					})
+				}
+			}
+		}
 	}
 
 	// Start transaction
@@ -607,10 +743,50 @@ func (d *DBPAdapter) ProcessTimestamps(daFilesetID, timingEstErr string, chapter
 		return log.Error(d.ctx, 500, err, "Failed to update timing_est_err tag")
 	}
 
+	// Update durations within the same transaction
+	if len(durationUpdates) > 0 {
+		err = d.updateBibleFileDurationsTx(tx, durationUpdates, hashID)
+		if err != nil {
+			return log.Error(d.ctx, 500, err, "Failed to update durations")
+		}
+	}
+
 	// Commit transaction
 	err = tx.Commit()
 	if err != nil {
 		return log.Error(d.ctx, 500, err, "Failed to commit timestamps transaction")
+	}
+
+	return nil
+}
+
+// updateBibleFileDurationsTx updates multiple duration fields within a transaction
+func (d *DBPAdapter) updateBibleFileDurationsTx(tx *sql.Tx, updates []DurationUpdate, hashID string) error {
+	query := `
+		UPDATE bible_files 
+		SET duration = ?, updated_at = CURRENT_TIMESTAMP
+		WHERE hash_id = ? AND book_id = ? AND chapter_start = ? AND file_name = ?
+	`
+
+	for _, update := range updates {
+		result, err := tx.Exec(query, update.Duration, hashID, update.BookID, update.Chapter, update.Filename)
+		if err != nil {
+			return fmt.Errorf("failed to update bible_files.duration for %s %s %d %s: %v",
+				update.FilesetID, update.BookID, update.Chapter, update.Filename, err)
+		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("failed to get rows affected: %v", err)
+		}
+
+		if rowsAffected == 0 {
+			log.Warn(d.ctx, fmt.Sprintf("No bible_files record found to update: %s %s %d %s",
+				update.FilesetID, update.BookID, update.Chapter, update.Filename))
+		} else {
+			log.Info(d.ctx, fmt.Sprintf("Updated bible_files.duration to %d for %s %s %d %s",
+				update.Duration, update.FilesetID, update.BookID, update.Chapter, update.Filename))
+		}
 	}
 
 	return nil

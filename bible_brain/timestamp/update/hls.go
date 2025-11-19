@@ -94,8 +94,14 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID, timestampsFilesetID
 				continue
 			}
 
-			// Process the file with HLS processor
-			fileData, err := processor.ProcessFile(audioFile, timestamps)
+			// Get current duration from database
+			dbDuration, status := d.dbpConn.GetBibleFileDuration(timestampsFilesetID, ch.BookId, ch.ChapterNum, audioFile)
+			if status != nil {
+				return status
+			}
+
+			// Process the file with HLS processor (includes sanity check)
+			fileData, err := processor.ProcessFile(audioFile, timestamps, dbDuration)
 			if err != nil {
 				return log.Error(d.ctx, 500, err, "Failed to process HLS file: "+audioFile)
 			}
