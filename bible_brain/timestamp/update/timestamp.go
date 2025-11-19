@@ -87,9 +87,9 @@ func (d *UpdateTimestamps) Process() *log.Status {
 				}
 			}
 
-			// Process timestamps in a single transaction (removes SA files, removes/inserts DA timestamps, updates tag).
+			// Process timestamps in a single transaction (removes SA files, removes/inserts DA timestamps, updates tag, updates durations).
 			// insertTimestampsTx only inserts rows with TimestampId == 0, which is why the duplication path zeroes ids first.
-			status = d.dbpConn.ProcessTimestamps(d.req.UpdateDBP.Timestamps, mmsAlignTimingEstErr, chapters, timestampsData)
+			status = d.dbpConn.ProcessTimestamps(d.req.UpdateDBP.Timestamps, mmsAlignTimingEstErr, ident.BibleId, chapters, timestampsData)
 			if status != nil {
 				return status
 			}
