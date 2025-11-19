@@ -198,11 +198,11 @@ func (g *YAMLGenerator) buildQuery(opts queryOptions, includeTextExclusion bool)
 	builder.WriteString("JOIN languages l ON b.language_id = l.id\n")
 	builder.WriteString("JOIN bible_fileset_connections bfc ON b.id = bfc.bible_id\n")
 	builder.WriteString("JOIN bible_filesets fs ON bfc.hash_id = fs.hash_id\n")
-	fmt.Fprintf(&builder, "JOIN access_group_filesets audio_agf ON audio_agf.hash_id = fs.hash_id AND audio_agf.access_group_id = %d\n", audioAccessGroupID)
+	fmt.Fprintf(&builder, "JOIN license_group_access_groups_view audio_v ON audio_v.id = fs.license_group_id AND audio_v.access_group = %d\n", audioAccessGroupID)
 	if !opts.duplicate {
 		builder.WriteString("JOIN bible_fileset_connections text_bfc ON b.id = text_bfc.bible_id\n")
 		builder.WriteString("JOIN bible_filesets text_fs ON text_bfc.hash_id = text_fs.hash_id\n")
-		fmt.Fprintf(&builder, "JOIN access_group_filesets text_agf ON text_agf.hash_id = text_fs.hash_id AND text_agf.access_group_id = %d\n", textAccessGroupID)
+		fmt.Fprintf(&builder, "JOIN license_group_access_groups_view text_v ON text_v.id = text_fs.license_group_id AND text_v.access_group = %d\n", textAccessGroupID)
 	}
 
 	builder.WriteString("WHERE ")
