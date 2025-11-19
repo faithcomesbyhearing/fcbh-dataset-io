@@ -126,15 +126,14 @@ func (d *APIDBPClient) searchUSXText(info *BibleInfoType, size string, textType 
 }
 
 func (d *APIDBPClient) searchAudioWithTypePreference(info *BibleInfoType, size string, codec string, bitrate string, preferredType string) FilesetType {
-	// If a specific type is preferred, try that first
+	// If a specific type is required, only search for that type
 	if preferredType != "" {
 		result := d.searchAudio(info, size, preferredType, codec, bitrate)
-		if result.Id != "" {
-			return result
-		}
+		// Return result even if empty - no fallback when type is explicitly specified
+		return result
 	}
 
-	// Fall back to original logic: audio first, then audio_drama
+	// Fall back to original logic: audio first, then audio_drama (only when no type specified)
 	result := d.searchAudio(info, size, `audio`, codec, bitrate)
 	if result.Id != "" {
 		return result
