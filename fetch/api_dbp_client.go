@@ -145,18 +145,29 @@ func (d *APIDBPClient) searchAudioWithTypePreference(info *BibleInfoType, size s
 func (d *APIDBPClient) searchAudio(info *BibleInfoType, size string, audioType string, codec string, bitrate string) FilesetType {
 	for _, rec := range info.DbpProd.Filesets {
 		if rec.Type == audioType {
-			recCodec := strings.ToUpper(rec.Codec)
-			if recCodec == codec || (recCodec == `MP` && codec == `MP3`) {
-				if rec.Bitrate == bitrate || (rec.Bitrate == `3kbps` && bitrate == `64kbps`) {
-					if d.hasSize(rec.Size, size) {
-						if recCodec == `MP` {
-							rec.Codec = `MP3`
-						}
-						if rec.Bitrate == `3kbps` {
-							rec.Bitrate = `64kbps`
-						}
-						return rec
+			// If codec/bitrate are not specified (empty), skip those checks
+			// This allows matching when only set_type_code is specified
+			codecMatch := true
+			if codec != "" {
+				recCodec := strings.ToUpper(rec.Codec)
+				codecMatch = recCodec == codec || (recCodec == `MP` && codec == `MP3`)
+			}
+
+			bitrateMatch := true
+			if bitrate != "" {
+				bitrateMatch = rec.Bitrate == bitrate || (rec.Bitrate == `3kbps` && bitrate == `64kbps`)
+			}
+
+			if codecMatch && bitrateMatch {
+				if d.hasSize(rec.Size, size) {
+					recCodec := strings.ToUpper(rec.Codec)
+					if recCodec == `MP` {
+						rec.Codec = `MP3`
 					}
+					if rec.Bitrate == `3kbps` {
+						rec.Bitrate = `64kbps`
+					}
+					return rec
 				}
 			}
 		}
