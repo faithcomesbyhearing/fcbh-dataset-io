@@ -70,7 +70,7 @@ type BibleInfoRespType struct {
 func (d *APIDBPClient) BibleInfo() (BibleInfoType, *log.Status) {
 	var result BibleInfoType
 	var status *log.Status
-	var get = `https://4.dbt.io/api/bibles/` + d.bibleId + `?v=4`
+	var get = getDBPHost() + `/api/bibles/` + d.bibleId + `?v=4`
 	var response BibleInfoRespType
 	body, status := httpGet(d.ctx, get, false, d.bibleId)
 	if status != nil {
