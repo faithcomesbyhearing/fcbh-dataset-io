@@ -51,10 +51,7 @@ func (r *RequestDecoder) checkTestament(req *request.Testament) {
 // if none are selected, it will set the default: NoAudio
 func (r *RequestDecoder) checkAudioData(req *request.AudioData, fieldName string) {
 	count := r.checkForOne(reflect.ValueOf(*req), fieldName, true)
-	// SetTypeCode is a valid audio source even if no codec/bitrate is specified
-	// It's skipped in checkForOneRecursive to avoid mutual exclusion errors,
-	// but we need to count it here to avoid setting NoAudio = true
-	if count == 0 && req.BibleBrain.SetTypeCode == "" {
+	if count == 0 {
 		req.NoAudio = true
 	}
 }

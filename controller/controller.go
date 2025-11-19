@@ -356,8 +356,7 @@ func (c *Controller) collectAudioInput() ([]input.InputFile, *log.Status) {
 	var status *log.Status
 	var expectFiles = true
 	bb := c.req.AudioData.BibleBrain
-	// Check for Bible Brain audio: either codec/bitrate specified OR set_type_code specified
-	if bb.MP3_64 || bb.MP3_16 || bb.OPUS || bb.SetTypeCode != "" {
+	if bb.MP3_64 || bb.MP3_16 || bb.OPUS {
 		bibleId := c.req.BibleId
 		files, status = input.DBPDirectory(c.ctx, bibleId, request.Audio, c.ident.AudioOTId,
 			c.ident.AudioNTId)
