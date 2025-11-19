@@ -455,8 +455,8 @@ func (g *YAMLGenerator) generateTimingsOnlyYAML(bible BibleInfo) string {
 	content = strings.ReplaceAll(content, "  json: no\n", "")
 	content = strings.ReplaceAll(content, "  csv: yes", "  csv: yes")
 
-	// Note: mp3_64 is optional and not included to avoid issues with filesets missing codec/bitrate tags
-	// The codec/bitrate check is bypassed when not specified, allowing filesets with missing tags to match
+	// Add mp3_64: yes stanza at same level as set_type_code
+	content = strings.ReplaceAll(content, "set_type_code: "+audioTypeCode, "set_type_code: "+audioTypeCode+"\n    mp3_64: yes")
 
 	// Ensure YAML ends with newline
 	if !strings.HasSuffix(content, "\n") {
@@ -477,6 +477,7 @@ notify_err: [jrstear@fcbhmail.org]
 audio_data: 
   bible_brain: 
     set_type_code: audio
+    mp3_64: yes
 update_dbp:
   timestamps: {{TIMESTAMPS_FILESET}}
   {{STREAM_STANZA}}
@@ -524,8 +525,8 @@ func (g *YAMLGenerator) generateBothYAML(bible BibleInfo) string {
 	content = strings.ReplaceAll(content, "  json: no\n", "")
 	content = strings.ReplaceAll(content, "  csv: yes", "  csv: yes")
 
-	// Note: mp3_64 is optional and not included to avoid issues with filesets missing codec/bitrate tags
-	// The codec/bitrate check is bypassed when not specified, allowing filesets with missing tags to match
+	// Add mp3_64: yes stanza at same level as set_type_code
+	content = strings.ReplaceAll(content, "set_type_code: "+audioTypeCode, "set_type_code: "+audioTypeCode+"\n    mp3_64: yes")
 
 	// Ensure YAML ends with newline
 	if !strings.HasSuffix(content, "\n") {
