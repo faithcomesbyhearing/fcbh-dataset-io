@@ -85,8 +85,9 @@ func (p *LocalHLSProcessor) ProcessFile(audioFile string, timestamps []Timestamp
 	roundedFormatDuration := int(math.Round(audioDuration))
 	roundedDbDuration := *dbDuration
 
-	if roundedFormatDuration != roundedDbDuration {
-		return nil, fmt.Errorf("duration mismatch for %s: bible_files.duration=%ds, format duration=%ds",
+	// Allow 1 second tolerance to allow for possible rounding difference in upstream processes
+	if math.Abs(float64(roundedFormatDuration-roundedDbDuration)) > 1 {
+		return nil, fmt.Errorf("duration mismatch for %s: bible_files.duration=%ds, format duration=%ds (difference exceeds 1 second)",
 			audioFile, roundedDbDuration, roundedFormatDuration)
 	}
 
