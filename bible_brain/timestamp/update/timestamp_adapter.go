@@ -594,10 +594,10 @@ func (d *DBPAdapter) validateDuration(audioPath string, timestamps []Timestamp, 
 	roundedFormatDuration := int(math.Round(audioDuration))
 	roundedSumVerses := int(math.Round(totalVerseDuration))
 
-	// Critical validation: Format duration must match sum of verses
-	// If they don't match, we can't trust either value and must fail
-	if roundedFormatDuration != roundedSumVerses {
-		return 0, nil, log.ErrorNoErr(d.ctx, 500, fmt.Sprintf("Audio duration mismatch for %s %s %d %s: format(%ds) vs sum_verses(%ds) - these must match",
+	// Critical validation: Format duration must be within 1 second of sum of verses
+	// Allow 1 second tolerance to allow for possible rounding difference in upstream processes
+	if math.Abs(float64(roundedFormatDuration-roundedSumVerses)) > 1 {
+		return 0, nil, log.ErrorNoErr(d.ctx, 500, fmt.Sprintf("Audio duration mismatch for %s %s %d %s: format(%ds) vs sum_verses(%ds) - difference exceeds 1 second",
 			filesetID, bookID, chapterNum, filename, roundedFormatDuration, roundedSumVerses))
 	}
 
