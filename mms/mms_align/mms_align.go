@@ -3,6 +3,14 @@ package mms_align
 import (
 	"context"
 	"encoding/json"
+	"math"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"unicode"
+
 	"github.com/divan/num2words"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/generic"
@@ -12,13 +20,6 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
 	"golang.org/x/text/unicode/norm"
-	"math"
-	"os"
-	"path/filepath"
-	"regexp"
-	"strconv"
-	"strings"
-	"unicode"
 )
 
 type MMSAlign_Input struct {
@@ -55,28 +56,25 @@ func NewMMSAlign(ctx context.Context, conn db.DBAdapter, lang string, sttLang st
 }
 
 // ProcessFiles will perform Forced Alignment on these files
-func (m *MMSAlign) ProcessFiles(files []input.InputFile) (status *log.Status) {
+func (m *MMSAlign) ProcessFiles(files []input.InputFile) *log.Status {
 	var err error
 	m.tempDir, err = os.MkdirTemp(os.Getenv(`FCBH_DATASET_TMP`), "mms_fa_")
 	if err != nil {
 		return log.Error(m.ctx, 500, err, `Error creating temp dir`)
 	}
 	defer os.RemoveAll(m.tempDir)
+	var status *log.Status
 	m.uroman, status = stdio_exec.NewStdioExec(m.ctx, os.Getenv(`FCBH_MMS_FA_PYTHON`), uroman.ScriptPath(), "-l", m.lang)
 	if status != nil {
 		return status
 	}
-	defer func() {
-		status = m.uroman.Close()
-	}()
+	defer m.uroman.Close()
 	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/mms_align/mms_align.py")
 	m.mmsAlign, status = stdio_exec.NewStdioExec(m.ctx, os.Getenv(`FCBH_MMS_FA_PYTHON`), pythonScript)
 	if status != nil {
 		return status
 	}
-	defer func() {
-		status = m.mmsAlign.Close()
-	}()
+	defer m.mmsAlign.Close()
 	for _, file := range files {
 		log.Info(m.ctx, "MMS Align", file.BookId, file.Chapter)
 		status = m.processFile(file)
@@ -96,7 +94,11 @@ func (m *MMSAlign) processFile(file input.InputFile) *log.Status {
 		return status
 	}
 	var wordList []Word
-	faInput.NormWords, wordList, status = m.prepareText(m.lang, file.BookId, file.Chapter)
+	if file.ScriptLine == "" {
+		faInput.NormWords, wordList, status = m.prepareText(file.BookId, file.Chapter)
+	} else {
+		faInput.NormWords, wordList, status = m.prepareScriptLineText(file.ScriptLine)
+	}
 	if status != nil {
 		return status
 	}
@@ -123,7 +125,7 @@ func (m *MMSAlign) processFile(file input.InputFile) *log.Status {
 	return status
 }
 
-func (m *MMSAlign) prepareText(lang string, bookId string, chapter int) ([]string, []Word, *log.Status) {
+func (m *MMSAlign) prepareText(bookId string, chapter int) ([]string, []Word, *log.Status) {
 	var textList []string
 	var refList []Word
 	var dbWords, status = m.conn.SelectWordsByBookChapter(bookId, chapter)
@@ -151,6 +153,54 @@ func (m *MMSAlign) prepareText(lang string, bookId string, chapter int) ([]strin
 		status = log.ErrorNoErr(m.ctx, 500, "mms_align.prepareText created lists of different sizes", len(textList), len(refList))
 	}
 	return textList, refList, status
+}
+
+func (m *MMSAlign) prepareScriptLineText(scriptLine string) ([]string, []Word, *log.Status) {
+	var textList []string
+	var refList, status = m.selectWordsByScriptLine(scriptLine)
+	if status != nil {
+		return textList, refList, status
+	}
+	for i := range refList {
+		refList[i].word = norm.NFC.String(refList[i].word)
+		uRoman, status2 := m.uroman.Process(refList[i].word)
+		if status2 != nil {
+			return textList, refList, status2
+		}
+		word := m.convertNum2Words(uRoman) // This does NOT handle isolated digits, only whole word numbers
+		word = m.normalizeURoman(word)
+		refList[i].uroman = word
+		textList = append(textList, word)
+	}
+	if len(textList) != len(refList) {
+		status = log.ErrorNoErr(m.ctx, 500, "mms_align.prepareText created lists of different sizes", len(textList), len(refList))
+	}
+	return textList, refList, status
+}
+
+func (m *MMSAlign) selectWordsByScriptLine(scriptLine string) ([]Word, *log.Status) {
+	var results []Word
+	var query = `SELECT s.verse_str, w.script_id, w.word_id, w.word_seq, w.word
+		FROM words w JOIN scripts s ON w.script_id = s.script_id
+		WHERE w.ttype = 'W' AND s.script_num = ? ORDER BY w.word_id`
+	rows, err := m.conn.DB.Query(query, scriptLine)
+	if err != nil {
+		return results, log.Error(m.ctx, 500, err, query)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var rec Word
+		err = rows.Scan(&rec.verseStr, &rec.scriptId, &rec.wordId, &rec.wordSeq, &rec.word)
+		if err != nil {
+			return results, log.Error(m.ctx, 500, err, query)
+		}
+		results = append(results, rec)
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Warn(m.ctx, err, query)
+	}
+	return results, nil
 }
 
 func (m *MMSAlign) convertNum2Words(text string) string {

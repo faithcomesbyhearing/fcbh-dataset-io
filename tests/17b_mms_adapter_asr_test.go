@@ -2,6 +2,8 @@ package tests
 
 import (
 	"testing"
+
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
 // This is not a test that is expected to run to completion.
@@ -40,6 +42,7 @@ compare:
 `
 
 func TestMMSAdapterASR(t *testing.T) {
+	log.SetOutput("stderr")
 	var yaml = mmsAdapterASR
 	DirectSqlTest(yaml, []SqliteTest{}, t)
 }

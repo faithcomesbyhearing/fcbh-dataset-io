@@ -4,6 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path"
+	"strconv"
+	"testing"
+
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
@@ -11,10 +16,6 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/match/diff"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
-	"os"
-	"path"
-	"strconv"
-	"testing"
 )
 
 func TestMMSASR2_ProcessFiles(t *testing.T) {
@@ -55,9 +56,7 @@ func TestMMSASR2_ParseResult(t *testing.T) {
 	if status != nil {
 		t.Fatal(status)
 	}
-	defer func() {
-		status = asr.uroman.Close()
-	}()
+	defer asr.uroman.Close()
 	response := readResultFile(file)
 	status = asr.parseResult(file, response)
 

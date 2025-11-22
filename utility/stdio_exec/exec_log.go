@@ -3,10 +3,11 @@ package stdio_exec
 import (
 	"bufio"
 	"context"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"os/exec"
 	"strings"
 	"sync"
+
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
 /**
@@ -33,6 +34,7 @@ func RunScriptWithLogging(ctx context.Context, python string, args ...string) *l
 		return log.Error(ctx, 500, err, `Unable to execute command`, cmd.String())
 	}
 	var pythonErr *log.Status
+	var mu sync.Mutex
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
@@ -53,7 +55,9 @@ func RunScriptWithLogging(ctx context.Context, python string, args ...string) *l
 			if len(line) > 0 {
 				status := log.ExecError(ctx, 500, line)
 				if status != nil {
+					mu.Lock()
 					pythonErr = status
+					mu.Unlock()
 				}
 			}
 		}
@@ -62,11 +66,17 @@ func RunScriptWithLogging(ctx context.Context, python string, args ...string) *l
 			_ = log.Error(ctx, 500, err, "Error reading stderr")
 		}
 	}()
+	var status *log.Status
 	wg.Wait() // Wait for goroutines to finish reading any remaining output
 	err = cmd.Wait()
 	if err != nil {
-		// Log, but discard so that error caught in python is returned
-		_ = log.Error(ctx, 500, err, `Module failed`, cmd.String())
+		status = log.Error(ctx, 500, err, "Error executing command", cmd.String())
 	}
-	return pythonErr
+	mu.Lock()
+	pyErr := pythonErr
+	mu.Unlock()
+	if pyErr != nil {
+		return pyErr
+	}
+	return status
 }

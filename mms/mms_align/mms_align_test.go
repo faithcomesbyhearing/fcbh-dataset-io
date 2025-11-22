@@ -3,15 +3,16 @@ package mms_align
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"testing"
+
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
-	"os"
-	"path/filepath"
-	"testing"
 )
 
 // These tests are dependent upon test 02_plain_text_edit_script_test.go
@@ -54,7 +55,7 @@ func TestMMSFA_prepareText(t *testing.T) {
 	for _, bookId := range db.BookNT {
 		lastChap := db.BookChapterMap[bookId]
 		for chap := 1; chap <= lastChap; chap++ {
-			textList, refList, status := fa.prepareText("eng", bookId, chap)
+			textList, refList, status := fa.prepareText(bookId, chap)
 			if status != nil {
 				t.Fatal(status)
 			}
@@ -85,7 +86,7 @@ func TestMMSFA_processPyOutput(t *testing.T) {
 	//file.Filename = "TestFile.mp3"
 	file.Filename = "B17___01_Titus_______ENGWEBN2DA.mp3"
 	var wordList []Word
-	_, wordList, status = fa.prepareText("eng", file.BookId, file.Chapter)
+	_, wordList, status = fa.prepareText(file.BookId, file.Chapter)
 	if status != nil {
 		t.Fatal(status)
 	}

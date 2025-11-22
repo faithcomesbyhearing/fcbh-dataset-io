@@ -3,15 +3,16 @@ package input
 import (
 	"archive/zip"
 	"context"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
 func Glob(ctx context.Context, search string) ([]InputFile, *log.Status) {
