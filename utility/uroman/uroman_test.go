@@ -3,9 +3,10 @@ package uroman
 import (
 	"context"
 	"fmt"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"strconv"
 	"testing"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 )
 
 func TestURoman(t *testing.T) {

@@ -65,16 +65,12 @@ func (a *MMSASR) ProcessFiles(files []input.InputFile) (status *log.Status) {
 	if status != nil {
 		return status
 	}
-	defer func() {
-		status = a.mmsAsrPy.Close()
-	}()
+	defer a.mmsAsrPy.Close()
 	a.uroman, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_FA_PYTHON`), uroman.ScriptPath(), "-l", a.lang)
 	if status != nil {
 		return status
 	}
-	defer func() {
-		status = a.uroman.Close()
-	}()
+	defer a.uroman.Close()
 	for _, file := range files {
 		status = a.processFile(file, tempDir)
 		if status != nil {

@@ -2,16 +2,17 @@ package asr
 
 import (
 	"context"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
 )
 
 type Wav2Vec2ASR struct {
@@ -34,7 +35,8 @@ func NewWav2Vec2ASR(ctx context.Context, conn db.DBAdapter, lang string, sttLang
 }
 
 // ProcessFiles will perform Auto Speech Recognition on these files
-func (a *Wav2Vec2ASR) ProcessFiles(files []input.InputFile) (status *log.Status) {
+func (a *Wav2Vec2ASR) ProcessFiles(files []input.InputFile) *log.Status {
+	var status *log.Status
 	tempDir, err := os.MkdirTemp(os.Getenv(`FCBH_DATASET_TMP`), "wav2vec2_asr_")
 	if err != nil {
 		return log.Error(a.ctx, 500, err, `Error creating temp dir`)
@@ -53,16 +55,12 @@ func (a *Wav2Vec2ASR) ProcessFiles(files []input.InputFile) (status *log.Status)
 	if status != nil {
 		return status
 	}
-	defer func() {
-		status = a.asrPy.Close()
-	}()
+	defer a.asrPy.Close()
 	a.uroman, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_FA_PYTHON`), uroman.ScriptPath(), "-l", a.lang)
 	if status != nil {
 		return status
 	}
-	defer func() {
-		status = a.uroman.Close()
-	}()
+	defer a.uroman.Close()
 	project := a.conn.Project
 	if strings.HasSuffix(project, "_audio") {
 		project = project[:len(project)-len("_audio")]

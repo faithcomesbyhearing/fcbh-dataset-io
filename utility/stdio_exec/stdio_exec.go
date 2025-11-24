@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"context"
 	"encoding/binary"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"io"
 	"os/exec"
 	"strings"
 	"sync"
+
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
 type StdioExec struct {
@@ -23,6 +24,7 @@ type StdioExec struct {
 	reader    *bufio.Reader
 	stderrWg  sync.WaitGroup
 	pythonErr *log.Status
+	errMutex  sync.Mutex
 }
 
 func NewStdioExec(ctx context.Context, command string, args ...string) (*StdioExec, *log.Status) {
@@ -64,7 +66,9 @@ func (s *StdioExec) handleStderr() {
 			if len(line) > 0 {
 				status := log.ExecError(s.ctx, 500, line)
 				if status != nil {
+					s.errMutex.Lock()
 					s.pythonErr = status
+					s.errMutex.Unlock()
 				}
 			}
 		}
@@ -75,8 +79,18 @@ func (s *StdioExec) handleStderr() {
 	}()
 }
 
+func (s *StdioExec) getPythonErr() *log.Status {
+	s.errMutex.Lock()
+	defer s.errMutex.Unlock()
+	return s.pythonErr
+}
+
 func (s *StdioExec) Process(input string) (string, *log.Status) {
 	var result string
+	pyErr := s.getPythonErr()
+	if pyErr != nil {
+		return result, pyErr
+	}
 	_, err := s.writer.WriteString(input + "\n")
 	if err != nil {
 		return result, log.Error(s.ctx, 500, err, "Error writing to", s.command)
@@ -89,12 +103,20 @@ func (s *StdioExec) Process(input string) (string, *log.Status) {
 	if err != nil {
 		return result, log.Error(s.ctx, 500, err, `Error reading response from`, s.command)
 	}
+	pyErr = s.getPythonErr()
+	if pyErr != nil {
+		return result, pyErr
+	}
 	result = strings.TrimRight(result, "\n")
 	return result, nil
 }
 
 func (s *StdioExec) ProcessBytes(input []byte) (string, *log.Status) {
 	var result string
+	pyErr := s.getPythonErr()
+	if pyErr != nil {
+		return result, pyErr
+	}
 	lengthBuf := make([]byte, 4)
 	binary.BigEndian.PutUint32(lengthBuf, uint32(len(input)))
 	_, err := s.writer.Write(lengthBuf)
@@ -113,11 +135,15 @@ func (s *StdioExec) ProcessBytes(input []byte) (string, *log.Status) {
 	if err != nil {
 		return result, log.Error(s.ctx, 500, err, `Error reading response from`, s.command)
 	}
+	pyErr = s.getPythonErr()
+	if pyErr != nil {
+		return result, pyErr
+	}
 	result = strings.TrimRight(result, "\n")
 	return result, nil
 }
 
-func (s *StdioExec) Close() *log.Status {
+func (s *StdioExec) Close() {
 	if s.writer != nil {
 		_ = s.writer.Flush()
 	}
@@ -132,5 +158,5 @@ func (s *StdioExec) Close() *log.Status {
 			_ = log.Error(s.ctx, 500, err, `Module failed`, s.cmd.String())
 		}
 	}
-	return s.pythonErr
+	return
 }

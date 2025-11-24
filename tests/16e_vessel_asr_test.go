@@ -4,11 +4,12 @@ import (
 	"testing"
 )
 
-const vesselTest = `is_new: yes
+const vesselASRTest = `is_new: yes
 dataset_name: 16e_vessel_test
 username: GaryNTest
 language_iso: eng
-notify_ok: [sqs/vessel_AP.fifo]
+notify_ok: [gary@shortsands.com]
+notify_err: [gary@shortsands.com]
 testament:
   nt: yes
 text_data:
@@ -34,7 +35,7 @@ compare:
       normalize_nfd: y
 `
 
-func TestVessel(t *testing.T) {
-	var yaml = vesselTest
+func TestVesselASR(t *testing.T) {
+	var yaml = vesselASRTest
 	DirectSqlTest(yaml, []SqliteTest{}, t)
 }

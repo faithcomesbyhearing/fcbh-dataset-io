@@ -6,30 +6,25 @@ import (
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
-const mmsAdapter = `is_new: no
-dataset_name: 17a_mms_adapter
+const vesselTrainTest = `is_new: yes
+dataset_name: 16f_vessel_test
 username: GaryNTest
-language_iso: cul
+language_iso: eng
 notify_ok: [gary@shortsands.com]
 notify_err: [gary@shortsands.com]
 testament:
-  nt_books: [PHM]
-database:
-  file: /Users/gary/FCBH2024/GaryNTest/17a_mms_adapter.db
+  nt: yes
+text_data:
+  file: /Users/gary/FCBH2024/GaryNTest/16e_vessel_test.xlsx
 audio_data:
-  file: /Users/gary/FCBH2024/GaryNTest/17a_mms_adapter/*.mp3
-training:
-  redo_training: n
-  mms_adapter:
-    batch_mb: 3
-    num_epochs: 1
-    learning_rate: 1e-3
-    warmup_pct: 12.0
-    grad_norm_max: 0.4
+  file: /Users/gary/FCBH2024/GaryNTest/16e_vessel_test/*_VOX.wav
+timestamps:
+  mms_align: y
 speech_to_text:
-  adapter_asr: y
+  mms_asr: y
 compare:
   html_report: yes
+  gordon_filter: 4
   compare_settings: 
     lower_case: y
     remove_prompt_chars: y
@@ -41,11 +36,11 @@ compare:
     hyphen:
       remove: y
     diacritical_marks:
-      normalize_nfkd: y
+      normalize_nfd: y
 `
 
-func TestMMSAdapter(t *testing.T) {
+func TestVesselTrain(t *testing.T) {
 	log.SetOutput("stderr")
-	var yaml = mmsAdapter
+	var yaml = vesselTrainTest
 	DirectSqlTest(yaml, []SqliteTest{}, t)
 }

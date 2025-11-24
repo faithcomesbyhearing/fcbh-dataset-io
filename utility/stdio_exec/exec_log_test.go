@@ -3,10 +3,11 @@ package stdio_exec
 import (
 	"context"
 	"fmt"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"os"
 	"path/filepath"
 	"testing"
+
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
 func TestRunScriptWithLogging(t *testing.T) {

@@ -10,7 +10,9 @@ import (
 func TestStdioExec(t *testing.T) {
 	ctx := context.Background()
 	uromanPath := os.Getenv(`FCBH_UROMAN_EXE`)
-	stdio, status := NewStdioExec(ctx, uromanPath)
-	result, status2 := stdio.Process("abc")
+	stdio1, status := NewStdioExec(ctx, uromanPath)
+	//defer stdio1.Close()
+	result, status2 := stdio1.Process("abc")
 	fmt.Println("result:", result, status, status2)
+	stdio1.Close()
 }

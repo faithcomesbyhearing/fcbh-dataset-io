@@ -3,6 +3,9 @@ package zero_shot_v1
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
@@ -10,8 +13,6 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/ffmpeg"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
-	"os"
-	"path/filepath"
 )
 
 type MMSASR struct {
@@ -19,8 +20,8 @@ type MMSASR struct {
 	conn     db.DBAdapter
 	lang     string
 	sttLang  string
-	uroman   stdio_exec.StdioExec
-	mmsAsrPy stdio_exec.StdioExec
+	uroman   *stdio_exec.StdioExec
+	mmsAsrPy *stdio_exec.StdioExec
 }
 
 func NewMMSASR(ctx context.Context, conn db.DBAdapter, lang string, sttLang string) MMSASR {

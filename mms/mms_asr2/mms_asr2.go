@@ -3,6 +3,12 @@ package mms_asr
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
@@ -11,11 +17,6 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
 	"github.com/sergi/go-diff/diffmatchpatch"
-	"os"
-	"path/filepath"
-	"regexp"
-	"strconv"
-	"strings"
 )
 
 type MMSASR2 struct {
@@ -43,7 +44,8 @@ func NewMMSASR2(ctx context.Context, conn db.DBAdapter, lang string, sttLang str
 }
 
 // ProcessFiles will perform Auto Speech Recognition on these files
-func (a *MMSASR2) ProcessFiles(files []input.InputFile) (status *log.Status) {
+func (a *MMSASR2) ProcessFiles(files []input.InputFile) *log.Status {
+	var status *log.Status
 	tempDir, err := os.MkdirTemp(os.Getenv(`FCBH_DATASET_TMP`), "mms_asr2_")
 	if err != nil {
 		return log.Error(a.ctx, 500, err, `Error creating temp dir`)
@@ -72,16 +74,12 @@ func (a *MMSASR2) ProcessFiles(files []input.InputFile) (status *log.Status) {
 	if status != nil {
 		return status
 	}
-	defer func() {
-		status = a.mmsAsrPy.Close()
-	}()
+	defer a.mmsAsrPy.Close()
 	a.uroman, status = stdio_exec.NewStdioExec(a.ctx, os.Getenv(`FCBH_MMS_FA_PYTHON`), uroman.ScriptPath(), "-l", a.lang)
 	if status != nil {
 		return status
 	}
-	defer func() {
-		status = a.uroman.Close()
-	}()
+	defer a.uroman.Close()
 	var response string
 	for _, file := range files {
 		response, status = a.processASR(file, tempDir)
@@ -129,7 +127,7 @@ type asrScript struct {
 	uRoman   string
 }
 
-func (a *MMSASR2) parseResult(file input.InputFile, response string) (status *log.Status) {
+func (a *MMSASR2) parseResult(file input.InputFile, response string) *log.Status {
 	scripts, status := a.selectVersesByBookChapter(file.BookId, file.Chapter)
 	if status != nil {
 		return status
