@@ -289,7 +289,7 @@ func (m *MMSAlign) processPyOutput(file input.InputFile, wordRefs []Word, respon
 			word.FAScore += ch.Score
 			faWd[j].Seq = j
 			if faWd[j].Uroman != uromanChars[j] {
-				log.ErrorNoErr(m.ctx, 500, "Norm", ref.uroman, "does not match")
+				_ = log.ErrorNoErr(m.ctx, 500, "Norm", ref.uroman, "does not match")
 			}
 		}
 		if len(faWd) > 0 {

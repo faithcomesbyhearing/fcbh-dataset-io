@@ -149,11 +149,11 @@ func (a *Wav2Vec2ASR) selectSample(db db.DBAdapter, bookId string, chapter int) 
 		}
 		parts := strings.Split(reference, ":")
 		if len(parts) != 2 {
-			return verses, log.Error(a.ctx, 500, err, `Error scanning in selectSample`)
+			return verses, log.ErrorNoErr(a.ctx, 500, `Error scanning in selectSample`)
 		}
 		pieces := strings.Split(parts[1], ".")
 		if len(pieces) != 2 {
-			return verses, log.Error(a.ctx, 500, err, `Error scanning in selectSample`)
+			return verses, log.ErrorNoErr(a.ctx, 500, `Error scanning in selectSample`)
 		}
 		verseStr := pieces[0]
 		word.wordNum, err = strconv.Atoi(pieces[1])
