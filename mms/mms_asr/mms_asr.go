@@ -36,7 +36,8 @@ func NewMMSASR(ctx context.Context, conn db.DBAdapter, lang string, sttLang stri
 }
 
 // ProcessFiles will perform Auto Speech Recognition on these files
-func (a *MMSASR) ProcessFiles(files []input.InputFile) (status *log.Status) {
+func (a *MMSASR) ProcessFiles(files []input.InputFile) *log.Status {
+	var status *log.Status
 	tempDir, err := os.MkdirTemp(os.Getenv(`FCBH_DATASET_TMP`), "mms_asr_")
 	if err != nil {
 		return log.Error(a.ctx, 500, err, `Error creating temp dir`)

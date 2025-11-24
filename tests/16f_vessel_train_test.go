@@ -20,11 +20,19 @@ audio_data:
   file: /Users/gary/FCBH2024/GaryNTest/16e_vessel_test/*_VOX.wav
 timestamps:
   mms_align: y
+training:
+  redo_training: y
+  mms_adapter:
+    batch_mb: 4
+    num_epochs: 1
+    learning_rate: 1e-3
+    warmup_pct: 12.0
+    grad_norm_max: 0.4
 speech_to_text:
-  mms_asr: y
+  adapter_asr: y
 compare:
   html_report: yes
-  gordon_filter: 4
+  gordon_filter: 0
   compare_settings: 
     lower_case: y
     remove_prompt_chars: y

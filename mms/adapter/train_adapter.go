@@ -3,15 +3,16 @@ package adapter
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
+
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	req "github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/ffmpeg"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
-	"os"
-	"path/filepath"
-	"strconv"
 )
 
 type TrainAdapter struct {
@@ -60,7 +61,7 @@ func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
 			return status
 		}
 	}
-	status := SilencePruner(t.ctx, 400, t.conn)
+	status := SilencePruner(t.ctx, .07, t.conn)
 	if status != nil {
 		return status
 	}

@@ -2,10 +2,11 @@ package adapter
 
 import (
 	"context"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"os"
 	"sort"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
 type SilenceRec struct {
@@ -23,7 +24,7 @@ type SilenceRec struct {
 	Silence     float64
 }
 
-func SilencePruner(ctx context.Context, threshold int, conn db.DBAdapter) *log.Status {
+func SilencePruner(ctx context.Context, thresholdPct float64, conn db.DBAdapter) *log.Status {
 	_, err := conn.DB.Exec("DROP TABLE IF EXISTS pruned_silence")
 	if err != nil {
 		return log.Error(ctx, 500, err, "Error while dropping pruned silence.")
@@ -32,7 +33,7 @@ func SilencePruner(ctx context.Context, threshold int, conn db.DBAdapter) *log.S
 	if err != nil {
 		return log.Error(ctx, 500, err, "Error while creating pruned silence.")
 	}
-	silences := findSilence(ctx, threshold, conn)
+	silences := findSilence(ctx, thresholdPct, conn)
 	query := `INSERT INTO pruned_silence(script_id) VALUES (?)`
 	tx, err := conn.DB.Begin()
 	if err != nil {
@@ -56,13 +57,14 @@ func SilencePruner(ctx context.Context, threshold int, conn db.DBAdapter) *log.S
 	return nil
 }
 
-func findSilence(ctx context.Context, threshold int, conn db.DBAdapter) []SilenceRec {
+func findSilence(ctx context.Context, thresholdPct float64, conn db.DBAdapter) []SilenceRec {
 	silences := selectSilences(ctx, conn)
 	duplicateOnLastWord(silences)
 	silences = summarizeMaxByVerse(silences)
 	sort.Slice(silences, func(i, j int) bool { // descending sort
 		return silences[i].Silence > silences[j].Silence
 	})
+	threshold := int(float64(len(silences)) * thresholdPct)
 	return silences[0:threshold]
 }
 

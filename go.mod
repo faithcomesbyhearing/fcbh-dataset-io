@@ -1,8 +1,6 @@
 module github.com/faithcomesbyhearing/fcbh-dataset-io
 
-go 1.23.0
-
-toolchain go1.23.3
+go 1.24.5
 
 require (
 	github.com/aws/aws-lambda-go v1.47.0
