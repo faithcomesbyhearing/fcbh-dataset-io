@@ -75,7 +75,9 @@ for line in sys.stdin:
     audioFile = data["audio_file"]
     beginTS = data.get("begin_ts", None)
     endTS = data.get("end_ts", None)
+    print("file", audioFile, beginTS, endTS, file=sys.stderr)
     info = torchaudio.info(audioFile, format="wav")
+    print("info", info, file=sys.stderr)
     if info.sample_rate != 16000:
         print("Audio sample rate must be 16000", file=sys.stderr, flush=True)
         sys.exit(1)
@@ -87,12 +89,14 @@ for line in sys.stdin:
         )
     else:
         speech, sample_rate = torchaudio.load(audioFile)
+    print("speech", type(speech), len(speech), file=sys.stderr)
 #    speech = speech.squeeze()
     inputs = processor(
         speech,
         sampling_rate=16000,
         return_tensors="pt",
         padding=False)
+    print("inputs", type(inputs), len(inputs), file=sys.stderr)
     inputs["input_values"] = inputs["input_values"].squeeze(0)
     inputs = ensureMinimumTensorSize(inputs, 3200, 0)
     inputs = {name: tensor.to(device) for name, tensor in inputs.items()}
@@ -100,6 +104,7 @@ for line in sys.stdin:
         outputs = model(**inputs).logits
     ids = torch.argmax(outputs, dim=-1)[0]
     transcription = processor.decode(ids)
+    print("transcription", transcription, file=sys.stderr)
     sys.stdout.write(transcription)
     sys.stdout.write("\n")
     sys.stdout.flush()

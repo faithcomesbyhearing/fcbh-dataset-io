@@ -2,6 +2,8 @@ package tests
 
 import (
 	"testing"
+
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
 const vesselASRTest = `is_new: yes
@@ -36,6 +38,7 @@ compare:
 `
 
 func TestVesselASR(t *testing.T) {
+	log.SetOutput("stderr")
 	var yaml = vesselASRTest
 	DirectSqlTest(yaml, []SqliteTest{}, t)
 }
