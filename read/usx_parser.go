@@ -3,15 +3,16 @@ package read
 import (
 	"context"
 	"encoding/xml"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/safe"
 	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/safe"
 )
 
 type Stack []string
@@ -150,6 +151,9 @@ type titleDesc struct {
 
 func (p *USXParser) addChapterHeading(records []db.Script, titles titleDesc) []db.Script {
 	var results = make([]db.Script, 0, len(records)+300)
+	if len(records) == 0 {
+		return results
+	}
 	var rec = records[0]
 	rec.VerseStr = `0`
 	rec.VerseNum = 0

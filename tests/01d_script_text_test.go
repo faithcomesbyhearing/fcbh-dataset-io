@@ -3,11 +3,12 @@ package tests
 import (
 	"context"
 	"fmt"
+	"strings"
+	"testing"
+
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/controller"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
-	"strings"
-	"testing"
 )
 
 const scriptTextScript = `is_new: yes
