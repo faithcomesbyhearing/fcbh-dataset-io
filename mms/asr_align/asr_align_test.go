@@ -1,4 +1,4 @@
-package mms_asr
+package asr_align
 
 import (
 	"context"
@@ -18,12 +18,12 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/uroman"
 )
 
-func TestMMSASR2_ProcessFiles(t *testing.T) {
+func TestASRAlign_ProcessFiles(t *testing.T) {
 	ctx := context.Background()
 	log.SetOutput("stderr")
 	user := request.GetTestUser()
 	conn, status := db.NewerDBAdapter(ctx, false, user, "N2MZJSIM") // is not used
-	asr := NewMMSASR2(ctx, conn, "mzj", "", false)
+	asr := NewASRAlign(ctx, conn, "mzj", "", false)
 	var files []input.InputFile
 	var file input.InputFile
 	file.BookId = "MAT"
@@ -39,7 +39,7 @@ func TestMMSASR2_ProcessFiles(t *testing.T) {
 	}
 }
 
-func TestMMSASR2_ParseResult(t *testing.T) {
+func TestASRAlign_ParseResult(t *testing.T) {
 	ctx := context.Background()
 	log.SetOutput("stderr")
 	user := request.GetTestUser()
@@ -47,7 +47,7 @@ func TestMMSASR2_ParseResult(t *testing.T) {
 	if status != nil {
 		t.Fatal(status)
 	}
-	asr := NewMMSASR2(ctx, conn, "mzj", "", false)
+	asr := NewASRAlign(ctx, conn, "mzj", "", false)
 	var file input.InputFile
 	file.BookId = "MAT"
 	file.Chapter = 12

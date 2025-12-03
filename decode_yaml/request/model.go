@@ -214,6 +214,7 @@ type SpeechToText struct {
 	MMSAdapter     bool    `yaml:"adapter_asr,omitempty"`
 	Wav2Vec2ASR    bool    `yaml:"wav2vec2_asr,omitempty"`
 	Whisper        Whisper `yaml:"whisper,omitempty"`
+	MMSASRAlign    bool    `yaml:"mms_asr_align,omitempty"`
 	NoSpeechToText bool    `yaml:"no_speech_to_text,omitempty"`
 }
 

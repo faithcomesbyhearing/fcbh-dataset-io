@@ -2,31 +2,20 @@ package tests
 
 import "testing"
 
-const runAnything = `is_new: no 
-dataset_name: N2KEUWB4
-bible_id: KEUWB4
+const runAnything = `is_new: yes 
+dataset_name: N2MZJSIM
+language_iso: mzj
 username: GaryNTest 
 notify_ok: [gary@shortsands.com]
 notify_err: [gary@shortsands.com]
 testament:
-  nt_books: [LUK,ROM,1JN]
-#text_data:
-#  aws_s3: s3://pretest-audio/N2KEUWB4 Akebu (BOV)/N2KEUWBT Text/USX/*.usx
+  nt_books: [3JN]
+text_data:
+  aws_s3: s3://pretest-audio/N2MZJSIM Manya (MZJ)/N2MZJSIM USX/*.usx
 audio_data:
-  aws_s3: s3://pretest-audio/N2KEUWB4 Akebu (BOV)/N2KEUWBT Chapter VOX/*.mp3
-#timestamps:
-#  mms_align: yes
-training:
-  redo_training: no
-  wav2vec2_word:
-    batch_mb: 4
-    num_epochs: 1 
-    learning_rate: 7.5e-5 # 5e-5 to 1e-4 suggested
-    warmup_pct: 12.0 # 10-15
-    grad_norm_max: 3.0 # 1-5
-    min_audio_sec: 0.5
+  aws_s3: s3://pretest-audio/N2MZJSIM Manya (MZJ)/N2MZJSIM Chapter VOX/*.mp3
 speech_to_text:
-  wav2vec2_asr: yes
+  mms_asr_align: yes
 compare:
   html_report: yes
   gordon_filter: 4
@@ -42,6 +31,8 @@ compare:
       remove: y
     diacritical_marks:
       normalize_nfc: y
+output:
+  csv: y
 `
 
 func TestRunAnything(t *testing.T) {

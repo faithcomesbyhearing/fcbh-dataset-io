@@ -11,7 +11,6 @@ from error_handler import setup_error_handler
 
 ## Documentation used to write this program
 ## https://huggingface.co/docs/transformers/main/en/model_doc/mms
-## This program is NOT reentrant because of torch.cuda.empty_cache()
 
 setup_error_handler()
 

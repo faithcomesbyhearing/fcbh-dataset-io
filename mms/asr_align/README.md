@@ -1,5 +1,5 @@
 
-The asr_mms2 was an unfinished experiment to do speech to text without first breaking it into verses.
+The asr_align is an unfinished experiment to do speech to text without first breaking it into verses.
 
 This method could be applied to all speech to text modules, and would cut the time to perform that task in half.
 

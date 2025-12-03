@@ -2,6 +2,10 @@ package controller
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"time"
+
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/bible_brain/timestamp/update"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/courier"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
@@ -15,6 +19,7 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/match/diff"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms/adapter"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms/asr_align"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms/mms_align"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/mms/mms_asr"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/output"
@@ -23,9 +28,6 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/timestamp"
 	asr2 "github.com/faithcomesbyhearing/fcbh-dataset-io/wav2vec2/asr"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/wav2vec2/train"
-	"os"
-	"path/filepath"
-	"time"
 )
 
 type OutputFiles struct {
@@ -469,6 +471,10 @@ func (c *Controller) speechToText(audioFiles []input.InputFile) *log.Status {
 	} else if c.req.SpeechToText.Wav2Vec2ASR {
 		var asr asr2.Wav2Vec2ASR
 		asr = asr2.NewWav2Vec2ASR(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage)
+		status = asr.ProcessFiles(audioFiles)
+	} else if c.req.SpeechToText.MMSASRAlign {
+		var asr asr_align.ASRAlign
+		asr = asr_align.NewASRAlign(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage, false)
 		status = asr.ProcessFiles(audioFiles)
 	} else {
 		var whisperModel = c.req.SpeechToText.Whisper.Model.String()

@@ -1,4 +1,4 @@
-package mms_asr
+package asr_align
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
-type MMSASR2 struct {
+type ASRAlign struct {
 	ctx          context.Context
 	conn         db.DBAdapter
 	lang         string
@@ -31,8 +31,8 @@ type MMSASR2 struct {
 	versePattern *regexp.Regexp
 }
 
-func NewMMSASR2(ctx context.Context, conn db.DBAdapter, lang string, sttLang string, adapter bool) MMSASR2 {
-	var a MMSASR2
+func NewASRAlign(ctx context.Context, conn db.DBAdapter, lang string, sttLang string, adapter bool) ASRAlign {
+	var a ASRAlign
 	a.ctx = ctx
 	a.conn = conn
 	a.lang = lang
@@ -44,9 +44,9 @@ func NewMMSASR2(ctx context.Context, conn db.DBAdapter, lang string, sttLang str
 }
 
 // ProcessFiles will perform Auto Speech Recognition on these files
-func (a *MMSASR2) ProcessFiles(files []input.InputFile) *log.Status {
+func (a *ASRAlign) ProcessFiles(files []input.InputFile) *log.Status {
 	var status *log.Status
-	tempDir, err := os.MkdirTemp(os.Getenv(`FCBH_DATASET_TMP`), "mms_asr2_")
+	tempDir, err := os.MkdirTemp(os.Getenv(`FCBH_DATASET_TMP`), "mms_asr_align_")
 	if err != nil {
 		return log.Error(a.ctx, 500, err, `Error creating temp dir`)
 	}
@@ -65,7 +65,7 @@ func (a *MMSASR2) ProcessFiles(files []input.InputFile) *log.Status {
 	if status != nil {
 		return status
 	}
-	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/mms_asr2/mms_asr2.py")
+	pythonScript := filepath.Join(os.Getenv("GOPROJ"), "mms/asr_align/asr_align.py")
 	var useAdapter string
 	if a.adapter {
 		useAdapter = "adapter"
@@ -96,7 +96,7 @@ func (a *MMSASR2) ProcessFiles(files []input.InputFile) *log.Status {
 }
 
 // processFile
-func (a *MMSASR2) processASR(file input.InputFile, tempDir string) (string, *log.Status) {
+func (a *ASRAlign) processASR(file input.InputFile, tempDir string) (string, *log.Status) {
 	var response string
 	var status *log.Status
 	fmt.Println("Process", file.FilePath())
@@ -127,7 +127,7 @@ type asrScript struct {
 	uRoman   string
 }
 
-func (a *MMSASR2) parseResult(file input.InputFile, response string) *log.Status {
+func (a *ASRAlign) parseResult(file input.InputFile, response string) *log.Status {
 	scripts, status := a.selectVersesByBookChapter(file.BookId, file.Chapter)
 	if status != nil {
 		return status
@@ -151,7 +151,7 @@ func (a *MMSASR2) parseResult(file input.InputFile, response string) *log.Status
 	return nil
 }
 
-func (a *MMSASR2) selectVersesByBookChapter(bookId string, chapter int) ([]asrScript, *log.Status) {
+func (a *ASRAlign) selectVersesByBookChapter(bookId string, chapter int) ([]asrScript, *log.Status) {
 	var results []asrScript
 	var query = `SELECT s.script_id, s.verse_str, LOWER(GROUP_CONCAT(w.word, ' ')) AS text
 	FROM scripts s JOIN words w ON w.script_id = s.script_id
@@ -178,7 +178,7 @@ func (a *MMSASR2) selectVersesByBookChapter(bookId string, chapter int) ([]asrSc
 	return results, nil
 }
 
-func (a *MMSASR2) combineVerses(scripts []asrScript) string {
+func (a *ASRAlign) combineVerses(scripts []asrScript) string {
 	var results []string
 	for _, s := range scripts {
 		results = append(results, "{"+strconv.FormatInt(s.scriptId, 10)+"}")
@@ -187,7 +187,7 @@ func (a *MMSASR2) combineVerses(scripts []asrScript) string {
 	return strings.Join(results, "")
 }
 
-func (a *MMSASR2) parseASRByOriginal(sourceText string, response string) []asrScript {
+func (a *ASRAlign) parseASRByOriginal(sourceText string, response string) []asrScript {
 	var results []asrScript
 	diffs := a.diffMatch.DiffMain(sourceText, response, false)
 	var currId string
@@ -218,7 +218,7 @@ func (a *MMSASR2) parseASRByOriginal(sourceText string, response string) []asrSc
 	return results
 }
 
-func (a *MMSASR2) ensureASRTable() *log.Status {
+func (a *ASRAlign) ensureASRTable() *log.Status {
 	query := `CREATE TABLE IF NOT EXISTS asr (
 		script_id INTEGER PRIMARY KEY,
 		script_text TEXT NOT NULL,
@@ -230,7 +230,7 @@ func (a *MMSASR2) ensureASRTable() *log.Status {
 	return nil
 }
 
-func (a *MMSASR2) insertASRText(scripts []asrScript) *log.Status {
+func (a *ASRAlign) insertASRText(scripts []asrScript) *log.Status {
 	_, err := a.conn.DB.Exec(`DELETE FROM asr`)
 	if err != nil {
 		return log.Error(a.ctx, 500, err, "could not delete asr")
