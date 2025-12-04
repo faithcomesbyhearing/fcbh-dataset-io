@@ -120,10 +120,10 @@ func (b *Courier) GetOutputPaths() []string {
 	return b.outputs
 }
 
-func (b *Courier) GetOutputByExt(fileExt string) []string {
+func (b *Courier) GetOutputByExt() []string {
 	var results []string
 	for _, path := range b.outputs {
-		if strings.HasSuffix(path, fileExt) {
+		if !strings.HasSuffix(path, ".db") && !strings.HasSuffix(path, ".sqlite") {
 			results = append(results, path)
 		}
 	}

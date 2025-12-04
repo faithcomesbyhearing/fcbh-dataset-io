@@ -1,11 +1,12 @@
 package courier
 
 import (
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
 func (b *Courier) Notification(req request.Request, status *log.Status, duration time.Duration) *log.Status {
@@ -20,7 +21,7 @@ func (b *Courier) Notification(req request.Request, status *log.Status, duration
 			emailRecip, sqsURLS = b.groupRecipients(req.NotifyOk)
 			subject = "SUCCESS: " + b.dataset
 			message = b.successMsg(duration)
-			attachments = b.GetOutputByExt(".html")
+			attachments = b.GetOutputByExt()
 		} else {
 			emailRecip, sqsURLS = b.groupRecipients(req.NotifyErr)
 			subject = "FAILED: " + b.dataset
