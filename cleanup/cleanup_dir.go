@@ -2,15 +2,16 @@ package cleanup
 
 import (
 	"context"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"os"
 	"path/filepath"
 	"time"
+
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
 func CleanupDownloadDirectory(ctx context.Context) {
 	downloadDir := os.Getenv("FCBH_DATASET_FILES")
-	maxAge := 10 * 24 * time.Hour // 10 day
+	maxAge := 3 * 24 * time.Hour // 3 day
 	_ = CleanupDirectory(ctx, downloadDir, maxAge)
 	tmpDir := os.Getenv("FCBH_DATASET_TMP")
 	_ = CleanupDirectory(ctx, tmpDir, maxAge)
