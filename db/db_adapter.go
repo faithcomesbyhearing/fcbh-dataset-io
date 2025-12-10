@@ -4,15 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/generic"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/safe"
-	_ "github.com/mattn/go-sqlite3"
 	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/generic"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/safe"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // GetDBPath is not correct with user/project database names
@@ -438,8 +439,7 @@ func (d *DBAdapter) insertMFCCS(query string, mfccs []MFCC) *log.Status {
 	return status
 }
 
-func (d *DBAdapter) CheckScriptInserts(records []Script) *log.Status {
-	var duplicates []string
+func (d *DBAdapter) CheckScriptInserts(records []Script) {
 	var keyMap = make(map[generic.VerseRef]bool)
 	for i, rec := range records {
 		var key generic.VerseRef
@@ -447,27 +447,18 @@ func (d *DBAdapter) CheckScriptInserts(records []Script) *log.Status {
 		key.ChapterNum = rec.ChapterNum
 		key.VerseStr = rec.VerseStr
 		_, found := keyMap[key]
-		if found {
-			if rec.VerseStr == "0" {
-				records[i].VerseStr = "0s"
-			} else {
-				duplicates = append(duplicates, key.UniqueKey())
-			}
+		for found {
+			records[i].VerseStr += "a"
+			key.VerseStr = records[i].VerseStr
+			_, found = keyMap[key]
 		}
 		keyMap[key] = true
 	}
-	if len(duplicates) > 0 {
-		return log.ErrorNoErr(d.Ctx, 500, "Duplicate Keys:", strings.Join(duplicates, "\n"))
-	}
-	return nil
 }
 
 func (d *DBAdapter) InsertScripts(records []Script) *log.Status {
 	records = d.parseVerseStr(records)
-	status := d.CheckScriptInserts(records)
-	if status != nil {
-		return status
-	}
+	d.CheckScriptInserts(records)
 	query := `INSERT INTO scripts(dataset_id, book_id, chapter_num, chapter_end, audio_file, script_num, usfm_style, 
 			person, actor, verse_num, verse_str, verse_end, script_text, script_begin_ts, script_end_ts) 
 			VALUES (1,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
@@ -483,7 +474,7 @@ func (d *DBAdapter) InsertScripts(records []Script) *log.Status {
 			return log.Error(d.Ctx, 500, err, `Error while inserting Scripts.`)
 		}
 	}
-	status = d.commitDML(tx, query)
+	status := d.commitDML(tx, query)
 	return status
 }
 
