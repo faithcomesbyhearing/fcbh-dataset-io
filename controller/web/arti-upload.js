@@ -221,6 +221,9 @@ async function uploadYAMLToS3(yamlData, datasetName, yamlBucketName) {
         yamlString = generateSimpleYAML(yamlData);
     }
     
+    // Post-process to ensure csv: yes is unquoted
+    yamlString = yamlString.replace(/^(\s+)csv:\s*['"]yes['"]/m, '$1csv: yes');
+    
     const key = `input/${datasetName}.yaml`;
     
     await s3.upload({
