@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
@@ -52,6 +53,7 @@ func USFMBookId(ctx context.Context, bookName string) string {
 		`Zechariah`:      `ZEC`,
 		`Zachariah`:      `ZEC`,
 		`Malachi`:        `MAL`,
+		`Covenant`:       `COV`,
 		`Matthew`:        `MAT`,
 		`Mark`:           `MRK`,
 		`Luke`:           `LUK`,

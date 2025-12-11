@@ -2,11 +2,12 @@ package uroman
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
-	"os"
-	"path/filepath"
 )
 
 // uroman.go requires a pip install uroman, but it uses the uroman.pl that is included
@@ -49,15 +50,13 @@ func UpdateUroman(conn db.DBAdapter, lang string) *log.Status {
 	return status
 }
 
-func SetUroman(ctx context.Context, linesIn []db.Script, lang string) (lines []db.Script, status *log.Status) {
-	lines = linesIn
+func SetUroman(ctx context.Context, linesIn []db.Script, lang string) ([]db.Script, *log.Status) {
+	lines := linesIn
 	uroman, status := stdio_exec.NewStdioExec(ctx, os.Getenv(`FCBH_MMS_FA_PYTHON`), ScriptPath(), "-l", lang)
 	if status != nil {
 		return lines, status
 	}
-	defer func() {
-		status = uroman.Close()
-	}()
+	defer uroman.Close()
 	for i := range lines {
 		lines[i].URoman, status = uroman.Process(lines[i].ScriptText)
 		if status != nil {

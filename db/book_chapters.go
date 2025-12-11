@@ -40,6 +40,7 @@ var BookChapterMap = map[string]int{
 	`HAG`: 2,
 	`ZEC`: 14,
 	`MAL`: 4,
+	`COV`: 4,
 	`MAT`: 28,
 	`MRK`: 16,
 	`LUK`: 24,

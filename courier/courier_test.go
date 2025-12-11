@@ -2,13 +2,14 @@ package courier
 
 import (
 	"context"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
-	req "github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
+	req "github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
 const runBucketTest = `is_new: yes

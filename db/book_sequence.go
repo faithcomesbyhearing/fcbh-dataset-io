@@ -55,6 +55,7 @@ var BookSeqMap = map[string]int{
 	`HAG`: 37,
 	`ZEC`: 38,
 	`MAL`: 39,
+	`COV`: 40,
 	`MAT`: 41,
 	`MRK`: 42,
 	`LUK`: 43,

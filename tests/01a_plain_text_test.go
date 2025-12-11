@@ -2,15 +2,18 @@ package tests
 
 import (
 	"fmt"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	"strings"
 	"testing"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 )
 
 const plainTextScript = `is_new: yes
 dataset_name: 01a_plain_text_{bibleId}
 bible_id: {bibleId}
 username: GaryNTest
+testament:
+  nt: yes
 output:
   sqlite: yes
 text_data:

@@ -3,17 +3,20 @@ package tests
 import (
 	"context"
 	"fmt"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/controller"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/controller"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 )
 
 const uSXTextEditScript = `is_new: yes
 dataset_name: 01c_usx_text_edit_{bibleId}
 bible_id: {bibleId}
 username: GaryNTest
+testament:
+  nt: yes
 output:
   sqlite: yes
 text_data:

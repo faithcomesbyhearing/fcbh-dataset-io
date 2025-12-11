@@ -19,8 +19,8 @@ type MMSASR struct {
 	conn     db.DBAdapter
 	lang     string
 	sttLang  string
-	uroman   stdio_exec.StdioExec
-	mmsAsrPy stdio_exec.StdioExec
+	uroman   *stdio_exec.StdioExec
+	mmsAsrPy *stdio_exec.StdioExec
 }
 
 func NewMMSASR(ctx context.Context, conn db.DBAdapter, lang string, sttLang string) MMSASR {

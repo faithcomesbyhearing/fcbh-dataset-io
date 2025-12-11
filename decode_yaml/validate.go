@@ -43,6 +43,7 @@ func (r *RequestDecoder) checkRequired(req *request.Request) {
 
 func (r *RequestDecoder) checkTestament(req *request.Testament) {
 	if !req.OT && !req.NT && len(req.NTBooks) == 0 && len(req.OTBooks) == 0 {
+		req.OT = true
 		req.NT = true
 	}
 }

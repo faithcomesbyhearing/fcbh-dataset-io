@@ -3,18 +3,21 @@ package tests
 import (
 	"context"
 	"fmt"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/generic"
-	"github.com/sergi/go-diff/diffmatchpatch"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/generic"
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 const usxVsPlain = `is_new: yes
 dataset_name: 3b_usx_vs_plain_{BIBLE_ID}
 bible_id: {BIBLE_ID}
 username: GaryNTest
+testament:
+  nt: yes
 output:
   sqlite: yes
 text_data:
