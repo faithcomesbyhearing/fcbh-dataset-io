@@ -724,21 +724,21 @@
             <div class="form-group">
                 <div class="form-row">
                     <label for="gordonFilter">gordon_filter:</label>
-                    <input type="number" id="gordonFilter" placeholder="Enter 4 for filter, or zero for no filter." value="4">
+                    <input type="number" id="gordonFilter" placeholder="Enter 4 for filter, or zero for no filter." value="0">
                 </div>
             </div>
 
             <div class="form-group">
                 <div class="form-row">
                     <label for="notifyOk">notify_ok: <span style="color: #888; font-size: 12px;">(comma-separated emails)</span></label>
-                    <input type="text" id="notifyOk" value="jbarndt@fcbhmail.org, ezornes@fcbhmail.org, gfiddes@fcbhmail.org, edomschot@fcbhmail.org, jrstear@fcbhmail.org" placeholder="jbarndt@fcbhmail.org, ezornes@fcbhmail.org, gfiddes@fcbhmail.org, edomschot@fcbhmail.org, jrstear@fcbhmail.org">
+                    <input type="text" id="notifyOk" value="ezornes@fcbhmail.org, gfiddes@fcbhmail.org, edomschot@fcbhmail.org, jrstear@fcbhmail.org" placeholder="ezornes@fcbhmail.org, gfiddes@fcbhmail.org, edomschot@fcbhmail.org, jrstear@fcbhmail.org">
                 </div>
             </div>
 
             <div class="form-group">
                 <div class="form-row">
                     <label for="notifyErr">notify_err: <span style="color: #888; font-size: 12px;">(comma-separated emails)</span></label>
-                    <input type="text" id="notifyErr" value="jbarndt@fcbhmail.org, gary@shortsands.com, ezornes@fcbhmail.org, jrstear@fcbhmail.org" placeholder="jbarndt@fcbhmail.org, gary@shortsands.com, ezornes@fcbhmail.org, jrstear@fcbhmail.org">
+                    <input type="text" id="notifyErr" value="gary@shortsands.com, ezornes@fcbhmail.org, jrstear@fcbhmail.org" placeholder="gary@shortsands.com, ezornes@fcbhmail.org, jrstear@fcbhmail.org">
                 </div>
             </div>
 
@@ -765,7 +765,7 @@
 
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1500.0.min.js"></script>
     <script src="arti-validation.js?v=24"></script>
-    <script src="arti-upload.js?v=31"></script>
+    <script src="arti-upload.js?v=32"></script>
     <script src="arti-main.js?v=56"></script>
     <script>
         // AWS Configuration - loaded from credentials file
@@ -1171,14 +1171,14 @@
             const username = document.getElementById('username').value;
             
             document.getElementById('requestForm').reset();
-            document.getElementById('gordonFilter').value = '4';
+            document.getElementById('gordonFilter').value = '0';
             // Set default radio selections
             document.getElementById('timestamps_mms_align').checked = true;
             document.getElementById('training_mms_adapter').checked = true;
             document.getElementById('compare').checked = true;
             // Set default email values
-            document.getElementById('notifyOk').value = 'jbarndt@fcbhmail.org, ezornes@fcbhmail.org, gfiddes@fcbhmail.org, edomschot@fcbhmail.org, jrstear@fcbhmail.org';
-            document.getElementById('notifyErr').value = 'jbarndt@fcbhmail.org, gary@shortsands.com, ezornes@fcbhmail.org, jrstear@fcbhmail.org';
+            document.getElementById('notifyOk').value = 'ezornes@fcbhmail.org, gfiddes@fcbhmail.org, edomschot@fcbhmail.org, jrstear@fcbhmail.org';
+            document.getElementById('notifyErr').value = 'gary@shortsands.com, ezornes@fcbhmail.org, jrstear@fcbhmail.org';
             
             // Restore username
             document.getElementById('username').value = username;
@@ -1519,6 +1519,11 @@
                 };
             }
 
+            // Output section with CSV
+            request.output = {
+                csv: 'yes'
+            };
+
             return request;
         }
 
@@ -1535,11 +1540,19 @@
             // Convert to YAML
             try {
                 const jsYaml = window.jsyaml || window.yaml;
+                let yamlString;
                 if (!jsYaml) {
                     // Fallback to simple YAML generation if js-yaml is not available
-                    return generateSimpleYAML(request);
+                    yamlString = generateSimpleYAML(request);
+                } else {
+                    yamlString = jsYaml.dump(request, { indent: 4, lineWidth: -1 });
                 }
-                return jsYaml.dump(request, { indent: 4, lineWidth: -1 });
+                
+                // Post-process to ensure csv: yes is unquoted
+                // Replace any quoted 'yes' or "yes" with unquoted yes for the csv field
+                yamlString = yamlString.replace(/^(\s+)csv:\s*['"]yes['"]/m, '$1csv: yes');
+                
+                return yamlString;
             } catch (error) {
                 showStatus('Error generating YAML: ' + error.message, 'error');
                 return null;
