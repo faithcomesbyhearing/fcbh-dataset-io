@@ -48,7 +48,7 @@ func (d *UpdateTimestamps) handleDuplicationIfNeeded(ident db.Ident) (bool, []db
 		return false, nil, status
 	}
 	if len(sourceDurations) == 0 {
-		return false, nil, log.ErrorNoErr(d.ctx, 400, fmt.Sprintf("Source fileset %s has no duration tags available", sourceID))
+		return false, nil, log.ErrorNoErr(d.ctx, 400, fmt.Sprintf("Source fileset %s has no duration data available", sourceID))
 	}
 
 	targetDurations, status := d.dbpConn.GetFilesetDurations(targetID)
@@ -56,7 +56,7 @@ func (d *UpdateTimestamps) handleDuplicationIfNeeded(ident db.Ident) (bool, []db
 		return false, nil, status
 	}
 	if len(targetDurations) == 0 {
-		return false, nil, log.ErrorNoErr(d.ctx, 400, fmt.Sprintf("Target fileset %s has no duration tags available", targetID))
+		return false, nil, log.ErrorNoErr(d.ctx, 400, fmt.Sprintf("Target fileset %s has no duration data available", targetID))
 	}
 
 	comparison := compareDurations(sourceDurations, targetDurations, tolerance)
@@ -79,7 +79,8 @@ func (d *UpdateTimestamps) handleDuplicationIfNeeded(ident db.Ident) (bool, []db
 
 	resetTimestampIDs(filteredData)
 
-	status = d.dbpConn.ProcessTimestamps(targetID, mmsAlignTimingEstErr, filteredChapters, filteredData)
+	// No duration validation needed for duplication (just copying timestamps)
+	status = d.dbpConn.ProcessTimestamps(targetID, mmsAlignTimingEstErr, ident.BibleId, filteredChapters, filteredData)
 	if status != nil {
 		return false, nil, status
 	}

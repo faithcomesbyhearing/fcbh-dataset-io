@@ -61,16 +61,37 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID, timestampsFilesetID
 		}
 	}
 
+	// Determine set_type_code and set_size_code based on fileset ID suffix
+	setTypeCode := "audio_stream" // Default to audio_stream
+	setSizeCode := "NT"           // Default to NT
+	hlsFilesetIDUpper := strings.ToUpper(hlsFilesetID)
+
+	if strings.HasSuffix(hlsFilesetIDUpper, "2SA") {
+		setTypeCode = "audio_drama_stream"
+	} else if strings.HasSuffix(hlsFilesetIDUpper, "1SA") {
+		setTypeCode = "audio_stream"
+	}
+
+	// Determine set_size_code based on 4th-to-last character (N/O in patterns like N1SA, N2SA, O1SA, O2SA)
+	if strings.HasSuffix(hlsFilesetIDUpper, "SA") && len(hlsFilesetIDUpper) >= 4 {
+		precedingChar := string(hlsFilesetIDUpper[len(hlsFilesetIDUpper)-4])
+		if precedingChar == "N" {
+			setSizeCode = "NT"
+		} else if precedingChar == "O" {
+			setSizeCode = "OT"
+		}
+	}
+
 	// Collect all HLS data
 	var hlsData HLSData
 	now := time.Now().Format("2006-01-02 15:04:05")
 	hlsData.Fileset = HLSFileset{
 		ID:             hlsFilesetID,
-		SetTypeCode:    "audio_stream",                                        // Default to audio_stream, could be made configurable
-		SetSizeCode:    "NT",                                                  // Default to NT, could be made configurable
-		ModeID:         modeID,                                                // Copy from source timestamps fileset
-		HashID:         generateHashID(hlsFilesetID, "audio_stream", assetID), // Generate a unique hash ID using asset_id as bucket
-		AssetID:        assetID,                                               // Use the asset_id from parent DA fileset or timestamps fileset
+		SetTypeCode:    setTypeCode,
+		SetSizeCode:    setSizeCode,
+		ModeID:         modeID,                                             // Copy from source timestamps fileset
+		HashID:         generateHashID(hlsFilesetID, setTypeCode, assetID), // Generate a unique hash ID using asset_id as bucket
+		AssetID:        assetID,                                            // Use the asset_id from parent DA fileset or timestamps fileset
 		BibleID:        bibleID,
 		LicenseGroupID: licenseGroupID, // Copy from source timestamps fileset
 		PublishedSNM:   publishedSNM,   // Copy from source timestamps fileset
@@ -94,8 +115,14 @@ func (d *UpdateTimestamps) ProcessHLS(hlsFilesetID, bibleID, timestampsFilesetID
 				continue
 			}
 
-			// Process the file with HLS processor
-			fileData, err := processor.ProcessFile(audioFile, timestamps)
+			// Get current duration from database
+			dbDuration, status := d.dbpConn.GetBibleFileDuration(timestampsFilesetID, ch.BookId, ch.ChapterNum, audioFile)
+			if status != nil {
+				return status
+			}
+
+			// Process the file with HLS processor (includes sanity check)
+			fileData, err := processor.ProcessFile(audioFile, timestamps, dbDuration)
 			if err != nil {
 				return log.Error(d.ctx, 500, err, "Failed to process HLS file: "+audioFile)
 			}

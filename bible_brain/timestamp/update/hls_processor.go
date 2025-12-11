@@ -14,7 +14,7 @@ import (
 )
 
 type HLSProcessor interface {
-	ProcessFile(audioFile string, timestamps []Timestamp) (*HLSFileData, error)
+	ProcessFile(audioFile string, timestamps []Timestamp, dbDuration *int) (*HLSFileData, error)
 }
 
 type HLSFileData struct {
@@ -43,13 +43,13 @@ func NewLocalHLSProcessor(ctx context.Context, bibleID, timestampsFilesetID stri
 	}
 }
 
-func (p *LocalHLSProcessor) ProcessFile(audioFile string, timestamps []Timestamp) (*HLSFileData, error) {
+func (p *LocalHLSProcessor) ProcessFile(audioFile string, timestamps []Timestamp, dbDuration *int) (*HLSFileData, error) {
 	// Construct full path to audio file
 	audioPath := filepath.Join(p.filesDir, audioFile)
 
 	// Check if file exists
 	if _, err := os.Stat(audioPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("Audio file not found: %s", audioPath)
+		return nil, fmt.Errorf("audio file not found: %s", audioPath)
 	}
 
 	// Get file info for size
@@ -71,29 +71,34 @@ func (p *LocalHLSProcessor) ProcessFile(audioFile string, timestamps []Timestamp
 		actualBandwidth = 64000 // fallback to 64kbps
 	}
 
-	// Get audio duration for SA filesets
+	// Get audio duration from format metadata for sanity check
 	audioDuration, err := p.getAudioDuration(audioPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get audio duration: %v", err)
 	}
 
-	// Validate that audio duration equals sum of all verse durations
-	totalVerseDuration := 0.0
-	for _, timestamp := range timestamps {
-		totalVerseDuration += (timestamp.EndTS - timestamp.BeginTS)
+	// Sanity check: Compare rounded bible_files.duration with rounded ffprobe format duration
+	if dbDuration == nil {
+		return nil, fmt.Errorf("bible_files.duration not found for %s", audioFile)
 	}
 
-	// Allow for small floating point differences (within 1 second)
-	if math.Abs(audioDuration-totalVerseDuration) > 1.0 {
-		return nil, fmt.Errorf("audio duration mismatch: audio=%.2fs, sum of verses=%.2fs, difference=%.2fs",
-			audioDuration, totalVerseDuration, math.Abs(audioDuration-totalVerseDuration))
+	roundedFormatDuration := int(math.Round(audioDuration))
+	roundedDbDuration := *dbDuration
+
+	// Allow 1 second tolerance to allow for possible rounding difference in upstream processes
+	if math.Abs(float64(roundedFormatDuration-roundedDbDuration)) > 1 {
+		return nil, fmt.Errorf("duration mismatch for %s: bible_files.duration=%ds, format duration=%ds (difference exceeds 1 second)",
+			audioFile, roundedDbDuration, roundedFormatDuration)
 	}
+
+	// Use database duration value (already rounded to int)
+	roundedDuration := roundedDbDuration
 
 	// Create HLS file entry
 	hlsFile := HLSFile{
 		FileName:  replaceExtension(audioFile, ".m3u8"),
 		FileSize:  fileSize,
-		Duration:  int(audioDuration), // Round to int for SA filesets
+		Duration:  roundedDuration,
 		CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
 		UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
 	}
@@ -337,7 +342,7 @@ func NewLambdaHLSProcessor(ctx context.Context, lambdaFunction string) *LambdaHL
 	}
 }
 
-func (p *LambdaHLSProcessor) ProcessFile(audioFile string, timestamps []Timestamp) (*HLSFileData, error) {
+func (p *LambdaHLSProcessor) ProcessFile(audioFile string, timestamps []Timestamp, dbDuration *int) (*HLSFileData, error) {
 	// TODO: Implement lambda call
 	return nil, fmt.Errorf("lambda processor not implemented yet")
 }
