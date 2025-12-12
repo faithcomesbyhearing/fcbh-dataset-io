@@ -4,15 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
 type APIDownloadClient struct {
@@ -100,7 +101,7 @@ func (d *APIDownloadClient) downloadPlainText(directory string, filesetId string
 	filePath := filepath.Join(directory, filename)
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
-		var get = HOST + "download/" + filesetId + "?v=4&limit=100000"
+		var get = getDBPHost() + "/api/download/" + filesetId + "?v=4&limit=100000"
 		fmt.Println("Downloading to", filePath)
 		content, status = httpGet(d.ctx, get, false, filesetId)
 		if status == nil {
@@ -129,9 +130,9 @@ func (d *APIDownloadClient) downloadLocation(filesetId string) ([]LocationRec, *
 	var status *log.Status
 	var get string
 	if strings.Contains(filesetId, `usx`) {
-		get = HOST + "bibles/filesets/" + filesetId + "/ALL/1?v=4&limit=100000"
+		get = getDBPHost() + "/api/bibles/filesets/" + filesetId + "/ALL/1?v=4&limit=100000"
 	} else {
-		get = HOST + "download/" + filesetId + "?v=4"
+		get = getDBPHost() + "/api/download/" + filesetId + "?v=4"
 	}
 	var content []byte
 	content, status = httpGet(d.ctx, get, true, filesetId)
@@ -159,7 +160,7 @@ func (d *APIDownloadClient) downloadEachLocation(fileset FilesetType) ([]Locatio
 		maxChapter, _ := db.BookChapterMap[book]
 		for ch := 1; ch <= maxChapter; ch++ {
 			chapter := strconv.Itoa(ch)
-			get := HOST + `bibles/filesets/` + fileset.Id + `/` + book + `/` + chapter + `?v=4&`
+			get := getDBPHost() + `/api/bibles/filesets/` + fileset.Id + `/` + book + `/` + chapter + `?v=4&`
 			var content []byte
 			content, status = httpGet(d.ctx, get, false, fileset.Id)
 			if status != nil {

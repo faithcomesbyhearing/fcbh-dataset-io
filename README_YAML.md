@@ -20,7 +20,7 @@ This document provides comprehensive documentation for all available configurati
   - [Audio Encoding](#audio-encoding)
   - [Text Encoding](#text-encoding)
   - [Database Configuration](#database-configuration)
-  - [Update DBP (Planned Feature)](#update-dbp-planned-feature)
+  - [Update DBP](#update-dbp)
 - [Validation Rules](#validation-rules)
 - [Default Values](#default-values)
 
@@ -142,7 +142,7 @@ audio_data:
     mp3_64: yes                # Mark yes for 64 kbps MP3
     mp3_16: yes                # Mark yes for 16 kbps MP3
     opus: yes                   # Mark yes for OPUS format
-    set_type_code: "audio"     # Optional: prefer specific fileset type ("audio" or "audio_drama")
+    set_type_code: "audio"     # Optional: require specific fileset type ("audio" or "audio_drama"). If specified, no fallback to other types.
   file: /directory/{mediaId}/*.wav          # Local file path (include twice for OT and NT)
   aws_s3: s3://bucket/audio/{bibleId}/{mediaId}/*.mp3  # S3 path (include twice for OT and NT)
   post: {mediaId}_{A/Bseq}_{book}_{chapter}_{verse}-{chapter_end}_{verse_end}  # File path pattern for multipart uploads (see [Multipart Uploads](#multipart-uploads) section)
@@ -155,22 +155,23 @@ audio_data:
 
 **Fileset Type Selection (`set_type_code`):**
 
-When multiple filesets are available for the same Bible (e.g., N1DA and N2DA), you can specify which type to prefer:
+When multiple filesets are available for the same Bible (e.g., N1DA and N2DA), you can specify which type is required:
 
-- **`"audio"`**: Prefer filesets without background music (e.g., ENGNIVN1DA)
-- **`"audio_drama"`**: Prefer filesets with background music (e.g., ENGNIVN2DA)
+- **`"audio"`**: Require filesets without background music (e.g., ENGNIVN1DA)
+- **`"audio_drama"`**: Require filesets with background music (e.g., ENGNIVN2DA)
 
 **How it works:**
-1. The system first tries to find a fileset matching your specified `set_type_code`
-2. If no match is found, it falls back to the default behavior (audio_drama first, then audio)
-3. This allows you to explicitly choose between N1DA vs N2DA variants when both are available
+1. If `set_type_code` is specified, the system will ONLY search for filesets matching that type
+2. If no match is found with the specified type, the search fails (no fileset selected)
+3. If `set_type_code` is NOT specified, the system falls back to default behavior (audio first, then audio_drama)
+4. This ensures that when you specify a type, you get exactly that type or nothing
 
 **Example:**
 ```yaml
 audio_data:
   bible_brain:
     mp3_64: yes
-    set_type_code: "audio"  # Prefer N1DA (without music) over N2DA (with music)
+    set_type_code: "audio"  # Require N1DA (without music) - will fail if only N2DA is available
 ```
 
 
@@ -435,29 +436,21 @@ database:
 
 ### Update DBP
 
-Update the DBP database with processed data:
+Use this section to create timestamps and HLS streams in biblebrain.
+It requires access to biblebrain's database, so is of very limited use outside Faith Comes By Hearing.
 
 ```yaml
 update_dbp:
-  timestamps: ENGNIVN1DA       # Fileset ID to update timestamps for
-  hls: ENGNIVN1SA              # Fileset ID for HLS stream generation
+  copy_timestamps_from: ENGWEBN1DA   # Optional (for copying eg N1 to N2)
+  timestamps: ENGNIVN2DA             # fileset to which timestamps are saved
+  hls: ENGNIVN2SA                    # New HLS fileset
 ```
 
 **Fields:**
-- **`timestamps`**: Fileset ID to update timestamp data in DBP
-- **`hls`**: Fileset ID for generating HTTP Live Streaming (HLS) streams
+- **`copy_timestamps_from` (optional)** – Copies biblebrain timestamps from this fileset to the target.  Intended for N1→N2 or O1→O2.  Will fail/refuse if chapter durations do not match exactly.
+- **`timestamps`** – Fileset ID whose timestamps will be written or overwritten in DBP.
+- **`hls`** – Fileset ID for generating HTTP Live Streaming (HLS) streams; typically the paired SA fileset.
 
-**HLS Stream Generation:**
-- **Purpose**: Generate HLS streams for the specified fileset
-- **Use case**: When you need to create streaming audio content from existing fileset data
-- **Value**: Fileset ID (e.g., `ENGNIVN1SA`, `ENGWEBN2SA`)
-
-**Example:**
-```yaml
-update_dbp:
-  timestamps: ENGNIVN1DA       # Update timestamps for ENGNIVN1DA
-  hls: ENGNIVN1SA              # Generate HLS streams for ENGNIVN1SA
-```
 
 ## Validation Rules
 

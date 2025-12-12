@@ -298,6 +298,21 @@ func (c *Controller) fetchData() (db.Ident, *log.Status) {
 		return c.ident, status
 	}
 	client.FindFilesets(&info, c.req.AudioData.BibleBrain, c.req.TextData.BibleBrain, c.req.Testament)
+
+	// Validate that required filesets were found if set_type_code was specified
+	if c.req.AudioData.BibleBrain.SetTypeCode != "" {
+		if (c.req.Testament.NT || len(c.req.Testament.NTBooks) > 0) && info.AudioNTFileset.Id == "" {
+			return c.ident, log.ErrorNoErr(c.ctx, 404,
+				"Required audio fileset type '"+c.req.AudioData.BibleBrain.SetTypeCode+"' not found for NT. "+
+					"Available filesets may not match the specified set_type_code.")
+		}
+		if (c.req.Testament.OT || len(c.req.Testament.OTBooks) > 0) && info.AudioOTFileset.Id == "" {
+			return c.ident, log.ErrorNoErr(c.ctx, 404,
+				"Required audio fileset type '"+c.req.AudioData.BibleBrain.SetTypeCode+"' not found for OT. "+
+					"Available filesets may not match the specified set_type_code.")
+		}
+	}
+
 	download := fetch.NewAPIDownloadClient(c.ctx, c.req.BibleId, c.req.Testament)
 	status = download.Download(info)
 	if status != nil {

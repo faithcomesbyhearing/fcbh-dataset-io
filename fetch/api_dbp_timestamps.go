@@ -3,11 +3,12 @@ package fetch
 import (
 	"context"
 	"encoding/json"
+	"strconv"
+	"strings"
+
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
-	"strconv"
-	"strings"
 )
 
 type APIDBPTimestamps struct {
@@ -90,7 +91,7 @@ func (a *APIDBPTimestamps) LoadTimestamps(testament request.Testament) (bool, *l
 func (a *APIDBPTimestamps) HavingTimestamps() (map[string]bool, *log.Status) {
 	var result = make(map[string]bool)
 	var status *log.Status
-	var get = `https://4.dbt.io/api/timestamps?v=4`
+	var get = getDBPHost() + `/api/timestamps?v=4`
 	body, status := httpGet(a.ctx, get, false, `timestamps`)
 	if status != nil {
 		return result, status
@@ -130,7 +131,7 @@ func (a *APIDBPTimestamps) Timestamps(bookId string, chapter int) ([]Timestamp, 
 	var status *log.Status
 	chapterStr := strconv.Itoa(chapter)
 	coreId := strings.Split(a.audioId, "-")[0]
-	var get = `https://4.dbt.io/api/timestamps/` + coreId + `/` + bookId + `/` + chapterStr + `?v=4`
+	var get = getDBPHost() + `/api/timestamps/` + coreId + `/` + bookId + `/` + chapterStr + `?v=4`
 	body, status := httpGet(a.ctx, get, false, `timestamps`)
 	if status != nil {
 		return result, status
