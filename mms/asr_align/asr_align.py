@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 from transformers import Wav2Vec2ForCTC
 from transformers import AutoProcessor
 import torch
@@ -67,15 +68,23 @@ model = model.to(device)
 for line in sys.stdin:
     torch.cuda.empty_cache()
     audioFile = line.strip()
-    sample, sr = soundfile.read(audioFile)
+    sample, sr = soundfile.read(audioFile) # replace this with torchaudio before production
     inputs = processor(sample, sampling_rate=16_000, return_tensors="pt")
     inputs = ensureMinimumTensorSize(inputs, 3200, 0)
     inputs = {name: tensor.to(device) for name, tensor in inputs.items()}
     with torch.no_grad():
         outputs = model(**inputs).logits
-    ids = torch.argmax(outputs, dim=-1)[0]
-    transcription = processor.decode(ids)
-    sys.stdout.write(transcription)
+    ids = torch.argmax(outputs, dim=-1)
+    output = processor.batch_decode(ids, output_word_offsets=True)
+    words = []
+    for word_info in output.word_offsets[0]:
+        words.append({
+            "word": word_info["word"],
+            "start": word_info["start_offset"] / processor.feature_extractor.sampling_rate,
+            "end": word_info["end_offset"] / processor.feature_extractor.sampling_rate
+        })
+    jsonString = json.dumps(words)
+    sys.stdout.write(jsonString)
     sys.stdout.write("\n")
     sys.stdout.flush()
 

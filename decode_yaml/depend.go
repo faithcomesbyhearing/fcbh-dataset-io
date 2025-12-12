@@ -3,7 +3,7 @@ package decode_yaml
 import "github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 
 func (r *RequestDecoder) Prereq(req *request.Request) {
-	if req.Timestamps.MMSAlign {
+	if req.Timestamps.MMSAlign || req.SpeechToText.MMSASRAlign {
 		req.Detail.Words = true
 	}
 }

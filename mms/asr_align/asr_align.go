@@ -2,6 +2,7 @@ package asr_align
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,6 +23,7 @@ import (
 type ASRAlign struct {
 	ctx          context.Context
 	conn         db.DBAdapter
+	baseDataset  string
 	lang         string
 	sttLang      string
 	adapter      bool
@@ -31,10 +33,11 @@ type ASRAlign struct {
 	versePattern *regexp.Regexp
 }
 
-func NewASRAlign(ctx context.Context, conn db.DBAdapter, lang string, sttLang string, adapter bool) ASRAlign {
+func NewASRAlign(ctx context.Context, conn db.DBAdapter, baseDataset string, lang string, sttLang string, adapter bool) ASRAlign {
 	var a ASRAlign
 	a.ctx = ctx
 	a.conn = conn
+	a.baseDataset = baseDataset
 	a.lang = lang
 	a.sttLang = sttLang
 	a.adapter = adapter
@@ -112,7 +115,9 @@ func (a *ASRAlign) processASR(file input.InputFile, tempDir string) (string, *lo
 		return response, status1
 	}
 	// Temp code for debugging
-	err := os.WriteFile(file.MediaId+"_"+file.BookId+strconv.Itoa(file.Chapter), []byte(response), 0644)
+	testFile := filepath.Join(os.Getenv("GOPROJ"), "mms/asr_align/",
+		file.MediaId+"_"+file.BookId+strconv.Itoa(file.Chapter))
+	err := os.WriteFile(testFile, []byte(response), 0644)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -125,6 +130,8 @@ type asrScript struct {
 	verseStr string
 	text     string
 	uRoman   string
+	beginTS  float64
+	endTS    float64
 }
 
 func (a *ASRAlign) parseResult(file input.InputFile, response string) *log.Status {
@@ -133,18 +140,28 @@ func (a *ASRAlign) parseResult(file input.InputFile, response string) *log.Statu
 		return status
 	}
 	sourceText := a.combineVerses(scripts)
-	respVerses := a.parseASRByOriginal(sourceText, response)
+	type AsrResponse struct {
+		Word    string  `json:"word"`
+		BeginTS float64 `json:"start"`
+		EndTS   float64 `json:"end"`
+	}
+	var asrResponse []AsrResponse
+	err := json.Unmarshal([]byte(response), &asrResponse)
+	if err != nil {
+		return log.Error(a.ctx, 500, err, `Error unmarshalling json`)
+	}
+	words := make([]string, len(asrResponse))
+	for i, r := range asrResponse {
+		words[i] = r.Word
+	}
+	respVerses := a.parseASRByOriginal(sourceText, strings.Join(words, " "))
 	for i := range respVerses {
 		respVerses[i].uRoman, status = a.uroman.Process(respVerses[i].text)
 		if status != nil {
 			return status
 		}
 	}
-	status = a.ensureASRTable()
-	if status != nil {
-		return status
-	}
-	status = a.insertASRText(respVerses)
+	status = a.updateASRText(respVerses)
 	if status != nil {
 		return status
 	}
@@ -153,12 +170,17 @@ func (a *ASRAlign) parseResult(file input.InputFile, response string) *log.Statu
 
 func (a *ASRAlign) selectVersesByBookChapter(bookId string, chapter int) ([]asrScript, *log.Status) {
 	var results []asrScript
+	baseConn, status := db.NewerDBAdapter(a.ctx, false, a.conn.User, a.baseDataset)
+	if status != nil {
+		return results, status
+	}
+	defer baseConn.Close()
 	var query = `SELECT s.script_id, s.verse_str, LOWER(GROUP_CONCAT(w.word, ' ')) AS text
 	FROM scripts s JOIN words w ON w.script_id = s.script_id
 	WHERE w.ttype = 'W' AND s.book_id = ? AND s.chapter_num = ?
 	GROUP BY s.script_id, s.verse_str
 	ORDER BY s.script_id, s.verse_str`
-	rows, err := a.conn.DB.Query(query, bookId, chapter)
+	rows, err := baseConn.DB.Query(query, bookId, chapter)
 	if err != nil {
 		return results, log.Error(a.ctx, 500, err, query, bookId, chapter)
 	}
@@ -218,24 +240,8 @@ func (a *ASRAlign) parseASRByOriginal(sourceText string, response string) []asrS
 	return results
 }
 
-func (a *ASRAlign) ensureASRTable() *log.Status {
-	query := `CREATE TABLE IF NOT EXISTS asr (
-		script_id INTEGER PRIMARY KEY,
-		script_text TEXT NOT NULL,
-		uroman TEXT NOT NULL DEFAULT '')`
-	_, err := a.conn.DB.Exec(query)
-	if err != nil {
-		return log.Error(a.ctx, 500, err, query)
-	}
-	return nil
-}
-
-func (a *ASRAlign) insertASRText(scripts []asrScript) *log.Status {
-	_, err := a.conn.DB.Exec(`DELETE FROM asr`)
-	if err != nil {
-		return log.Error(a.ctx, 500, err, "could not delete asr")
-	}
-	query := `INSERT INTO asr (script_id, script_text, uroman) VALUES (?,?,?)`
+func (a *ASRAlign) updateASRText(scripts []asrScript) *log.Status {
+	query := `UPDATE scripts SET script_text = ?, uroman = ? WHERE script_id = ?`
 	tx, err := a.conn.DB.Begin()
 	if err != nil {
 		return log.Error(a.ctx, 500, err, query)
@@ -246,7 +252,7 @@ func (a *ASRAlign) insertASRText(scripts []asrScript) *log.Status {
 	}
 	defer stmt.Close()
 	for _, rec := range scripts {
-		_, err = stmt.Exec(rec.scriptId, rec.text, rec.uRoman)
+		_, err = stmt.Exec(rec.text, rec.uRoman, rec.scriptId)
 		if err != nil {
 			return log.Error(a.ctx, 500, err, `Error while inserting asr text.`)
 		}

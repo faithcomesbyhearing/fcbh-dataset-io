@@ -489,7 +489,7 @@ func (c *Controller) speechToText(audioFiles []input.InputFile) *log.Status {
 		status = asr.ProcessFiles(audioFiles)
 	} else if c.req.SpeechToText.MMSASRAlign {
 		var asr asr_align.ASRAlign
-		asr = asr_align.NewASRAlign(c.ctx, c.database, c.ident.LanguageISO, c.req.AltLanguage, false)
+		asr = asr_align.NewASRAlign(c.ctx, c.database, c.req.Compare.BaseDataset, c.ident.LanguageISO, c.req.AltLanguage, false)
 		status = asr.ProcessFiles(audioFiles)
 	} else {
 		var whisperModel = c.req.SpeechToText.Whisper.Model.String()

@@ -18,7 +18,7 @@ speech_to_text:
   mms_asr_align: yes
 compare:
   html_report: yes
-  gordon_filter: 4
+  gordon_filter: 0
   compare_settings: 
     lower_case: y
     remove_prompt_chars: y
