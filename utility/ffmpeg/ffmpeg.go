@@ -5,15 +5,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
-	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
+	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
 // ChopByTimestamp uses timestamps to chop timestamps into files, and puts the filenames in timestamp record.
@@ -54,18 +55,26 @@ func ChopByTimestamp(ctx context.Context, tempDir string, inputFile string, time
 }
 
 // ChopOneSegment uses timestamps extract one segment from an audio file
+// Outputs as WAV format (re-encodes if necessary)
 func ChopOneSegment(ctx context.Context, tempDir string, inputFile string, beginTS float64, endTS float64) (string, *log.Status) {
 	var outputFile string
 	outputFile = filepath.Join(tempDir, fmt.Sprintf("%d.wav", time.Now().UnixNano()))
+	
+	// Ensure temp directory exists
+	if err := os.MkdirAll(tempDir, 0755); err != nil {
+		return outputFile, log.Error(ctx, 500, err, "Error creating temp directory for ChopOneSegment")
+	}
+	
 	err := ffmpeg.Input(inputFile).Output(outputFile, ffmpeg.KwArgs{
-		"codec:a": "copy",
-		"c":       "copy",
-		"y":       "",
-		"ss":      beginTS,
-		"to":      endTS,
+		"acodec": "pcm_s16le", // WAV format
+		"ar":     "16000",      // 16kHz sample rate (string format for ffmpeg-go)
+		"ac":     "1",          // Mono (string format for ffmpeg-go)
+		"y":      "",           // Overwrite output file
+		"ss":     fmt.Sprintf("%.6f", beginTS), // Start time
+		"to":     fmt.Sprintf("%.6f", endTS),   // End time
 	}).Silent(true).OverWriteOutput().Run()
 	if err != nil {
-		return outputFile, log.Error(ctx, 500, err, "Error in ChopOneSegment")
+		return outputFile, log.Error(ctx, 500, err, "Error in ChopOneSegment", "input", inputFile, "beginTS", beginTS, "endTS", endTS, "output", outputFile)
 	}
 	return outputFile, nil
 }
