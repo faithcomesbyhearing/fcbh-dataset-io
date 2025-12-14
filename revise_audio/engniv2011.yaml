@@ -1,0 +1,31 @@
+is_new: yes
+dataset_name: engniv2011
+bible_id: ENGNIV
+username: jrstear
+notify_ok: [jrstear@fcbhmail.org]
+notify_err: [jrstear@fcbhmail.org]
+output: 
+  csv: yes
+testament:
+  nt_books: [JUD]
+text_data: 
+  aws_s3: s3://dataset-io/jrstear/niv2011/usx/*.usx
+audio_data: 
+  aws_s3: s3://dataset-io/jrstear/niv2011/n1da/
+timestamps: 
+  mms_align: yes
+speech_to_text:
+  mms_asr: yes
+compare:
+  html_report: yes
+  compare_settings:
+    lower_case: yes
+    remove_punctuation: yes
+    double_quotes:
+      remove: yes
+    apostrophe:
+      remove: yes
+    hyphen:         
+      remove: yes  
+    diacritical_marks:
+      remove: yes    
