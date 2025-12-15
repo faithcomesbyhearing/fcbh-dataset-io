@@ -4,12 +4,11 @@ runuser --login ec2-user --shell=/bin/bash << 'EOF'
 env
 cd ~/go/src/fcbh-dataset-io
 if [[ "$FCBH_DATASET_QUEUE" == *"-dev" ]]; then
-    #git pull origin train
     git pull origin main
 else
     git pull origin main
 fi
-go install -a ./controller/queue_server
+go install ./controller/queue_server
 cd
 nohup ~/go/bin/queue_server &
 EOF
