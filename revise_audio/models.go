@@ -77,6 +77,7 @@ type VoiceConversionConfig struct {
 	RVCModelPath      string // Path to trained RVC model
 	SpeakerEmbeddingPath string // Path to speaker embedding file
 	F0Method          string // "rmvpe", "harvest", "dio", "pm"
+	Device            string // "auto", "cuda", "cpu"
 	
 	// Output settings
 	SampleRate int // Output sample rate (default: 16000)
@@ -89,9 +90,10 @@ type ProsodyConfig struct {
 	UseNeural   bool // Use neural prosody transfer (future)
 	
 	// DSP-specific settings
-	F0Method        string // "pyworld", "librosa", "rmvpe"
+	F0Method        string  // "pyworld", "librosa", "auto"
 	PitchShiftRange float64 // Max semitones to shift (default: 2.0)
 	TimeStretchRange float64 // Max time stretch factor (default: 1.2)
+	SampleRate      int     // Audio sample rate (default: 16000)
 	
 	// Reference audio for prosody extraction
 	ReferenceContextSeconds float64 // Seconds before/after to analyze (default: 5.0)
