@@ -1,0 +1,7 @@
+[Unit]
+Description=Arti Failure Notification
+After=arti.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/ec2-user/go/src/fcbh-dataset-io/controller/systemctl/arti-failure-notify.sh

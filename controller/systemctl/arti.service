@@ -1,0 +1,56 @@
+[Unit]
+Description=Artificial Polyglot - Bible Audio Quality Control Server
+Documentation=https://faithcomesbyhearing.com
+After=network-online.target
+Wants=network-online.target
+OnFailure=arti-failure-notify.service
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/go/src/fcbh-dataset-io
+
+# Environment variables
+# GOPATH
+Environment="GOPATH=/home/ec2-user/go"
+Environment="GOPROJ=/home/ec2-user/go/src/fcbh-dataset-io"
+Environment="PATH=/usr/local/go/bin:/opt/conda/bin:/opt/conda/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/usr/local/go/bin"
+# Data
+Environment="FCBH_DATASET_DB=/home/ec2-user/data"
+Environment="FCBH_DATASET_FILES=/home/ec2-user/data/download"
+Environment="FCBH_DATASET_TMP=/home/ec2-user/data/tmp"
+Environment="FCBH_DATASET_QUEUE=dataset-queue-dev"
+Environment="FCBH_DATASET_IO_BUCKET=dataset-io"
+Environment="FCBH_SQS_URL_PREFIX=https://sqs.us-west-2.amazonaws.com/078432969830/"
+# Conda ENVS
+Environment="FCBH_AENEAS_PYTHON=/opt/conda/envs/aeneas/bin/python"
+Environment="FCBH_FASTTEXT_EXE=/opt/conda/envs/fasttext/fastText/fasttext"
+Environment="FCBH_LIBROSA_PYTHON=/opt/conda/envs/librosa/bin/python"
+Environment="FCBH_MMS_ASR_PYTHON=/opt/conda/envs/mms_asr/bin/python"
+Environment="FCBH_MMS_FA_PYTHON=/opt/conda/envs/mms_fa/bin/python"
+Environment="FCBH_MMS_ADAPTER_PYTHON=/opt/conda/envs/mms_adapter/bin/python"
+Environment="FCBH_UROMAN_EXE=/opt/conda/envs/mms_fa/bin/uroman"
+Environment="FCBH_WHISPER_EXE=/opt/conda/envs/whisper/bin/whisper"
+# Logging
+Environment="FCBH_DATASET_LOG_FILE=/home/ec2-user/dataset.log"
+Environment="FCBH_DATASET_LOG_LEVEL=DEBUG"
+Environment="PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
+
+ExecStart=/home/ec2-user/go/src/fcbh-dataset-io/EC2_start_script.sh
+
+# Restart policy
+Restart=on-failure
+RestartSec=10s
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=arti
+
+[Install]
+WantedBy=multi-user.target
+
+# Install file at /etc/systemd/system/arti.service
+
+
