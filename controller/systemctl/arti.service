@@ -20,9 +20,6 @@ Environment="PATH=/usr/local/go/bin:/opt/conda/bin:/opt/conda/condabin:/usr/loca
 Environment="FCBH_DATASET_DB=/home/ec2-user/data"
 Environment="FCBH_DATASET_FILES=/home/ec2-user/data/download"
 Environment="FCBH_DATASET_TMP=/home/ec2-user/data/tmp"
-Environment="FCBH_DATASET_QUEUE=dataset-queue-dev"
-Environment="FCBH_DATASET_IO_BUCKET=dataset-io"
-Environment="FCBH_SQS_URL_PREFIX=https://sqs.us-west-2.amazonaws.com/078432969830/"
 # Conda ENVS
 Environment="FCBH_AENEAS_PYTHON=/opt/conda/envs/aeneas/bin/python"
 Environment="FCBH_FASTTEXT_EXE=/opt/conda/envs/fasttext/fastText/fasttext"
@@ -37,7 +34,7 @@ Environment="FCBH_DATASET_LOG_FILE=/home/ec2-user/dataset.log"
 Environment="FCBH_DATASET_LOG_LEVEL=DEBUG"
 Environment="PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
 
-# Secret environment variables (from file, not in git)
+# Secret and configurable environment variables (from file, not in git)
 EnvironmentFile=/etc/arti/arti.env
 
 ExecStart=/home/ec2-user/go/src/fcbh-dataset-io/controller/systemctl/arti-start-script.sh
