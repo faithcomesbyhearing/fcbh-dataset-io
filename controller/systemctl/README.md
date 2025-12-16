@@ -1,3 +1,11 @@
+# systemctl is the preferred way to start, stop and restart arti.
+# This readme describes how to install and use systemctl.
+
+# When installed, the following commands will be available:
+# sudo systemctl start arti.service
+# sudo systemctl stop arti.service
+# sudo systemctl restart arti.service
+
 # must install sendemail
 sudo apt install sendemail
 
@@ -24,12 +32,16 @@ sudo journalctl -u arti.service -f
 sudo journalctl -u arti-failure-notify.service
 
 # /etc/arti.env must contain the following variables
-export OPENAI_API_KEY={open AI key}
-export FCBH_DBP_KEY={Bible Brain key}
-export SMTP_SENDER_EMAIL=apolyglot@fcbh.us
-export SMTP_PASSWORD={email password}
-export SMTP_HOST_NAME=smtp.office365.com
-export SMTP_HOST_PORT=587
+sudo mkdir /etc/arti
+sudo vi /etc/arti/arti.env
+i
+OPENAI_API_KEY={open AI key}
+FCBH_DBP_KEY={Bible Brain key}
+SMTP_SENDER_EMAIL=apolyglot@fcbh.us
+SMTP_PASSWORD={email password}
+SMTP_HOST_NAME=smtp.office365.com
+SMTP_HOST_PORT=587
+escZZ
 
 
 
