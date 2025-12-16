@@ -7,7 +7,7 @@ LOGFILE="/home/ec2-user/dataset.log"
 
 # Collect service status and recent logs
 {
-    echo "Arti service has failed and been restarted."
+    echo "Arti service has crashed."
     echo ""
     echo "Timestamp: $(date)"
     echo "Hostname: $(hostname)"
