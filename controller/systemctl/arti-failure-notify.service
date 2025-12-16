@@ -4,6 +4,7 @@ After=arti.service
 
 [Service]
 Type=oneshot
+EnvironmentFile=/etc/arti/arti.env
 ExecStart=/home/ec2-user/go/src/fcbh-dataset-io/controller/systemctl/arti-failure-notify.sh
 
 StandardOutput=journal
