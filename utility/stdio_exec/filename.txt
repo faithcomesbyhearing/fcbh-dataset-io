@@ -1,0 +1,12 @@
+
+import os
+import sys
+#sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GOPROJ'], 'logger')))
+#from exception_handler import setup_error_handler
+setup_error_handler()
+print("12", 2 * 6, flush=true)
+#sys.exit(10)
+print("24", 4 * 6, file=sys.stderr, flush=true)
+print("Inf", 5 / 1, flush=true)
+print("36", 6 * 6, flush=true)
+print("64", 8 * 8, file=sys.stderr, flush=true)
