@@ -7,6 +7,7 @@ sudo cp arti.service /etc/systemd/system/
 sudo cp arti-failure-notify.service /etc/systemd/system/
 
 # 2. Reload systemd to recognize the new service
+# And do this anytime either service file is updated
 sudo systemctl daemon-reload
 
 # 3. Enable the service to start on boot
