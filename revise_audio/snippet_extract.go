@@ -72,7 +72,7 @@ func (s *SnippetExtractor) ExtractWord(bookId string, chapterNum int, verseStr s
 	}
 
 	// Query database for words with timestamps
-	words, status := s.queryWordsByVerse(bookId, chapterNum, verseStr)
+	words, status := s.QueryWordsByVerse(bookId, chapterNum, verseStr)
 	if status != nil {
 		return "", status
 	}
@@ -123,7 +123,7 @@ func (s *SnippetExtractor) ExtractWord(bookId string, chapterNum int, verseStr s
 // ExtractPhrase extracts a phrase (multiple consecutive words) from the database
 func (s *SnippetExtractor) ExtractPhrase(bookId string, chapterNum int, verseStr string, startWordSeq int, endWordSeq int) (string, *log.Status) {
 	// Query database for words with timestamps
-	words, status := s.queryWordsByVerse(bookId, chapterNum, verseStr)
+	words, status := s.QueryWordsByVerse(bookId, chapterNum, verseStr)
 	if status != nil {
 		return "", status
 	}
@@ -198,8 +198,9 @@ func (s *SnippetExtractor) resolveAudioFilePath(candidate SnippetCandidate) (str
 	return s.resolveAudioFilePathFromScript(*script)
 }
 
-// queryWordsByVerse queries words with timestamps for a specific verse
-func (s *SnippetExtractor) queryWordsByVerse(bookId string, chapterNum int, verseStr string) ([]db.Audio, *log.Status) {
+// QueryWordsByVerse queries words with timestamps for a specific verse
+// This is a public method for use by boundary detection and other components
+func (s *SnippetExtractor) QueryWordsByVerse(bookId string, chapterNum int, verseStr string) ([]db.Audio, *log.Status) {
 	query := `SELECT w.word_id, w.script_id, s.book_id, s.chapter_num, s.verse_str, 
 		s.verse_num, w.word_seq, w.word, w.uroman, w.word_begin_ts, w.word_end_ts, w.fa_score,
 		s.script_begin_ts, s.script_end_ts, s.fa_score, s.audio_file

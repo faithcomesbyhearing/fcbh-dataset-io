@@ -37,6 +37,9 @@ if not os.path.exists(SO_VITS_SVC_ROOT):
 # Add So-VITS-SVC to Python path
 sys.path.insert(0, SO_VITS_SVC_ROOT)
 
+# Change to SO_VITS_SVC_ROOT directory so relative paths work
+os.chdir(SO_VITS_SVC_ROOT)
+
 # Try to import So-VITS-SVC
 SO_VITS_SVC_AVAILABLE = False
 try:
@@ -70,10 +73,20 @@ def convert_voice_so_vits_svc(source_audio_path, model_path, config_path, output
         }
     
     try:
+        # Redirect stdout to stderr during model initialization to prevent JSON corruption
+        import contextlib
+        original_stdout = sys.stdout
+        
         # Configuration parameters
         speaker = config.get("speaker", "speaker0")  # Speaker name from model
         f0_method = config.get("f0_method", "rmvpe")  # rmvpe, pm, harvest, crepe, dio, fcpe
         device = config.get("device", None)  # None = auto-detect
+        # Convert "auto" to None for auto-detection
+        if device == "auto":
+            device = None
+        # Auto-detect CUDA if device is None
+        if device is None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
         tran = config.get("tran", 0)  # Pitch shift in semitones
         auto_predict_f0 = config.get("auto_predict_f0", False)  # Auto F0 prediction
         noice_scale = config.get("noice_scale", 0.4)  # Noise scale
@@ -82,8 +95,9 @@ def convert_voice_so_vits_svc(source_audio_path, model_path, config_path, output
         cluster_infer_ratio = config.get("cluster_infer_ratio", 0)  # Cluster ratio
         cluster_model_path = config.get("cluster_model_path", "")  # Optional cluster model
         
-        # Initialize So-VITS-SVC model
-        svc_model = Svc(
+        # Initialize So-VITS-SVC model (redirect stdout to stderr to avoid JSON corruption)
+        with contextlib.redirect_stdout(sys.stderr):
+            svc_model = Svc(
             net_g_path=model_path,
             config_path=config_path,
             device=device,
@@ -95,10 +109,11 @@ def convert_voice_so_vits_svc(source_audio_path, model_path, config_path, output
             only_diffusion=config.get("only_diffusion", False),
             spk_mix_enable=config.get("use_spk_mix", False),
             feature_retrieval=config.get("feature_retrieval", False)
-        )
+            )
         
-        # Perform inference
-        audio = svc_model.slice_inference(
+        # Perform inference (also redirect stdout during inference)
+        with contextlib.redirect_stdout(sys.stderr):
+            audio = svc_model.slice_inference(
             raw_audio_path=source_audio_path,
             spk=speaker,
             tran=tran,
@@ -117,14 +132,15 @@ def convert_voice_so_vits_svc(source_audio_path, model_path, config_path, output
             use_spk_mix=config.get("use_spk_mix", False),
             second_encoding=config.get("second_encoding", False),
             loudness_envelope_adjustment=config.get("loudness_envelope_adjustment", 1)
-        )
+            )
         
         # Save output
         wav_format = config.get("wav_format", "wav")
         sf.write(output_path, audio, svc_model.target_sample, format=wav_format)
         
         # Clean up
-        svc_model.clear_empty()
+        with contextlib.redirect_stdout(sys.stderr):
+            svc_model.clear_empty()
         
         return {
             "success": True,
@@ -143,6 +159,11 @@ def convert_voice_so_vits_svc(source_audio_path, model_path, config_path, output
         }
 
 def main():
+    # Redirect stdout to stderr to prevent interference with JSON responses
+    # So-VITS-SVC prints messages to stdout which would break JSON parsing
+    import contextlib
+    original_stdout = sys.stdout
+    
     # Handle multiple requests in a loop (like MMS ASR script)
     for line in sys.stdin:
         try:

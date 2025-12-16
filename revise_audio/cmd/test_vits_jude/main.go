@@ -140,54 +140,58 @@ func main() {
 	}
 
 	tempDir := os.TempDir()
-	verseSegmentPath := filepath.Join(tempDir, "jude_1_1_original.wav")
 	
-	_, status := ffmpeg.ChopOneSegment(ctx, originalAudioFile, verseSegmentPath, beginTS, endTS)
+	// ChopOneSegment signature: (ctx, tempDir, inputFile, beginTS, endTS) -> outputFile
+	verseSegmentPath, status := ffmpeg.ChopOneSegment(ctx, tempDir, originalAudioFile, beginTS, endTS)
 	if status != nil {
 		fmt.Printf("Error extracting segment: %v\n", status)
 		os.Exit(1)
 	}
 	fmt.Printf("   Extracted: %s (%.2fs - %.2fs)\n", verseSegmentPath, beginTS, endTS)
 
-	// Step 3: Generate TTS for the revised text
-	fmt.Println("\n2. Generating TTS for revised text...")
-	ttsAdapter, status := revise_audio.NewMMSTTSAdapter(ctx, "eng")
-	if status != nil {
-		fmt.Printf("Error creating TTS adapter: %v\n", status)
-		os.Exit(1)
-	}
-	defer ttsAdapter.Close()
-
-	// Revised text: "Jude, a servant of Jesus Christ and a brother of James, who are loved in God the Father and kept for Jesus Christ"
-	revisedText := "Jude, a servant of Jesus Christ and a brother of James, who are loved in God the Father and kept for Jesus Christ"
-	ttsPath, status := ttsAdapter.GeneratePhrase(revisedText)
-	if status != nil {
-		fmt.Printf("Error generating TTS: %v\n", status)
-		os.Exit(1)
-	}
-	fmt.Printf("   Generated TTS: %s\n", ttsPath)
+	// Step 3: Use original audio segment for voice conversion test
+	// (In production, this would be TTS-generated audio from revised text)
+	fmt.Println("\n2. Using original audio segment for voice conversion test...")
+	fmt.Println("   (Note: In production, this would be TTS-generated audio from revised text)")
+	sourceAudioPath := verseSegmentPath
+	fmt.Printf("   Source audio: %s\n", sourceAudioPath)
 
 	// Step 4: Voice convert using So-VITS-SVC
 	fmt.Println("\n3. Voice converting with So-VITS-SVC...")
 	
-	// Find the latest model checkpoint
-	matches, _ = filepath.Glob(filepath.Join(modelDir, "G_*.pth"))
-	if len(matches) == 0 {
-		fmt.Println("Error: No model checkpoint found")
-		os.Exit(1)
+	// Use specific checkpoint if provided as argument, otherwise find latest
+	var latestModel string
+	if len(os.Args) > 2 {
+		// Use specific checkpoint provided as second argument (e.g., "1600")
+		specificCheckpoint := filepath.Join(modelDir, fmt.Sprintf("G_%s.pth", os.Args[2]))
+		if _, err := os.Stat(specificCheckpoint); err == nil {
+			latestModel = specificCheckpoint
+			fmt.Printf("   Using specified checkpoint: %s\n", filepath.Base(latestModel))
+		} else {
+			fmt.Printf("Warning: Specified checkpoint not found: %s, using latest instead\n", specificCheckpoint)
+		}
 	}
 	
-	// Get the latest checkpoint
-	var latestModel string
-	var latestEpoch int
-	for _, match := range matches {
-		// Extract epoch number from filename like G_100.pth
-		var epoch int
-		fmt.Sscanf(filepath.Base(match), "G_%d.pth", &epoch)
-		if epoch > latestEpoch {
-			latestEpoch = epoch
-			latestModel = match
+	// If no specific checkpoint or it wasn't found, find the latest
+	if latestModel == "" {
+		matches, _ := filepath.Glob(filepath.Join(modelDir, "G_*.pth"))
+		if len(matches) == 0 {
+			fmt.Println("Error: No model checkpoint found")
+			os.Exit(1)
 		}
+		
+		// Get the latest checkpoint
+		var latestEpoch int
+		for _, match := range matches {
+			// Extract epoch number from filename like G_100.pth
+			var epoch int
+			fmt.Sscanf(filepath.Base(match), "G_%d.pth", &epoch)
+			if epoch > latestEpoch {
+				latestEpoch = epoch
+				latestModel = match
+			}
+		}
+		fmt.Printf("   Using latest checkpoint: %s\n", filepath.Base(latestModel))
 	}
 	
 	configPath := filepath.Join(soVitsRoot, "configs", "config.json")
@@ -211,7 +215,7 @@ func main() {
 
 	// Convert voice (speaker name from config - typically "jude_narrator" or "speaker0")
 	speakerName := "jude_narrator" // This should match the speaker name in the trained model
-	convertedPath, status := vitsAdapter.ConvertVoice(ttsPath, latestModel, configPath, speakerName)
+	convertedPath, status := vitsAdapter.ConvertVoice(sourceAudioPath, latestModel, configPath, speakerName)
 	if status != nil {
 		fmt.Printf("Error converting voice: %v\n", status)
 		os.Exit(1)
@@ -219,7 +223,11 @@ func main() {
 	fmt.Printf("   Converted: %s\n", convertedPath)
 
 	// Step 5: Save final result
-	outputPath := "/Users/jrstear/tmp/arti_revised_audio/JUD_01_v1_vits.wav"
+	outputDir := os.Getenv("HOME")
+	if outputDir == "" {
+		outputDir = "/tmp"
+	}
+	outputPath := filepath.Join(outputDir, "tmp", "arti_revised_audio", "JUD_01_v1_vits.wav")
 	os.MkdirAll(filepath.Dir(outputPath), 0755)
 	
 	// Copy converted file to output

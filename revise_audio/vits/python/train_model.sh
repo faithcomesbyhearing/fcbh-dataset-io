@@ -35,7 +35,7 @@ echo "Step 4: Starting training..."
 echo "Note: Training will take a while. Monitor progress with tensorboard:"
 echo "  tensorboard --logdir logs/44k"
 echo ""
-python train.py -c configs/config.json
+python train.py -c configs/config.json -m 44k
 
 echo ""
 echo "Training complete! Check logs/44k/ for model checkpoints."

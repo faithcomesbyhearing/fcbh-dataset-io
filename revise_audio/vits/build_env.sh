@@ -18,7 +18,7 @@ if conda env list | grep -q "revise_audio_vits"; then
     conda remove --name revise_audio_vits --all -y 2>/dev/null || true
 fi
 
-conda create --name revise_audio_vits python=3.11 -y
+conda create --name revise_audio_vits python=3.10 -y
 
 # Activate conda environment
 if [ -f "$(conda info --base 2>/dev/null)/etc/profile.d/conda.sh" ]; then
@@ -31,15 +31,17 @@ conda install -y openblas
 
 # Downgrade pip to 24.0 to handle fairseq dependency conflicts
 pip install --upgrade pip==24.0
-pip install numpy
+# Install NumPy < 2.0 for compatibility with scipy, sklearn, tensorflow
+pip install "numpy<2.0"
 
 # PyTorch installation - platform specific
+# Note: Using PyTorch 2.5.1 to avoid weights_only security changes that break fairseq
 if [ "$(uname)" == "Darwin" ]; then
   # M1 Mac - CPU only (MPS support if needed)
-  pip install torch torchaudio
+  pip install torch==2.5.1 torchaudio==2.5.1
 else
   # Linux (AWS EC2) - CUDA support
-  pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+  pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
 fi
 
 # So-VITS-SVC dependencies
