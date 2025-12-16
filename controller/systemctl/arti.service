@@ -39,10 +39,6 @@ EnvironmentFile=/etc/arti/arti.env
 
 ExecStart=/home/ec2-user/go/src/fcbh-dataset-io/controller/systemctl/arti-start-script.sh
 
-# Restart policy
-Restart=on-failure
-# RestartSec=10s
-
 # Logging
 StandardOutput=journal
 StandardError=journal

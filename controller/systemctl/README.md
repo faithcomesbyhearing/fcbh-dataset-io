@@ -14,7 +14,7 @@ cat /etc/rc.local
 sudo apt install sendemail
 
 # 1. Create or update the service file
-cd $GOPROJ/controller/systemctl
+cd /home/ec2-user/go/src/fcbh-dataset-io/controller/systemctl
 sudo cp arti.service /etc/systemd/system/
 sudo cp arti-failure-notify.service /etc/systemd/system/
 

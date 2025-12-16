@@ -32,5 +32,8 @@ sendemail \
     -xu "$SMTP_SENDER_EMAIL" \
     -xp "$SMTP_PASSWORD"
 
+sleep 10
+systemctl start arti.service
+
 exit 0
 
