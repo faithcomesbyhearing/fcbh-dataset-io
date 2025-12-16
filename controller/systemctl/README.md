@@ -1,9 +1,9 @@
-# 1. Create the service file
+# 1. Create or update the service file
 cd $GOPROJ/controller/systemctl
 sudo cp arti.service /etc/systemd/system/
 
 # 2. Make sure your script is executable
-chmod +x /home/ec2-user/go/src/fcbh-dataset-io/EC2_start_script.sh
+chmod +x /home/ec2-user/go/src/fcbh-dataset-io/controller/systemctl/arti-start-script.sh
 
 # 3. Reload systemd to recognize the new service
 sudo systemctl daemon-reload
