@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+env
+
 python3 << 'EOF_END'
 import time
 
