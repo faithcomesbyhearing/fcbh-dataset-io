@@ -5,7 +5,6 @@ RECIPIENTS="gary@shortsands.com"
 SUBJECT="ALERT: Arti Service Failed and Restarted"
 LOGFILE="/home/ec2-user/dataset.log"
 source /etc/arti/arti.env
-env
 
 # Collect service status and recent logs
 {
