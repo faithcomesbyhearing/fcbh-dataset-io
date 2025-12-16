@@ -1,5 +1,16 @@
 #!/bin/bash -e
 
+python3 << 'EOF_END'
+import time
+
+print("Starting program...")
+print("Sleeping for 60 seconds...")
+time.sleep(60)
+print("Waking up and dividing by zero...")
+result = 1 / 0
+print("This line will never execute")
+EOF_END
+
 # Ensure HOME is set (systemd may not set it)
 export HOME=/home/ec2-user
 

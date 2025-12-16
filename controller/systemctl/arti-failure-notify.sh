@@ -1,7 +1,7 @@
 #!/bin/bash
 # Arti service failure notification script
 
-RECIPIENTS="gary@shortsands.com,jrstear@fcbhmail.org"
+RECIPIENTS="gary@shortsands.com"
 SUBJECT="ALERT: Arti Service Failed and Restarted"
 LOGFILE="/home/ec2-user/dataset.log"
 
@@ -15,8 +15,8 @@ LOGFILE="/home/ec2-user/dataset.log"
     echo "=== Service Status ==="
     systemctl status arti.service
     echo ""
-    echo "=== Last 1000 Log Lines ==="
-    journalctl -u arti.service -n 1000 --no-pager
+    echo "=== Last 100 Log Lines ==="
+    journalctl -u arti.service -n 100 --no-pager
 } > "$LOGFILE"
 
 # Send email with log file attached
