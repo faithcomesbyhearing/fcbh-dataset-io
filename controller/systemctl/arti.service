@@ -37,6 +37,9 @@ Environment="FCBH_DATASET_LOG_FILE=/home/ec2-user/dataset.log"
 Environment="FCBH_DATASET_LOG_LEVEL=DEBUG"
 Environment="PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
 
+# Secret environment variables (from file, not in git)
+EnvironmentFile=/etc/arti/arti.env
+
 ExecStart=/home/ec2-user/go/src/fcbh-dataset-io/controller/systemctl/arti-start-script.sh
 
 # Restart policy

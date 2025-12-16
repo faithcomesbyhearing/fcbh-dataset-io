@@ -1,3 +1,6 @@
+# must install sendemail
+sudo apt install sendemail
+
 # 1. Create or update the service file
 cd $GOPROJ/controller/systemctl
 sudo cp arti.service /etc/systemd/system/
@@ -17,8 +20,9 @@ sudo systemctl status arti.service
 
 # 6. View logs
 sudo journalctl -u arti.service -f
+sudo journalctl -u arti-failure-notify.service
 
-# .bash_profile must contain the following ENV's that are not to be checked into git
+# /etc/arti.env must contain the following variables
 export OPENAI_API_KEY={open AI key}
 export FCBH_DBP_KEY={Bible Brain key}
 export SMTP_SENDER_EMAIL=apolyglot@fcbh.us
@@ -26,7 +30,6 @@ export SMTP_PASSWORD={email password}
 export SMTP_HOST_NAME=smtp.office365.com
 export SMTP_HOST_PORT=587
 
-# must install sendemail
-sudo apt install sendemail
+
 
 
