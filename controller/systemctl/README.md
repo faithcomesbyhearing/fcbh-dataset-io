@@ -3,23 +3,19 @@ cd $GOPROJ/controller/systemctl
 sudo cp arti.service /etc/systemd/system/
 sudo cp arti-failure-notify.service /etc/systemd/system/
 
-# 2. Make sure your script is executable
-chmod +x /home/ec2-user/go/src/fcbh-dataset-io/controller/systemctl/arti-start-script.sh
-chmod +x /home/ec2-user/go/src/fcbh-dataset-io/controller/systemctl/arti-failure-notify.sh
-
-# 3. Reload systemd to recognize the new service
+# 2. Reload systemd to recognize the new service
 sudo systemctl daemon-reload
 
-# 4. Enable the service to start on boot
+# 3. Enable the service to start on boot
 sudo systemctl enable arti.service
 
-# 5. Start the service
+# 4. Start the service
 sudo systemctl start arti.service
 
-# 6. Check status
+# 5. Check status
 sudo systemctl status arti.service
 
-# 7. View logs
+# 6. View logs
 sudo journalctl -u arti.service -f
 
 # .bash_profile must contain the following ENV's that are not to be checked into git
