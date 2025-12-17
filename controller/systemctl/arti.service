@@ -30,7 +30,6 @@ Environment="FCBH_MMS_ADAPTER_PYTHON=/opt/conda/envs/mms_adapter/bin/python"
 Environment="FCBH_UROMAN_EXE=/opt/conda/envs/mms_fa/bin/uroman"
 Environment="FCBH_WHISPER_EXE=/opt/conda/envs/whisper/bin/whisper"
 # Logging
-Environment="FCBH_DATASET_LOG_FILE=/home/ec2-user/dataset.log"
 Environment="FCBH_DATASET_LOG_LEVEL=DEBUG"
 Environment="PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
 

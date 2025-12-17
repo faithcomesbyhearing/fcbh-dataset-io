@@ -21,7 +21,7 @@ sendemail \
     -t "$FAILURE_RECIPIENTS" \
     -u "ALERT: Arti Service Crashed" \
     -m "Arti service has failed and been restarted. See attached log file for details." \
-    -a "FCBH_DATASET_LOG_FILE" \
+    -a "$FCBH_DATASET_LOG_FILE" \
     -s "$SMTP_HOST_NAME:$SMTP_HOST_PORT" \
     -o tls=yes \
     -xu "$SMTP_SENDER_EMAIL" \

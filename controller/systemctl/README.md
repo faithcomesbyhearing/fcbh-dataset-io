@@ -46,6 +46,7 @@ SMTP_SENDER_EMAIL=apolyglot@fcbh.us
 SMTP_PASSWORD={email password}
 SMTP_HOST_NAME=smtp.office365.com
 SMTP_HOST_PORT=587
+FCBH_DATASET_LOG_FILE=/home/ec2-user/dataset.log
 FCBH_DATASET_QUEUE={queue s3 bucket name}
 FCBH_DATASET_IO_BUCKET={output s3 bucket name}
 FCBH_SQS_URL_PREFIX=https://sqs.us-west-2.amazonaws.com/078432969830/ # example
