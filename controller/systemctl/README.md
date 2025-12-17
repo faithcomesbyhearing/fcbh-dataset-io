@@ -41,6 +41,7 @@ sudo vi /etc/arti/arti.env
 i
 OPENAI_API_KEY={open AI key}
 FCBH_DBP_KEY={Bible Brain key}
+FAILURE_RECIPIENTS={email addresses comma separated}
 SMTP_SENDER_EMAIL=apolyglot@fcbh.us
 SMTP_PASSWORD={email password}
 SMTP_HOST_NAME=smtp.office365.com

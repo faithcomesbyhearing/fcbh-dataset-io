@@ -1,10 +1,6 @@
 #!/bin/bash
 # Arti service failure notification script
 
-RECIPIENTS="gary@shortsands.com"
-SUBJECT="ALERT: Arti Service Failed and Restarted"
-LOGFILE="/home/ec2-user/dataset.log"
-
 # Collect service status and recent logs
 {
     echo "Arti service has crashed."
@@ -17,16 +13,15 @@ LOGFILE="/home/ec2-user/dataset.log"
     echo ""
     echo "=== Last 100 Log Lines ==="
     journalctl -u arti.service -n 100 --no-pager
-} > "$LOGFILE"
+} > "$FCBH_DATASET_LOG_FILE"
 
 # Send email with log file attached
-#mail -s "$SUBJECT" -a "$LOGFILE" "$RECIPIENTS" < "$LOGFILE"
 sendemail \
     -f "$SMTP_SENDER_EMAIL" \
-    -t "$RECIPIENTS" \
-    -u "$SUBJECT" \
+    -t "$FAILURE_RECIPIENTS" \
+    -u "ALERT: Arti Service Crashed" \
     -m "Arti service has failed and been restarted. See attached log file for details." \
-    -a "$LOGFILE" \
+    -a "FCBH_DATASET_LOG_FILE" \
     -s "$SMTP_HOST_NAME:$SMTP_HOST_PORT" \
     -o tls=yes \
     -xu "$SMTP_SENDER_EMAIL" \
