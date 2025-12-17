@@ -2,10 +2,11 @@ package adapter
 
 import (
 	"context"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"os"
 	"sort"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
 type SilenceRec struct {
@@ -63,7 +64,11 @@ func findSilence(ctx context.Context, threshold int, conn db.DBAdapter) []Silenc
 	sort.Slice(silences, func(i, j int) bool { // descending sort
 		return silences[i].Silence > silences[j].Silence
 	})
-	return silences[0:threshold]
+	if threshold < len(silences) {
+		return silences[0:threshold]
+	} else {
+		return silences
+	}
 }
 
 func selectSilences(ctx context.Context, conn db.DBAdapter) []SilenceRec {

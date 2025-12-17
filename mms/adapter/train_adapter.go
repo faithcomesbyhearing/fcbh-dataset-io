@@ -3,15 +3,17 @@ package adapter
 import (
 	"context"
 	"fmt"
+	"math"
+	"os"
+	"path/filepath"
+	"strconv"
+
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	req "github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
 	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/ffmpeg"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/utility/stdio_exec"
-	"os"
-	"path/filepath"
-	"strconv"
 )
 
 type TrainAdapter struct {
@@ -28,8 +30,6 @@ func NewTrainAdapter(ctx context.Context, conn db.DBAdapter, langISO string, tra
 	ident, status := t.conn.SelectIdent()
 	fmt.Println("Status: ", status)
 	fmt.Println("Ident: ", ident)
-	scripts, status := t.conn.SelectScripts()
-	fmt.Println("Status: ", status, "Len Scripts: ", len(scripts))
 	t.langISO = langISO
 	t.args = train
 	return t
@@ -60,7 +60,12 @@ func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
 			return status
 		}
 	}
-	status := SilencePruner(t.ctx, 400, t.conn)
+	scriptsNum, status := t.conn.CountScriptRows()
+	if status != nil {
+		return status
+	}
+	threshold := int(math.Ceil(float64(scriptsNum) * 0.05))
+	status = SilencePruner(t.ctx, threshold, t.conn)
 	if status != nil {
 		return status
 	}
