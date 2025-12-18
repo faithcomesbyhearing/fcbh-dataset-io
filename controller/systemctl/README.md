@@ -5,10 +5,7 @@
 # sudo systemctl start arti.service
 # sudo systemctl stop arti.service
 # sudo systemctl restart arti.service
-
-# When these instructions are complete the current startup script needs to be modified
-# to remove the startup of arti. 
-cat /etc/rc.local
+# sudo systemctl status arti.service
 
 # must install sendemail
 sudo apt install sendemail
@@ -51,6 +48,10 @@ FCBH_DATASET_QUEUE={queue s3 bucket name}
 FCBH_DATASET_IO_BUCKET={output s3 bucket name}
 FCBH_SQS_URL_PREFIX=https://sqs.us-west-2.amazonaws.com/078432969830/ # example
 escZZ
+
+# When these instructions are complete the current startup script needs to be modified
+# to remove the startup of arti from /etc/rc.local
+cat /etc/rc.local
 
 
 
