@@ -68,7 +68,7 @@ function getTestament(bookId) {
 
 /**
  * Parse VOX audio filename (equivalent to parseVOXAudioFilename in Go)
- * Format: {N1/N2/O1/O2}_{ISO}_{VERSION}_{BOOKSEQ}_{BOOKCODE}_{CHAPTER}_{VERSE}_VOX.{mp3|wav}
+ * Format: {N1/N2/O1/O2/P1/P2}_{ISO}_{VERSION}_{BOOKSEQ}_{BOOKCODE}_{CHAPTER}_{VERSE}_VOX.{mp3|wav}
  * Example: N2_ANL_BSM_001_MAT_001_VOX.mp3
  */
 function parseVOXAudioFilename(filename) {
@@ -464,7 +464,7 @@ function validateFolderStructure(folderData) {
 
 /**
  * Parse folder name to extract components
- * Pattern: {N1|N2|O1|O2}{ISO}{BIBLEID}
+ * Pattern: {N1|N2|O1|O2|P1|P2}{ISO}{BIBLEID}
  * Example: N2ANLBSM -> drama=N2, iso=ANL, bibleId=ANLBSM
  * Handles folder names with extra text like "N2ANLBSM Khongso (ANL)"
  */
@@ -474,24 +474,24 @@ function parseFolderName(folderName) {
     
     // Extract the core pattern from the beginning of the folder name
     // This handles cases like "N2ANLBSM Khongso (ANL)" by taking just "N2ANLBSM"
-    const coreMatch = cleanName.match(/^([NO][12][A-Z]{3}[A-Z0-9]+)/);
+    const coreMatch = cleanName.match(/^([NOP][12][A-Z]{3}[A-Z0-9]+)/);
     
     if (!coreMatch) {
         return {
             valid: false,
-            error: `Folder name does not match expected pattern. Expected: N1/N2/O1/O2 + 3-letter ISO + Bible ID. Got: ${cleanName}`
+            error: `Folder name does not match expected pattern. Expected: N1/N2/O1/O2/P1/P2 + 3-letter ISO + Bible ID. Got: ${cleanName}`
         };
     }
     
     const coreName = coreMatch[1];
     
-    // Pattern: N1/N2/O1/O2 + ISO (3 chars) + BIBLEID (rest)
-    const match = coreName.match(/^([NO][12])([A-Z]{3})(.+)$/);
+    // Pattern: N1/N2/O1/O2/P1/P2 + ISO (3 chars) + BIBLEID (rest)
+    const match = coreName.match(/^([NOP][12])([A-Z]{3})(.+)$/);
     
     if (!match) {
         return {
             valid: false,
-            error: `Core folder name does not match expected pattern. Expected: N1/N2/O1/O2 + 3-letter ISO + Bible ID. Got: ${coreName}`
+            error: `Core folder name does not match expected pattern. Expected: N1/N2/O1/O2/P1/P2 + 3-letter ISO + Bible ID. Got: ${coreName}`
         };
     }
     
