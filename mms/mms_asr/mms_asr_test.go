@@ -8,9 +8,11 @@ import (
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/decode_yaml/request"
 	"github.com/faithcomesbyhearing/fcbh-dataset-io/input"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
 )
 
 func TestMMSASR_ProcessFiles(t *testing.T) {
+	log.SetOutput("stderr")
 	ctx := context.Background()
 	//conn := db.NewDBAdapter(ctx, ":memory:")
 	user := request.GetTestUser()

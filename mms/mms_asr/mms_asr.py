@@ -1,12 +1,10 @@
 import os
+import json
 import sys
-from datasets import Dataset, Audio
 from transformers import Wav2Vec2ForCTC
-from transformers import Wav2Vec2Processor
 from transformers import AutoProcessor
 import torch
-import psutil #probably not used
-#from safetensors.torch import load_file as safe_load_file
+import torchaudio
 from transformers.models.wav2vec2.modeling_wav2vec2 import WAV2VEC2_ADAPTER_SAFE_FILE
 from safetensors.torch import load_file
 sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GOPROJ'], 'logger')))
@@ -28,7 +26,7 @@ def isSupportedLanguage(modelId:str, lang:str):
     return False
 
 def ensureMinimumTensorSize(batch, minTensorLength, padValue):
-    tensor = batch.input_values
+    tensor = batch["input_values"]
     batch_size = tensor.shape[0]
     originalLen = tensor.shape[-1]
     if originalLen < minTensorLength:
@@ -71,13 +69,23 @@ else:
 model = model.to(device)
 for line in sys.stdin:
     torch.cuda.empty_cache()
-    audioFile = line.strip()
-    fromDict = Dataset.from_dict({"audio": [audioFile]})
-    streamData = fromDict.cast_column("audio", Audio(sampling_rate=16000))
-    sample = next(iter(streamData))["audio"]["array"]
-
-    inputs = processor(sample, sampling_rate=16_000, return_tensors="pt")
-    inputs = ensureMinimumTensorSize(inputs, 3200, 0)
+    audio = json.loads(line)
+    info = torchaudio.info(audio["path"], format="wav")
+    if info.sample_rate != 16000:
+        print("Audio sample rate must be 16000", file=sys.stderr, flush=True)
+        sys.exit(1)
+    speech, sample_rate = torchaudio.load(
+        audio["path"],
+        frame_offset=int(audio["begin_ts"] * 16000),
+        num_frames=int((audio["end_ts"] - audio["begin_ts"]) * 16000)
+	)
+    inputTensor = processor(
+        speech.squeeze(),
+        sampling_rate=16000,
+        return_tensors="pt",
+        padding=False
+    ).input_values
+    inputs = ensureMinimumTensorSize({"input_values": inputTensor}, 3200, 0)
     inputs = {name: tensor.to(device) for name, tensor in inputs.items()}
     with torch.no_grad():
         outputs = model(**inputs).logits

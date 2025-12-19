@@ -2,7 +2,7 @@ package mms_asr
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"os"
 	"path/filepath"
 
@@ -81,6 +81,12 @@ func (a *MMSASR) ProcessFiles(files []input.InputFile) *log.Status {
 	return status
 }
 
+type MMSASR_Input struct {
+	Path    string  `json:"path"`
+	BeginTS float64 `json:"begin_ts"`
+	EndTS   float64 `json:"end_ts"`
+}
+
 // processFile
 func (a *MMSASR) processFile(file input.InputFile, tempDir string) *log.Status {
 	var status *log.Status
@@ -107,17 +113,20 @@ func (a *MMSASR) processFile(file input.InputFile, tempDir string) *log.Status {
 		if status != nil {
 			return status
 		}
-		audioFiles, status = ffmpeg.ChopByTimestamp(a.ctx, tempDir, wavFile, audioFiles)
 	}
 	for i, ts := range audioFiles {
 		audioFiles[i].AudioFile = file.Filename
 		audioFiles[i].AudioChapterWav = wavFile
-		fmt.Println(ts.BookId, ts.ChapterNum, ts.VerseStr, "sid:", ts.ScriptId)
-		response, status1 := a.mmsAsrPy.Process(ts.AudioVerseWav)
+		jsonInput := MMSASR_Input{Path: wavFile, BeginTS: ts.BeginTS, EndTS: ts.EndTS}
+		jsonBytes, err := json.Marshal(jsonInput)
+		if err != nil {
+			return log.Error(a.ctx, 500, err, "Error marshalling input to JSON.")
+		}
+		response, status1 := a.mmsAsrPy.Process(string(jsonBytes))
 		if status1 != nil {
 			return status1
 		}
-		fmt.Println("response:", response)
+		log.Info(a.ctx, "Response:", response)
 		audioFiles[i].Text = response
 		uRoman, status2 := a.uroman.Process(response)
 		if status2 != nil {
@@ -125,7 +134,6 @@ func (a *MMSASR) processFile(file input.InputFile, tempDir string) *log.Status {
 		}
 		audioFiles[i].Uroman = uRoman
 	}
-	//log.Debug(a.ctx, "Finished ASR", file.BookId, file.Chapter)
 	var recCount int
 	recCount, status = a.conn.UpdateScriptText(audioFiles)
 	if recCount != len(audioFiles) {
