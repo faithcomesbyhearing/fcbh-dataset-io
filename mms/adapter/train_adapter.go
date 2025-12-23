@@ -53,7 +53,11 @@ func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
 	if len(files) == 0 {
 		return nil
 	}
-	tempDir := files[0].Directory
+	tempDir, err := os.MkdirTemp(os.Getenv(`FCBH_DATASET_TMP`), "mms_adapter_")
+	if err != nil {
+		return log.Error(t.ctx, 500, err, `Error creating temp dir`)
+	}
+	defer os.RemoveAll(tempDir)
 	for _, file := range files {
 		_, status := ffmpeg.ConvertMp3ToWav(t.ctx, tempDir, file.FilePath())
 		if status != nil {
