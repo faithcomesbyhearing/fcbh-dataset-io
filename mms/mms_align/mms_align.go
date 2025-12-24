@@ -76,7 +76,7 @@ func (m *MMSAlign) ProcessFiles(files []input.InputFile) *log.Status {
 	}
 	defer m.mmsAlign.Close()
 	for _, file := range files {
-		log.Info(m.ctx, "MMS Align", file.BookId, file.Chapter)
+		log.Info(m.ctx, "MMS Align", file.BookId, file.Chapter, file.ScriptLine)
 		status = m.processFile(file)
 		if status != nil {
 			return status
