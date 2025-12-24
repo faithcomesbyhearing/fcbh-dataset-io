@@ -19,7 +19,7 @@ that all errors are removed, I eliminate more lines that just those.
 def dataPruner(database):
     # Version 2
     database.execute('DROP TABLE IF EXISTS pruned_data',())
-    query = """CREATE TEMPORARY TABLE pruned_data AS
+    query = """CREATE TABLE pruned_data AS
             SELECT script_id
             FROM scripts WHERE verse_str != '0'
             AND fa_score > 0.2
