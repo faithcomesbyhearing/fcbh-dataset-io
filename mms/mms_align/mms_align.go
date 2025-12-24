@@ -303,9 +303,12 @@ func (m *MMSAlign) processPyOutput(file input.InputFile, wordRefs []Word, respon
 	var verses []db.Audio
 	verses = m.summarizeByVerse(wordsByLine)
 	verses = m.midPoint(verses)
-	verses[len(verses)-1].EndTS, status = ffmpeg.GetAudioDuration(m.ctx, file.Directory, file.Filename)
+	duration, status := ffmpeg.GetAudioDuration(m.ctx, file.Directory, file.Filename)
 	if status != nil {
 		return status
+	}
+	if duration > verses[len(verses)-1].EndTS {
+		verses[len(verses)-1].EndTS = duration
 	}
 	status = m.conn.UpdateScriptFATimestamps(verses)
 	if status != nil {

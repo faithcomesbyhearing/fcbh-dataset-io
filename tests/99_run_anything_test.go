@@ -2,37 +2,43 @@ package tests
 
 import "testing"
 
-const runAnything = `is_new: yes 
-dataset_name: N2MZJSIM
-language_iso: mzj
-username: GaryNTest 
+const runAnything = `is_new: yes
+dataset_name: ART
+language_iso: spa
+username: GaryNTest
 notify_ok: [gary@shortsands.com]
 notify_err: [gary@shortsands.com]
-testament:
-  nt_books: [3JN]
 text_data:
-  aws_s3: s3://pretest-audio/N2MZJSIM Manya (MZJ)/N2MZJSIM USX/*.usx
+  aws_s3: s3://dataset-vessel/vessel/ART_12231842/ART Text/XLSX/Arti Test_ART_LineBased.xlsx
 audio_data:
-  aws_s3: s3://pretest-audio/N2MZJSIM Manya (MZJ)/N2MZJSIM Chapter VOX/*.mp3
+  aws_s3: s3://dataset-vessel/vessel/ART_12231842/ART Line VOX/*.wav
+timestamps:
+  mms_align: y
+training:
+  redo_training: yes
+  mms_adapter:
+    batch_mb: 4
+    num_epochs: 16
+    learning_rate: 1e-3
+    warmup_pct: 12.0
+    grad_norm_max: 0.4
 speech_to_text:
-  mms_asr_align: yes
+  adapter_asr: yes
 compare:
   html_report: yes
   gordon_filter: 0
-  compare_settings: 
-    lower_case: y
-    remove_prompt_chars: y
-    remove_punctuation: y
-    double_quotes: 
-      remove: y
-    apostrophe: 
-      remove: y
+  compare_settings:
+    lower_case: yes
+    remove_prompt_chars: yes
+    remove_punctuation: yes
+    double_quotes:
+      remove: yes
+    apostrophe:
+      remove: yes
     hyphen:
-      remove: y
+      remove: yes
     diacritical_marks:
-      normalize_nfc: y
-output:
-  csv: y
+      normalize_nfc: yes
 `
 
 func TestRunAnything(t *testing.T) {
