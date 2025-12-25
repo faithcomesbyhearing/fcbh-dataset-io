@@ -5,15 +5,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
-	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/faithcomesbyhearing/fcbh-dataset-io/db"
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
+	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
 // ChopByTimestamp uses timestamps to chop timestamps into files, and puts the filenames in timestamp record.
@@ -88,6 +90,38 @@ func ConvertMp3ToWav(ctx context.Context, tempDir string, inputFile string) (str
 		}
 	}
 	return outputPath, nil
+}
+
+func ComputeDuration(ctx context.Context, directory string, filename string) (float64, *log.Status) {
+	var result float64
+	filePath := filepath.Join(directory, filename)
+	ffMpegPath := `ffmpeg`
+	cmd := exec.Command(ffMpegPath,
+		`-i`, filePath,
+		`-f`, `null`, `-`)
+	var stderrBuf bytes.Buffer
+	cmd.Stderr = &stderrBuf
+	err := cmd.Run()
+	if err != nil {
+		return result, log.Error(ctx, 500, err, stderrBuf.String())
+	}
+	re := regexp.MustCompile(`time=(\d{2}:\d{2}:\d{2}\.\d+)`)
+	matches := re.FindAllStringSubmatch(stderrBuf.String(), -1)
+	if len(matches) > 0 {
+		timeStr := matches[len(matches)-1][1] // last match
+		parts := strings.Split(timeStr, ":")
+		partsNum, _ := strconv.ParseFloat(parts[0], 64)
+		result = partsNum * 3600.0
+		if len(parts) > 1 {
+			partsNum, _ = strconv.ParseFloat(parts[1], 64)
+			result += partsNum * 60.0
+		}
+		if len(parts) > 2 {
+			partsNum, _ = strconv.ParseFloat(parts[2], 64)
+			result += partsNum
+		}
+	}
+	return result, nil
 }
 
 // ConvertMp3toWav

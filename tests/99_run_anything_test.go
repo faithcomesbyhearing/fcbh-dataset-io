@@ -1,6 +1,10 @@
 package tests
 
-import "testing"
+import (
+	"testing"
+
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
+)
 
 const runAnything = `is_new: yes
 dataset_name: ART
@@ -43,5 +47,6 @@ compare:
 
 func TestRunAnything(t *testing.T) {
 	var yaml = runAnything
+	log.SetOutput("stderr")
 	DirectSqlTest(yaml, []SqliteTest{}, t)
 }

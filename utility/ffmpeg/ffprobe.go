@@ -3,11 +3,12 @@ package ffmpeg
 import (
 	"context"
 	"encoding/json"
-	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
-	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	log "github.com/faithcomesbyhearing/fcbh-dataset-io/logger"
+	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
 type ProbeData struct {
@@ -34,13 +35,16 @@ func GetAudioDuration(ctx context.Context, directory string, filename string) (f
 	if status != nil {
 		return result, status
 	}
-	if strings.TrimSpace(probeData.Format.Duration) == "" {
-		result = 0.0
-	} else {
+	if strings.TrimSpace(probeData.Format.Duration) != "" {
 		var err error
 		result, err = strconv.ParseFloat(probeData.Format.Duration, 64)
 		if err != nil {
 			return result, log.Error(ctx, 500, err, "Data conversion error in timestamp.GetAudioDuration")
+		}
+	} else {
+		result, status = ComputeDuration(ctx, directory, filename)
+		if status != nil {
+			return result, status
 		}
 	}
 	return result, nil
