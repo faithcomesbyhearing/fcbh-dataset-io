@@ -8,7 +8,7 @@ cd /home/ec2-user/go/src/fcbh-dataset-io
 
 # Pull latest code based on environment
 if [[ "$FCBH_DATASET_QUEUE" == *"-dev" ]]; then
-    git pull origin main
+    git pull origin dev
 else
     git pull origin main
 fi
