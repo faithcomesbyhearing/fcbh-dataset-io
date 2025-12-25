@@ -75,9 +75,10 @@ for line in sys.stdin:
         print("Audio sample rate must be 16000", file=sys.stderr, flush=True)
         sys.exit(1)
     speech, sample_rate = torchaudio.load(
-        audio["path"],
-        frame_offset=int(audio["begin_ts"] * 16000),
-        num_frames=int((audio["end_ts"] - audio["begin_ts"]) * 16000)
+        audio["path"]#,
+        #frame_offset=int(audio["begin_ts"] * 16000),
+        #num_frames=int((audio["end_ts"] - audio["begin_ts"]) * 16000)
+        # DEBUG CHANGE CHANGE BACK
 	)
     inputTensor = processor(
         speech.squeeze(),
