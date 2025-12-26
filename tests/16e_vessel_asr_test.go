@@ -14,6 +14,7 @@ notify_ok: [gary@shortsands.com]
 notify_err: [gary@shortsands.com]
 testament:
   nt: yes
+  ot: yes
 text_data:
   file: /Users/gary/FCBH2024/GaryNTest/16e_vessel_test.xlsx
 audio_data:

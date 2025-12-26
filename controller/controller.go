@@ -342,7 +342,7 @@ func (c *Controller) collectTextInput() ([]input.InputFile, *log.Status) {
 	if status != nil {
 		return files, status
 	}
-	files, status = input.FillInputFile(c.ctx, c.req.Testament, files)
+	files, status = input.FillInputFile(c.ctx, c.req.Testament, c.database, files)
 	if status != nil {
 		return files, status
 	}
@@ -370,7 +370,7 @@ func (c *Controller) collectAudioInput() ([]input.InputFile, *log.Status) {
 	} else {
 		expectFiles = false
 	}
-	files, status = input.FillInputFile(c.ctx, c.req.Testament, files)
+	files, status = input.FillInputFile(c.ctx, c.req.Testament, c.database, files)
 	if status != nil {
 		return files, status
 	}

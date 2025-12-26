@@ -32,7 +32,7 @@ func Glob(ctx context.Context, search string) ([]InputFile, *log.Status) {
 	return results, nil
 }
 
-func FillInputFile(ctx context.Context, testament request.Testament, files []InputFile) ([]InputFile, *log.Status) {
+func FillInputFile(ctx context.Context, testament request.Testament, conn db.DBAdapter, files []InputFile) ([]InputFile, *log.Status) {
 	var status *log.Status
 	files, status = unzip(ctx, files)
 	if status != nil {
@@ -45,7 +45,7 @@ func FillInputFile(ctx context.Context, testament request.Testament, files []Inp
 				return files, status
 			}
 		}
-		status = parseFilenames(ctx, &files[i])
+		status = parseFilenames(ctx, conn, &files[i])
 		if status != nil {
 			return files, status
 		}
@@ -133,7 +133,7 @@ func setMediaType(ctx context.Context, file *InputFile) *log.Status {
 	return nil
 }
 
-func parseFilenames(ctx context.Context, file *InputFile) *log.Status {
+func parseFilenames(ctx context.Context, conn db.DBAdapter, file *InputFile) *log.Status {
 	var status *log.Status
 	if file.MediaType == request.TextPlain || file.MediaType == request.TextPlainEdit ||
 		file.MediaType == request.TextCSV {
@@ -179,7 +179,8 @@ func parseFilenames(ctx context.Context, file *InputFile) *log.Status {
 		if strings.HasSuffix(fN, `VOX.mp3`) || strings.HasSuffix(fN, `VOX.wav`) {
 			parts := strings.Split(fN, `_`)
 			if len(parts[len(parts)-2]) >= 5 {
-				status = parseVOXScriptLineFile(ctx, file)
+				file.ScriptLine = parts[len(parts)-2]
+				status = parseVOXScriptLineFile(ctx, conn, file)
 			} else {
 				status = parseVOXAudioFilename(ctx, file)
 			}
@@ -297,25 +298,13 @@ func parseVOXAudioFilename(ctx context.Context, file *InputFile) *log.Status {
 	return status
 }
 
-func parseVOXScriptLineFile(ctx context.Context, file *InputFile) *log.Status {
-	parts := strings.Split(file.Filename, `_`)
-	file.MediaId = parts[0]
-	if len(parts) > 2 {
-		var status *log.Status
-		file.BookId, status = validateBookId(ctx, parts[2])
-		if status != nil {
-			return status
-		}
-	}
-	if len(parts) > 3 {
-		var err error
-		file.Chapter, err = strconv.Atoi(parts[3])
-		if err != nil {
-			return log.Error(ctx, 500, err, `Error convert chapter to int`, parts[3])
-		}
-	}
-	if len(parts) > 4 {
-		file.ScriptLine = parts[4]
+func parseVOXScriptLineFile(ctx context.Context, conn db.DBAdapter, file *InputFile) *log.Status {
+	var scriptId int64
+	var query = `SELECT script_id, book_id, chapter_num FROM scripts WHERE script_num = ?`
+	row := conn.DB.QueryRow(query, file.ScriptLine)
+	err := row.Scan(&scriptId, &file.BookId, &file.Chapter)
+	if err != nil {
+		return log.Error(ctx, 500, err, "Error during SelectScriptLine.")
 	}
 	return nil
 }
