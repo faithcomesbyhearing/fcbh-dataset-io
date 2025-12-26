@@ -68,8 +68,10 @@ else:
 
 model = model.to(device)
 for line in sys.stdin:
+    print("line", line, file=sys.stderr)
     torch.cuda.empty_cache()
     audio = json.loads(line)
+    print("audio", audio, file=sys.stderr)
     info = torchaudio.info(audio["path"], format="wav")
     if info.sample_rate != 16000:
         print("Audio sample rate must be 16000", file=sys.stderr, flush=True)
