@@ -68,15 +68,13 @@ else:
 
 model = model.to(device)
 for line in sys.stdin:
-    print("line", line, file=sys.stderr)
     torch.cuda.empty_cache()
     audio = json.loads(line)
-    print("audio", audio, file=sys.stderr)
     info = torchaudio.info(audio["path"], format="wav")
     if info.sample_rate != 16000:
         print("Audio sample rate must be 16000", file=sys.stderr, flush=True)
         sys.exit(1)
-    if audio.get("end_ts") is None:
+    if audio.get("end_ts") == 0:
         speech, sample_rate = torchaudio.load(audio["path"])
     else:
         speech, sample_rate = torchaudio.load(
@@ -107,6 +105,9 @@ for line in sys.stdin:
 ## conda activate mms_asr
 ## python mms_asr.py eng
 ## /Users/gary/FCBH2024/download/ENGWEB/ENGWEBN2DA-mp3-64/B02___01_Mark________ENGWEBN2DA.wav
+## {"path":"/Users/gary/FCBH2024/download/ENGWEB/ENGWEBN2DA-mp3-64/B02___01_Mark________ENGWEBN2DA.wav"}
+
+# {"path": "/Users/gary/FCBH2024/download/ART_12231842/ART Line VOX/ART_888_AMO_009_00451_VOX.wav"}
 
 
 
