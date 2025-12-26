@@ -117,7 +117,12 @@ func (a *MMSASR) processFile(file input.InputFile, tempDir string) *log.Status {
 	for i, ts := range audioFiles {
 		audioFiles[i].AudioFile = file.Filename
 		audioFiles[i].AudioChapterWav = wavFile
-		jsonInput := MMSASR_Input{Path: wavFile, BeginTS: ts.BeginTS, EndTS: ts.EndTS}
+		var jsonInput MMSASR_Input
+		if len(audioFiles) == 1 {
+			jsonInput = MMSASR_Input{Path: wavFile}
+		} else {
+			jsonInput = MMSASR_Input{Path: wavFile, BeginTS: ts.BeginTS, EndTS: ts.EndTS}
+		}
 		jsonBytes, err := json.Marshal(jsonInput)
 		if err != nil {
 			return log.Error(a.ctx, 500, err, "Error marshalling input to JSON.")
