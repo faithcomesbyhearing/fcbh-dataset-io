@@ -103,6 +103,7 @@ func (b *Courier) groupRecipients(recipients []string) ([]string, []string) {
 	var email []string
 	var sqs []string
 	for _, recip := range recipients {
+		recip = strings.TrimSpace(recip)
 		if strings.HasPrefix(recip, "sqs/") {
 			sqs = append(sqs, recip)
 		} else {
