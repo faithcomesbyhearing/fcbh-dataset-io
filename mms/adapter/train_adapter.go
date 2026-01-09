@@ -68,7 +68,7 @@ func (t *TrainAdapter) Train(files []input.InputFile) *log.Status {
 	if status != nil {
 		return status
 	}
-	threshold := int(math.Ceil(float64(scriptsNum) * 0.10))
+	threshold := int(math.Ceil(float64(scriptsNum) * 0.20))
 	status = SilencePruner(t.ctx, threshold, t.conn)
 	if status != nil {
 		return status
