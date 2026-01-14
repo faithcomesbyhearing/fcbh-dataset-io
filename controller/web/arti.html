@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -48,8 +49,8 @@
             text-align: center;
             padding: 10px;
         }
-        
-        .credentials-dropzone > * {
+
+        .credentials-dropzone>* {
             pointer-events: none;
         }
 
@@ -97,11 +98,11 @@
             text-align: center;
             padding: 10px;
         }
-        
-        .folder-dropzone > * {
+
+        .folder-dropzone>* {
             pointer-events: none;
         }
-        
+
         .folder-status {
             pointer-events: auto !important;
         }
@@ -381,7 +382,9 @@
             color: #ffffff;
         }
 
-        input[type="text"], input[type="number"], select {
+        input[type="text"],
+        input[type="number"],
+        select {
             flex: 1;
             min-width: 200px;
             background-color: #4a4a4a;
@@ -396,7 +399,9 @@
             cursor: pointer;
         }
 
-        input[type="text"]:focus, input[type="number"]:focus, select:focus {
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus {
             outline: none;
             border-color: #0066cc;
             box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
@@ -427,7 +432,8 @@
             box-shadow: 0 0 0 2px rgba(255, 68, 68, 0.2);
         }
 
-        .radio-group, .checkbox-group {
+        .radio-group,
+        .checkbox-group {
             margin-bottom: 15px;
         }
 
@@ -555,8 +561,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .file-input {
@@ -602,34 +613,41 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="credentials-dropzone" id="credentialsDropzone">
             <div>🔑 Drop AWS Credentials</div>
             <div class="credentials-status" id="credentialsStatus">No credentials loaded</div>
         </div>
-        
-            <div class="folder-dropzone" id="folderDropzone">
-                <div>📁 Drag a media folder or YAML file here, or press to select</div>
-                <div class="folder-status" id="folderStatus">No folder or file selected</div>
-                <div class="folder-progress" id="folderProgress" style="display: none;"></div>
-            </div>
-            
-        
+
+        <div class="folder-dropzone" id="folderDropzone">
+            <div>📁 Drag a media folder or YAML file here, or press to select</div>
+            <div class="folder-status" id="folderStatus">No folder or file selected</div>
+            <div class="folder-progress" id="folderProgress" style="display: none;"></div>
+        </div>
+
+
         <div class="header">
             <img src="arti.png" alt="Artie Logo" class="logo">
             <h2 class="subtitle">Media and Job<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Uploader</h2>
         </div>
-        
+
         <!-- Upload Progress Bar -->
         <div id="uploadProgressBar" style="display: none; margin-bottom: 15px;">
-            <div style="background-color: #444; border-radius: 4px; height: 20px; position: relative; overflow: hidden;">
-                <div id="uploadProgressFill" style="background-color: #4CAF50; height: 100%; width: 0%; transition: width 0.3s ease; border-radius: 4px;"></div>
-                <div id="uploadProgressText" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">0%</div>
+            <div
+                style="background-color: #444; border-radius: 4px; height: 20px; position: relative; overflow: hidden;">
+                <div id="uploadProgressFill"
+                    style="background-color: #4CAF50; height: 100%; width: 0%; transition: width 0.3s ease; border-radius: 4px;">
+                </div>
+                <div id="uploadProgressText"
+                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">
+                    0%</div>
             </div>
-            <div id="uploadProgressMessage" style="margin-top: 5px; font-size: 12px; color: #ccc; text-align: center;"></div>
+            <div id="uploadProgressMessage" style="margin-top: 5px; font-size: 12px; color: #ccc; text-align: center;">
+            </div>
         </div>
-        
+
         <div class="button-group">
             <button onclick="clearForm()">Clear</button>
             <button id="uploadButton" disabled>Upload</button>
@@ -641,14 +659,17 @@
             <div class="form-group">
                 <div class="form-row">
                     <label for="username">username:</label>
-                    <input type="text" id="username" placeholder="Enter a unique username for yourself (used to group datasets on the server)." required>
+                    <input type="text" id="username"
+                        placeholder="Enter a unique username for yourself (used to group datasets on the server)."
+                        required>
                 </div>
             </div>
 
             <div class="form-group">
                 <div class="form-row">
                     <label for="datasetName">dataset_name:</label>
-                    <input type="text" id="datasetName" placeholder="Enter a unique name for this dataset (unique within your username that is).">
+                    <input type="text" id="datasetName"
+                        placeholder="Enter a unique name for this dataset (unique within your username that is).">
                 </div>
             </div>
 
@@ -669,88 +690,111 @@
             <div class="form-group">
                 <div class="form-row">
                     <label for="languageIso">language_iso:</label>
-                    <input type="text" id="languageIso" placeholder="Enter 3-letter ISO code (e.g., eng, spa, fra), this specifies the language model to use." maxlength="3">
+                    <input type="text" id="languageIso"
+                        placeholder="Enter 3-letter ISO code (e.g., eng, spa, fra), this specifies the language model to use."
+                        maxlength="3">
                 </div>
             </div>
 
             <div class="form-group">
                 <div class="form-row">
-                    <label for="altLanguage">alt_language: <span style="color: #888; font-size: 12px;">(optional)</span></label>
-                    <input type="text" id="altLanguage" class="optional" placeholder="Enter a different ISO code, to override the above.">
+                    <label for="altLanguage">alt_language: <span
+                            style="color: #888; font-size: 12px;">(optional)</span></label>
+                    <input type="text" id="altLanguage" class="optional"
+                        placeholder="Enter a different ISO code, to override the above.">
                 </div>
             </div>
 
             <div class="form-group">
-                <div class="radio-group">
-                    <label>model:</label>
-                    <div class="radio-options">
-                        <div class="radio-option">
-                            <input type="radio" id="training_mms_adapter" name="training" value="mms_adapter" checked>
-                            <label for="training_mms_adapter">mms_adapter - use a locally-trained model for this iso</label>
-                        </div>
-                        <div class="radio-option">
-                            <input type="radio" id="training_no_training" name="training" value="no_training">
-                            <label for="training_no_training">mms - use mms' model for this iso</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <div class="radio-group">
-                    <label>timestamps:</label>
-                    <div class="radio-options">
-                        <div class="radio-option">
-                            <input type="radio" id="timestamps_mms_align" name="timestamps" value="mms_align" checked> 
-                            <label for="timestamps_mms_align">mms_align - fastest and most accurate, but can fail due to insufficient memory</label>
-                        </div>
-                        <div class="radio-option">
-                            <input type="radio" id="timestamps_mms_fa_verse" name="timestamps" value="mms_fa_verse">
-                            <label for="timestamps_mms_fa_verse">mms_fa_verse - slower and less accurate, but try this if mms_align fails</label>
+                <div class="form-group">
+                    <div class="radio-group">
+                        <label>model:</label>
+                        <div class="radio-options">
+                            <div class="radio-option">
+                                <input type="radio" id="training_mms_adapter" name="training" value="mms_adapter"
+                                    checked>
+                                <label for="training_mms_adapter">mms_adapter - use a locally-trained model for this
+                                    iso</label>
+                                <div style="margin-left: 24px; margin-top: 4px;">
+                                    <input type="checkbox" id="redoTraining" style="width: auto; margin-right: 5px;">
+                                    <label for="redoTraining" style="font-weight: normal;">Redo Training</label>
+                                </div>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" id="training_no_training" name="training" value="no_training">
+                                <label for="training_no_training">mms - use mms' model for this iso</label>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <div class="checkbox-group">
-                    <div class="checkbox-option">
-                        <input type="checkbox" id="compare" checked>
-                        <label for="compare">compare: html report of comparing two copies of text</label>
+                <div class="form-group">
+                    <div class="radio-group">
+                        <label>timestamps:</label>
+                        <div class="radio-options">
+                            <div class="radio-option">
+                                <input type="radio" id="timestamps_mms_align" name="timestamps" value="mms_align"
+                                    checked>
+                                <label for="timestamps_mms_align">mms_align - fastest and most accurate, but can fail
+                                    due to
+                                    insufficient memory</label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" id="timestamps_mms_fa_verse" name="timestamps" value="mms_fa_verse">
+                                <label for="timestamps_mms_fa_verse">mms_fa_verse - slower and less accurate, but try
+                                    this
+                                    if mms_align fails</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <div class="form-row">
-                    <label for="gordonFilter">gordon_filter:</label>
-                    <input type="number" id="gordonFilter" placeholder="Enter 4 for filter, or zero for no filter." value="0">
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <div class="checkbox-option">
+                            <input type="checkbox" id="compare" checked>
+                            <label for="compare">compare: html report of comparing two copies of text</label>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <div class="form-row">
-                    <label for="notifyOk">notify_ok: <span style="color: #888; font-size: 12px;">(comma-separated emails)</span></label>
-                    <input type="text" id="notifyOk" value="ezornes@fcbhmail.org, gfiddes@fcbhmail.org, edomschot@fcbhmail.org, jrstear@fcbhmail.org" placeholder="ezornes@fcbhmail.org, gfiddes@fcbhmail.org, edomschot@fcbhmail.org, jrstear@fcbhmail.org">
+                <div class="form-group">
+                    <div class="form-row">
+                        <label for="gordonFilter">gordon_filter:</label>
+                        <input type="number" id="gordonFilter" placeholder="Enter 4 for filter, or zero for no filter."
+                            value="0">
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <div class="form-row">
-                    <label for="notifyErr">notify_err: <span style="color: #888; font-size: 12px;">(comma-separated emails)</span></label>
-                    <input type="text" id="notifyErr" value="gary@shortsands.com, ezornes@fcbhmail.org, jrstear@fcbhmail.org" placeholder="gary@shortsands.com, ezornes@fcbhmail.org, jrstear@fcbhmail.org">
+                <div class="form-group">
+                    <div class="form-row">
+                        <label for="notifyOk">notify_ok: <span style="color: #888; font-size: 12px;">(comma-separated
+                                emails)</span></label>
+                        <input type="text" id="notifyOk"
+                            value="ezornes@fcbhmail.org, gfiddes@fcbhmail.org, edomschot@fcbhmail.org, jrstear@fcbhmail.org"
+                            placeholder="ezornes@fcbhmail.org, gfiddes@fcbhmail.org, edomschot@fcbhmail.org, jrstear@fcbhmail.org">
+                    </div>
                 </div>
-            </div>
 
-            <div class="file-input" style="display: none;">
-                <input type="file" id="fileInput" accept=".yaml,.yml" onchange="handleFileLoad()">
-            </div>
+                <div class="form-group">
+                    <div class="form-row">
+                        <label for="notifyErr">notify_err: <span style="color: #888; font-size: 12px;">(comma-separated
+                                emails)</span></label>
+                        <input type="text" id="notifyErr"
+                            value="gary@shortsands.com, ezornes@fcbhmail.org, jrstear@fcbhmail.org"
+                            placeholder="gary@shortsands.com, ezornes@fcbhmail.org, jrstear@fcbhmail.org">
+                    </div>
+                </div>
+
+                <div class="file-input" style="display: none;">
+                    <input type="file" id="fileInput" accept=".yaml,.yml" onchange="handleFileLoad()">
+                </div>
         </form>
 
         <div class="loading" id="loading"></div>
         <div class="status" id="status"></div>
         <div class="upload-progress" id="uploadProgress"></div>
-        
+
         <!-- Validation Error Modal -->
         <div class="error-modal" id="errorModal">
             <div class="error-modal-content">
@@ -764,9 +808,9 @@
     </div>
 
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1500.0.min.js"></script>
-    <script src="arti-validation.js?v=24"></script>
+    <script src="arti-validation.js?v=25"></script>
     <script src="arti-upload.js?v=32"></script>
-    <script src="arti-main.js?v=56"></script>
+    <script src="arti-main.js?v=57"></script>
     <script>
         // AWS Configuration - loaded from credentials file
         let AWS_CONFIG = {
@@ -778,22 +822,22 @@
         // Auto-detect bucket name from URL when hosted on S3
         function getBucketName() {
             const hostname = window.location.hostname;
-            
+
             // If hosted on S3 website (e.g., bucket-name.s3-website-region.amazonaws.com)
             if (hostname.includes('.s3-website-')) {
                 return hostname.split('.s3-website-')[0];
             }
-            
+
             // If hosted on S3 website with different format
             if (hostname.includes('.s3-website.')) {
                 return hostname.split('.s3-website.')[0];
             }
-            
+
             // If accessed via S3 website endpoint
             if (hostname.includes('.s3.')) {
                 return hostname.split('.s3.')[0];
             }
-            
+
             // Fallback to hardcoded bucket for local development
             return 'dataset-queue';
         }
@@ -819,10 +863,10 @@
         function updateCredentialsStatus(customMessage = null) {
             const statusDiv = document.getElementById('credentialsStatus');
             const dropzone = document.getElementById('credentialsDropzone');
-            
+
             // Remove any existing validation classes
             dropzone.classList.remove('credentials-error', 'credentials-valid');
-            
+
             if (customMessage) {
                 statusDiv.textContent = customMessage;
                 statusDiv.className = 'credentials-status';
@@ -842,33 +886,33 @@
             try {
                 const lines = content.split('\n');
                 const credentials = {};
-                
+
                 let currentProfile = 'default';
                 let inProfile = false;
-                
+
                 for (let line of lines) {
                     line = line.trim();
-                    
+
                     // Skip comments and empty lines
                     if (line.startsWith('#') || line === '') continue;
-                    
+
                     // Check for profile section [profile name]
                     if (line.startsWith('[') && line.endsWith(']')) {
                         currentProfile = line.slice(1, -1);
                         inProfile = true;
                         continue;
                     }
-                    
+
                     // Parse key=value pairs
                     if (line.includes('=')) {
                         const [key, value] = line.split('=').map(s => s.trim());
-                        
+
                         if (inProfile && currentProfile === 'default') {
                             credentials[key] = value;
                         }
                     }
                 }
-                
+
                 return credentials;
             } catch (error) {
                 console.error('Error parsing credentials file:', error);
@@ -878,15 +922,15 @@
 
         function loadCredentialsFromFile(file) {
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 const credentials = parseCredentialsFile(e.target.result);
-                
+
                 if (credentials && credentials.aws_access_key_id && credentials.aws_secret_access_key) {
                     // Update credentials
                     AWS_CONFIG.accessKeyId = credentials.aws_access_key_id;
                     AWS_CONFIG.secretAccessKey = credentials.aws_secret_access_key;
                     AWS.config.update(AWS_CONFIG);
-                    
+
                     // Test credentials based on environment
                     testCredentialsValidity();
                 } else {
@@ -899,10 +943,10 @@
         async function testCredentialsValidity() {
             const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
             const isFileProtocol = window.location.protocol === 'file:';
-            
+
             updateCredentialsStatus('Testing credentials...');
             showLoading(true);
-            
+
             try {
                 if (isFileProtocol || isLocalhost) {
                     // Local development - basic validation only
@@ -919,7 +963,7 @@
                 if (error.code) errorMsg += ' (Code: ' + error.code + ')';
                 if (error.statusCode) errorMsg += ' (HTTP: ' + error.statusCode + ')';
                 showStatus(errorMsg, 'error');
-                
+
                 // Reset credentials on failure
                 AWS_CONFIG.accessKeyId = null;
                 AWS_CONFIG.secretAccessKey = null;
@@ -939,28 +983,28 @@
             if (!AWS_CONFIG.accessKeyId || !AWS_CONFIG.secretAccessKey) {
                 throw new Error('Missing access key or secret key');
             }
-            
+
             // Check access key format (should start with AKIA for long-term credentials)
             if (!AWS_CONFIG.accessKeyId.startsWith('AKIA') && !AWS_CONFIG.accessKeyId.startsWith('ASIA')) {
                 throw new Error('Invalid access key format');
             }
-            
+
             // Check secret key format (should be 40 characters)
             if (AWS_CONFIG.secretAccessKey.length !== 40) {
                 throw new Error('Invalid secret key format');
             }
-            
+
             // Try to create STS client to validate credentials (minimal AWS call)
             const sts = new AWS.STS();
             await sts.getCallerIdentity().promise();
-            
+
             console.log('Basic credential validation passed');
         }
 
         async function testFullS3Access() {
             const s3 = new AWS.S3();
             const testPrefix = 'credential-test/';
-            
+
             // Test 1: List objects (read permission)
             console.log('Testing S3 read access...');
             const listParams = {
@@ -969,62 +1013,62 @@
             };
             await s3.listObjectsV2(listParams).promise();
             console.log('✅ S3 read access confirmed');
-            
+
             // Test 2: Try to upload a test file to credential-test/ folder (write permission)
             console.log('Testing S3 write access to credential-test/ folder...');
             const testKey = `${testPrefix}test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.txt`;
             const testContent = 'APClient credential test file - safe to delete';
-            
+
             const uploadParams = {
                 Bucket: S3_BUCKET,
                 Key: testKey,
                 Body: testContent,
                 ContentType: 'text/plain'
             };
-            
+
             await s3.upload(uploadParams).promise();
             console.log('✅ S3 write access to credential-test/ folder confirmed');
-            
+
             // Test 3: Verify the file was uploaded correctly
             console.log('Verifying uploaded test file...');
             const getParams = {
                 Bucket: S3_BUCKET,
                 Key: testKey
             };
-            
+
             const result = await s3.getObject(getParams).promise();
             const downloadedContent = result.Body.toString();
-            
+
             if (downloadedContent !== testContent) {
                 throw new Error('Uploaded file content verification failed');
             }
             console.log('✅ File upload verification confirmed');
-            
+
             // Test 4: Clean up test file
             console.log('Cleaning up test file...');
             const deleteParams = {
                 Bucket: S3_BUCKET,
                 Key: testKey
             };
-            
+
             await s3.deleteObject(deleteParams).promise();
             console.log('✅ Test file cleaned up');
-            
+
             // Test 5: Test upload to the specific input/ path
             console.log('Testing upload to input/ path...');
             const inputTestKey = `input/test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.yaml`;
             const inputTestContent = 'test: true\ncreated_by: APClient_credential_test';
-            
+
             const inputUploadParams = {
                 Bucket: S3_BUCKET,
                 Key: inputTestKey,
                 Body: inputTestContent,
                 ContentType: 'text/yaml'
             };
-            
+
             await s3.upload(inputUploadParams).promise();
             console.log('✅ Input path upload confirmed');
-            
+
             // Clean up input test file
             const inputDeleteParams = {
                 Bucket: S3_BUCKET,
@@ -1032,49 +1076,49 @@
             };
             await s3.deleteObject(inputDeleteParams).promise();
             console.log('✅ Input test file cleaned up');
-            
+
             console.log('🎉 Full S3 access validation completed successfully!');
         }
 
         // Drag and drop functionality
         function setupDragAndDrop() {
             const dropzone = document.getElementById('credentialsDropzone');
-            
-            dropzone.addEventListener('dragenter', function(e) {
+
+            dropzone.addEventListener('dragenter', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
             });
-            
-            dropzone.addEventListener('dragover', function(e) {
+
+            dropzone.addEventListener('dragover', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 e.dataTransfer.dropEffect = 'copy';
                 dropzone.classList.add('dragover');
             });
-            
-            dropzone.addEventListener('dragleave', function(e) {
+
+            dropzone.addEventListener('dragleave', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 dropzone.classList.remove('dragover');
             });
-            
-            dropzone.addEventListener('drop', function(e) {
+
+            dropzone.addEventListener('drop', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 dropzone.classList.remove('dragover');
-                
+
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
                     loadCredentialsFromFile(files[0]);
                 }
             });
-            
+
             // Also allow clicking to select file
-            dropzone.addEventListener('click', function() {
+            dropzone.addEventListener('click', function () {
                 const input = document.createElement('input');
                 input.type = 'file';
                 input.accept = '.txt,.ini,.credentials';
-                input.onchange = function(e) {
+                input.onchange = function (e) {
                     if (e.target.files.length > 0) {
                         loadCredentialsFromFile(e.target.files[0]);
                     }
@@ -1086,7 +1130,7 @@
 
         function loadYamlFile(file) {
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 try {
                     const content = e.target.result;
                     const data = jsyaml.load(content);
@@ -1139,16 +1183,16 @@
 
         function updateRequiredFieldStyling() {
             const requiredFields = ['datasetName', 'username', 'languageIso', 'textData', 'audioData'];
-            
+
             requiredFields.forEach(fieldId => {
                 const field = document.getElementById(fieldId);
                 if (!field) return;
-                
+
                 const value = field.value.trim();
-                
+
                 // Remove any existing styling
                 field.classList.remove('required-error', 'required-valid');
-                
+
                 if (value.length === 0) {
                     field.classList.add('required-error');
                 } else {
@@ -1169,7 +1213,7 @@
         function clearForm() {
             // Preserve username before reset
             const username = document.getElementById('username').value;
-            
+
             document.getElementById('requestForm').reset();
             document.getElementById('gordonFilter').value = '0';
             // Set default radio selections
@@ -1179,13 +1223,13 @@
             // Set default email values
             document.getElementById('notifyOk').value = 'ezornes@fcbhmail.org, gfiddes@fcbhmail.org, edomschot@fcbhmail.org, jrstear@fcbhmail.org';
             document.getElementById('notifyErr').value = 'gary@shortsands.com, ezornes@fcbhmail.org, jrstear@fcbhmail.org';
-            
+
             // Restore username
             document.getElementById('username').value = username;
-            
+
             // Clear loaded config so defaults are used again
             window.loadedConfig = null;
-            
+
             // Reset folder dropzone to initial state
             const folderDropzone = document.getElementById('folderDropzone');
             if (folderDropzone) {
@@ -1196,15 +1240,15 @@
                 `;
                 folderDropzone.classList.remove('success', 'error', 'processing');
             }
-            
+
             // Reset field styling to initial state (red for empty required fields)
             updateRequiredFieldStyling();
-            
+
             // Clear upload celebration
             if (typeof window.clearUploadCelebration === 'function') {
                 window.clearUploadCelebration();
             }
-            
+
             // Update upload button state
             if (typeof updateUploadButtonState === 'function') {
                 updateUploadButtonState();
@@ -1220,11 +1264,11 @@
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 try {
                     const yamlContent = e.target.result;
                     const jsYaml = window.jsyaml || window.yaml;
-                    
+
                     if (!jsYaml) {
                         showStatus('YAML parser not loaded. Please include js-yaml library.', 'error');
                         return;
@@ -1283,6 +1327,16 @@
                 document.getElementById('compare').checked = data.compare.html_report;
             }
 
+            // Handle Redo Training checkbox
+            if (data.training && data.training.redo_training !== undefined) {
+                document.getElementById('redoTraining').checked = (data.training.redo_training === true);
+            } else {
+                document.getElementById('redoTraining').checked = false;
+            }
+
+            // Sync checkbox enabled state
+            updateRedoTrainingState();
+
             // Handle notification emails
             if (data.notify_ok && Array.isArray(data.notify_ok)) {
                 document.getElementById('notifyOk').value = data.notify_ok.join(', ');
@@ -1296,19 +1350,19 @@
             if (!validateForm()) {
                 return;
             }
-            
+
             const yamlData = generateYAML();
             if (!yamlData) return;
 
             const datasetName = document.getElementById('datasetName').value;
             const filename = datasetName ? `${datasetName}.yaml` : 'request.yaml';
-            
+
             try {
                 // Create blob with proper MIME type
-                const blob = new Blob([yamlData], { 
+                const blob = new Blob([yamlData], {
                     type: 'text/yaml;charset=utf-8'
                 });
-                
+
                 // Check if we can use the download attribute
                 if (typeof document.createElement('a').download !== 'undefined') {
                     // Modern browsers with download support
@@ -1320,12 +1374,12 @@
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                    
+
                     // Wait a moment before revoking the URL to allow download to complete
                     setTimeout(() => {
                         URL.revokeObjectURL(url);
                     }, 1000);
-                    
+
                     showStatus('File saved successfully');
                 } else {
                     // Fallback for older browsers (like older Safari versions)
@@ -1385,20 +1439,20 @@
                 { id: 'textData', name: 'Text data (S3 path)' },
                 { id: 'audioData', name: 'Audio data (S3 path)' }
             ];
-            
+
             const errors = [];
-            
+
             // Clear previous error styling
             requiredFields.forEach(field => {
                 const element = document.getElementById(field.id);
                 element.classList.remove('required-error');
             });
-            
+
             // Check each required field
             requiredFields.forEach(field => {
                 const element = document.getElementById(field.id);
                 const value = element.value.trim();
-                
+
                 if (!value) {
                     errors.push(field.name);
                     element.classList.add('required-error');
@@ -1422,13 +1476,13 @@
                     }
                 }
             });
-            
-            
+
+
             if (errors.length > 0) {
                 showStatus('Validation errors: ' + errors.join(', '), 'error');
                 return false;
             }
-            
+
             return true;
         }
 
@@ -1497,8 +1551,8 @@
 
             if (modelValue === 'mms_adapter') {
                 // mms_adapter selected: generate training.mms_adapter + speech_to_text.adapter_asr
-                request.training.mms_adapter = configToUse.training && configToUse.training.mms_adapter 
-                    ? configToUse.training.mms_adapter 
+                request.training.mms_adapter = configToUse.training && configToUse.training.mms_adapter
+                    ? configToUse.training.mms_adapter
                     : DEFAULT_CONFIG.mmsAdapter;
                 request.speech_to_text.adapter_asr = true;
             } else {
@@ -1507,14 +1561,17 @@
                 request.speech_to_text.mms_asr = true;
             }
 
+            // Redo training
+            request.training.redo_training = document.getElementById('redoTraining').checked;
+
             // Compare
             const compareChecked = document.getElementById('compare').checked;
             if (compareChecked) {
                 request.compare = {
                     html_report: true,
                     gordon_filter: gordonFilter,
-                    compare_settings: configToUse.compare && configToUse.compare.compare_settings 
-                        ? configToUse.compare.compare_settings 
+                    compare_settings: configToUse.compare && configToUse.compare.compare_settings
+                        ? configToUse.compare.compare_settings
                         : DEFAULT_CONFIG.compareSettings
                 };
             }
@@ -1547,33 +1604,33 @@
                 } else {
                     yamlString = jsYaml.dump(request, { indent: 4, lineWidth: -1 });
                 }
-                
+
                 // Post-process to ensure csv: yes is unquoted
                 // Replace any quoted 'yes' or "yes" with unquoted yes for the csv field
                 yamlString = yamlString.replace(/^(\s+)csv:\s*['"]yes['"]/m, '$1csv: yes');
-                
+
                 return yamlString;
             } catch (error) {
                 showStatus('Error generating YAML: ' + error.message, 'error');
                 return null;
             }
         }
-        
+
         // Make buildYAMLObject globally accessible for arti-upload.js
         window.buildYAMLObject = buildYAMLObject;
 
         function generateSimpleYAML(obj) {
             // Simple YAML generator for basic structures
             let yaml = '';
-            
+
             function processValue(key, value, indent = 0) {
                 const spaces = '    '.repeat(indent);
-                
+
                 if (value === null || value === undefined) return '';
                 if (typeof value === 'boolean') return `${spaces}${key}: ${value}`;
                 if (typeof value === 'number') return `${spaces}${key}: ${value}`;
                 if (typeof value === 'string') return `${spaces}${key}: ${value}`;
-                
+
                 if (Array.isArray(value)) {
                     let result = `${spaces}${key}:\n`;
                     value.forEach(item => {
@@ -1581,7 +1638,7 @@
                     });
                     return result;
                 }
-                
+
                 if (typeof value === 'object') {
                     let result = `${spaces}${key}:\n`;
                     for (const [k, v] of Object.entries(value)) {
@@ -1589,14 +1646,14 @@
                     }
                     return result;
                 }
-                
+
                 return `${spaces}${key}: ${value}`;
             }
-            
+
             for (const [key, value] of Object.entries(obj)) {
                 yaml += processValue(key, value) + '\n';
             }
-            
+
             return yaml;
         }
 
@@ -1616,9 +1673,9 @@
 
             const datasetName = document.getElementById('datasetName').value;
             const filename = `${datasetName}.yaml`;
-            
+
             showLoading(true);
-            
+
             try {
                 const s3 = new AWS.S3();
                 const params = {
@@ -1631,13 +1688,13 @@
                 console.log('Attempting upload to:', `s3://${S3_BUCKET}/input/${filename}`);
                 const result = await s3.upload(params).promise();
                 console.log('Upload successful:', result);
-                
+
                 // Also save locally
                 saveFile();
-                
+
                 // Show two-line success message
                 showStatus(`✅ Downloaded: ${filename}\n📤 Uploaded to: s3://${S3_BUCKET}/input/${filename}`);
-                
+
             } catch (error) {
                 console.error('S3 Upload Error:', error);
                 console.error('Error details:', {
@@ -1648,12 +1705,12 @@
                     bucket: S3_BUCKET,
                     key: `input/${filename}`
                 });
-                
+
                 let errorMsg = 'Upload failed: ' + error.message;
                 if (error.code) errorMsg += ' (Code: ' + error.code + ')';
                 if (error.statusCode) errorMsg += ' (HTTP: ' + error.statusCode + ')';
                 if (error.requestId) errorMsg += ' (RequestID: ' + error.requestId + ')';
-                
+
                 showStatus(errorMsg, 'error');
             } finally {
                 showLoading(false);
@@ -1672,12 +1729,12 @@
         function validateField(fieldId) {
             const element = document.getElementById(fieldId);
             const value = element.value.trim();
-            
+
             if (!value) return; // Don't validate empty fields in real-time
-            
+
             let isValid = true;
             let errorMessage = '';
-            
+
             if (fieldId === 'languageIso' && !validateLanguageISO(value)) {
                 isValid = false;
                 errorMessage = 'Must be exactly 3 letters (a-z, A-Z)';
@@ -1688,7 +1745,7 @@
                 isValid = false;
                 errorMessage = 'Must be valid email addresses (comma-separated)';
             }
-            
+
             if (!isValid) {
                 element.classList.add('required-error');
                 // Show a subtle tooltip or status message
@@ -1701,40 +1758,54 @@
             if (validationTimers[fieldId]) {
                 clearTimeout(validationTimers[fieldId]);
             }
-            
+
             // Set a new timer to validate after 3 seconds of no typing
             validationTimers[fieldId] = setTimeout(() => {
                 validateField(fieldId);
             }, 3000);
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        function updateRedoTrainingState() {
+            const mmsAdapterSelected = document.getElementById('training_mms_adapter').checked;
+            const redoTraining = document.getElementById('redoTraining');
+            if (redoTraining) {
+                redoTraining.disabled = !mmsAdapterSelected;
+                if (!mmsAdapterSelected) {
+                    redoTraining.checked = false;
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
             clearForm();
             setupDragAndDrop();
             updateCredentialsStatus();
-            
+
+            // Initialize redo training state
+            updateRedoTrainingState();
+
             // Initialize upload button state
             if (typeof updateUploadButtonState === 'function') {
                 updateUploadButtonState();
             }
-            
+
             // Initialize all required field styling
             updateRequiredFieldStyling();
-            
+
             // Add event listeners for real-time validation
             const requiredFields = ['datasetName', 'username', 'languageIso', 'textData', 'audioData'];
             const optionalFields = ['notifyOk', 'notifyErr'];
             const allValidationFields = [...requiredFields, ...optionalFields];
-            
+
             allValidationFields.forEach(fieldId => {
                 const element = document.getElementById(fieldId);
-                
+
                 // Clear errors immediately when user starts typing
                 element.addEventListener('input', () => {
                     clearFieldError(fieldId);
                     // Use debounced validation for typing
                     debouncedValidateField(fieldId);
-                    
+
                     // Update upload button state and field styling if required field changed
                     if (['datasetName', 'username', 'languageIso', 'textData', 'audioData'].includes(fieldId)) {
                         // Clear upload celebration when user manually edits fields
@@ -1745,7 +1816,7 @@
                         updateRequiredFieldStyling();
                     }
                 });
-                
+
                 // Validate immediately when user leaves the field (blur)
                 element.addEventListener('blur', () => {
                     // Clear any pending timer since we're validating now
@@ -1753,7 +1824,7 @@
                         clearTimeout(validationTimers[fieldId]);
                     }
                     validateField(fieldId);
-                    
+
                     // Update upload button state and field styling if required field changed
                     if (['datasetName', 'username', 'languageIso', 'textData', 'audioData'].includes(fieldId)) {
                         // Clear upload celebration when user manually edits fields
@@ -1765,13 +1836,13 @@
                     }
                 });
             });
-            
+
             // Add event listener to ALL form inputs to clear upload celebration on ANY change
             // Use event capture (third parameter = true) to catch all events bubbling up
             const form = document.getElementById('requestForm');
             if (form) {
                 // Single event listener with capture=true catches everything
-                const clearCelebration = function(eventType, target) {
+                const clearCelebration = function (eventType, target) {
                     console.log('clearCelebration triggered by:', eventType, 'target:', target);
                     if (typeof window.clearUploadCelebration === 'function') {
                         window.clearUploadCelebration();
@@ -1779,19 +1850,24 @@
                         console.log('window.clearUploadCelebration is not a function');
                     }
                 };
-                
+
                 // Listen for 'input' event (text fields, textareas as you type)
-                form.addEventListener('input', function(e) {
+                form.addEventListener('input', function (e) {
                     clearCelebration('input', e.target);
                 }, true);
-                
+
                 // Listen for 'change' event (radio, checkbox, select)
-                form.addEventListener('change', function(e) {
+                form.addEventListener('change', function (e) {
                     clearCelebration('change', e.target);
+
+                    // Update Redo Training checkbox state when model selection changes
+                    if (e.target.name === 'training') {
+                        updateRedoTrainingState();
+                    }
                 }, true);
-                
+
                 // Listen for 'click' event (catches radio/checkbox clicks immediately)
-                form.addEventListener('click', function(e) {
+                form.addEventListener('click', function (e) {
                     if (e.target.tagName === 'INPUT' && (e.target.type === 'radio' || e.target.type === 'checkbox')) {
                         clearCelebration('click', e.target);
                     }
@@ -1803,13 +1879,13 @@
         function showErrorModal(errors) {
             const modal = document.getElementById('errorModal');
             const errorList = document.getElementById('errorList');
-            
+
             // Create error list HTML
             let errorHtml = '';
             errors.forEach(error => {
                 errorHtml += `<div class="error-item">${error}</div>`;
             });
-            
+
             errorList.innerHTML = errorHtml;
             modal.style.display = 'block';
         }
@@ -1820,15 +1896,16 @@
         }
 
         // Close modal when clicking outside
-        window.onclick = function(event) {
+        window.onclick = function (event) {
             const modal = document.getElementById('errorModal');
             if (event.target === modal) {
                 closeErrorModal();
             }
         }
     </script>
-    
+
     <!-- Optional: Include js-yaml for better YAML handling -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
 </body>
+
 </html>

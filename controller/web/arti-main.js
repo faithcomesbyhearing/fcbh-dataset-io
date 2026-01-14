@@ -510,8 +510,32 @@ function setupUploadButton() {
     const uploadButton = document.getElementById('uploadButton');
     if (!uploadButton) return;
     
-    uploadButton.addEventListener('click', async function() {
+    uploadButton.addEventListener('click', async function(event) {
         console.log('🚀 Upload button clicked!');
+        
+        // Handle shift-click: download YAML without uploading
+        if (event.shiftKey) {
+            console.log('⬇️ Shift-click detected: downloading YAML only');
+            
+            // Check if we have a valid folder or all required fields
+            const hasValidFolder = currentFolderData && currentFolderInfo && validationResult;
+            const requiredFields = ['datasetName', 'username', 'languageIso', 'textData', 'audioData'];
+            const allFieldsPopulated = requiredFields.every(fieldId => {
+                const field = document.getElementById(fieldId);
+                return field && field.value.trim().length > 0;
+            });
+            
+            if (!hasValidFolder && !allFieldsPopulated) {
+                console.log('❌ Missing folder data or required fields');
+                showStatus('❌ Please select and validate a folder OR fill all required fields', 'error');
+                return;
+            }
+            
+            // Generate and download YAML
+            saveFile();
+            showStatus('📥 YAML downloaded successfully', 'success');
+            return;
+        }
         
         // Handle cancel upload
         if (isUploading) {
