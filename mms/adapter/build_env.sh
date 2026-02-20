@@ -12,7 +12,7 @@ pip install numpy
 if [ "$(uname)" == "Darwin" ]; then
   pip install torch torchaudio
 else
-  pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu118
+  pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 fi
 pip install soundfile
 pip install adapters

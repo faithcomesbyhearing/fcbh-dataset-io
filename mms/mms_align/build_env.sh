@@ -10,7 +10,12 @@ conda create -y -n mms_fa python=3.11
 
 conda activate mms_fa
 
-conda install -y pytorch torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+if [ "$(uname)" == "Darwin" ]; then
+  pip install torch torchaudio
+else
+  pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+fi
+# conda install -y pytorch torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
 # On Mac
 # conda install -y pytorch::pytorch torchaudio -c pytorch
 
@@ -22,8 +27,10 @@ conda install -y sox -c conda-forge
 pip install sox
 
 pip install uroman
-cp /opt/conda/envs/mms_fa/bin/uroman /opt/conda/envs/mms_fa/bin/uroman.pl
-# on Mac
-# cp /Users/gary/miniforge3/envs/mms_fa/bin/uroman /Users/gary/miniforge3/envs/mms_fa/bin/uroman.pl
+if [ "$(uname)" == "Darwin" ]; then
+  cp $HOME/miniforge/envs/mms_fa/bin/uroman $HOME/miniforge/envs/mms_fa/bin/uroman.pl
+else
+  cp /opt/conda/envs/mms_fa/bin/uroman /opt/conda/envs/mms_fa/bin/uroman.pl
+fi
 
 conda deactivate
