@@ -2,10 +2,10 @@
 
 # This is meant to be executed line by line
 
-conda deactivate
-conda remove --name mms_adapter --all
+conda activate base
+#conda remove --name mms_adapter --all
 
-conda create --name mms_adapter python=3.11 -y
+conda create -y -n mms_adapter python=3.11
 conda activate mms_adapter
 pip install --upgrade pip
 pip install numpy

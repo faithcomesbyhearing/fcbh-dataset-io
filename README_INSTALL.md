@@ -9,6 +9,11 @@ For instruction on the go language, see <https://go.dev/learn>
 
 To install go, download the binary at <https://go.dev/doc/install>, and follow the installation instructions.
 
+Open a new terminal window to verify that go is installed.
+```
+go version
+which go
+```
 ## Download the Arti repository
 
 cd to the location where you want to install Arti.  Optionally, create a parent directory for 
@@ -35,7 +40,7 @@ Download and install Miniforge for your operating system: <https://conda-forge.o
 Once installed, type 'conda init' to initialize conda in your shell.
 
 ```
-init conda
+conda init
 ```
 After doing this, your command line prompt should start with '(base)'.
 The command syntax for using Miniforge is identical to conda.
@@ -51,8 +56,10 @@ conda install -y sqlite -c conda-forge
 ```
 
 ### Install packages for the aeneas component 
+
+** This is not working, and not needed.  So, skip it.
 ```
-cd fcbh-dataset-io
+cd ~/go/fcbh-dataset-io
 sh encode/build_aeneas_env.sh
 ```
 
@@ -75,19 +82,19 @@ conda deactivate
 
 ### Install packages for the MMS Adapter Training component
 ```
-cd fcbh-dataset-io
+cd ~/go/fcbh-dataset-io
 sh mms/adapter/build_env.sh
 ```
 
 ### Install packages for the MMS ASR component
 ```
-cd fcbh-dataset-io
+cd ~/go/fcbh-dataset-io
 sh mms/mms_asr/build_env.sh
 ```
 
 ### Install packages from the MMS Forced Alignment component
 ```
-cd fcbh-dataset-io
+cd ~/go/fcbh-dataset-io
 sh mms/mms_align/build_env.sh
 ```
 
