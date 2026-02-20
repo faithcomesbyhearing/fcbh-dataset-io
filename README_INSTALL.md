@@ -164,8 +164,92 @@ export SMTP_HOST_PORT= # The SMTP port
 export FCBH_DBP_KEY= # This must be set with a Bible Brain key if you want to access FCBH Bible Brain.
 ```
 
-This looks like an error.
-export PATH=$PATH:/Users/gary/Library/Python/3.9/bin:$GOPROJ/bin
+## Compile Arti Server, and start the server
+
+Arti is run in production as a server, that listens for request files to be added to an S3 bucket
+that functions as a queue.
+
+```
+cd ~/go/fcbh-dataset-io
+go install ./controller/queue_server
+cd
+nohup ~/go/bin/queue_server &
+```
+
+## Compile and run Arti as a command line program
+
+Arti can also be run as a command line program.
+
+```
+cd ~/go/fcbh-dataset-io
+go install ./controller/dataset_cli
+$HOME/go/bin/dataset_cli request_config.yaml
+```
+
+## Development and testing
+
+The following is a sample test.  This request.yaml file is stating that text data is to be loaded from
+an Excel spreadsheet located on AWS S3.  The audio files in .wav format are also located on AWS S3.
+The process first runs forced alignment to get timestamp and probability of correctness scores.
+Then, the text and data is used to train an mms adapter model in the language.  Following that,
+speech to text is run to create a transcript of the audio using the trained model.  Finally, the
+transcript is compared to the original text, and a report is produced for analysts to review.  In this
+case only one person is receiving email notification.
+
+The SqliteTest struct provides a means to add database queries and expected results that will be 
+run at completion of the test.
+
+```
+import (
+	"testing"
+)
+
+const runAnything = `is_new: yes
+dataset_name: ART
+language_iso: spa
+username: GaryNTest
+notify_ok: [gary@shortsands.com]
+notify_err: [gary@shortsands.com]
+text_data:
+  aws_s3: s3://dataset-vessel/vessel/ART_12231842/ART Text/XLSX/Arti Test_ART_LineBased.xlsx
+audio_data:
+  aws_s3: s3://dataset-vessel/vessel/ART_12231842/ART Line VOX/*.wav
+timestamps:
+  mms_align: y
+training:
+  redo_training: yes
+  mms_adapter:
+    batch_mb: 4
+    num_epochs: 16
+    learning_rate: 1e-3
+    warmup_pct: 12.0
+    grad_norm_max: 0.4
+speech_to_text:
+  adapter_asr: yes
+compare:
+  html_report: yes
+  gordon_filter: 0
+  compare_settings:
+    lower_case: yes
+    remove_prompt_chars: yes
+    remove_punctuation: yes
+    double_quotes:
+      remove: yes
+    apostrophe:
+      remove: yes
+    hyphen:
+      remove: yes
+    diacritical_marks:
+      normalize_nfc: yes
+`
+
+func TestRunAnything(t *testing.T) {
+	DirectSqlTest(runAnything, []SqliteTest{}, t)
+}
+```
+
+###This looks like an error.
+###export PATH=$PATH:/Users/gary/Library/Python/3.9/bin:$GOPROJ/bin
 
 
 
