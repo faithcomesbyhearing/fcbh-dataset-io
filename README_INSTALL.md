@@ -248,8 +248,6 @@ func TestRunAnything(t *testing.T) {
 }
 ```
 
-###This looks like an error.
-###export PATH=$PATH:/Users/gary/Library/Python/3.9/bin:$GOPROJ/bin
 
 
 
